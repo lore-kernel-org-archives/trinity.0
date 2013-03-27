@@ -1,34 +1,27 @@
-From: Denis Kirjanov <kda@linux-powerpc.org>
-Subject: [PATCH] Fix BITS_PER_LONG for ppc32
-Date: Wed, 27 Mar 2013 10:06:20 +0400
-Message-ID: <1364364380-3075-1-git-send-email-kda@linux-powerpc.org>
+From: Dave Jones <davej@redhat.com>
+Subject: Re: [PATCH] Fix BITS_PER_LONG for ppc32
+Date: Wed, 27 Mar 2013 09:46:45 -0400
+Message-ID: <20130327134645.GA1738@redhat.com>
+References: <1364364380-3075-1-git-send-email-kda@linux-powerpc.org>
+Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1364364380-3075-1-git-send-email-kda@linux-powerpc.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
-Cc: davej@redhat.com, kda@linuxpowerpc.org, Denis Kirjanov <kda@linux-powerpc.org>
+To: Denis Kirjanov <kda@linux-powerpc.org>
+Cc: trinity@vger.kernel.org, kda@linuxpowerpc.org
 
-Signed-off-by: Denis Kirjanov <kda@linux-powerpc.org>
----
- include/arch-ppc.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+On Wed, Mar 27, 2013 at 10:06:20AM +0400, Denis Kirjanov wrote:
 
-diff --git a/include/arch-ppc.h b/include/arch-ppc.h
-index 8c1a71a..792a54a 100644
---- a/include/arch-ppc.h
-+++ b/include/arch-ppc.h
-@@ -17,7 +17,7 @@
- #define TASK_SIZE 		(PAGE_OFFSET)
- 
- #define PAGE_SHIFT		12
--#define BITS_PER_LONG		64
-+#define BITS_PER_LONG		32
- #define PTE_RPN_SHIFT		(PAGE_SHIFT)
- #define PTE_FILE_MAX_BITS	(BITS_PER_LONG - PTE_RPN_SHIFT)
- 
--- 
-1.8.0.2
+ > -#define BITS_PER_LONG		64
+ > +#define BITS_PER_LONG		32
+
+oops ;)
+
+Thanks, applied.
+
+	Dave
 
