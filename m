@@ -1,30 +1,42 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: [PATCH] overwritten assignment in sanitise_setsockopt
-Date: Tue, 2 Apr 2013 10:15:48 -0400
-Message-ID: <20130402141548.GA1477@redhat.com>
-References: <20130402134003.747af8ed@absol.kitzblitz>
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] Include compat.h in syscalls/msgsnd.c for MSG_COPY for older kernels.
+Date: Fri,  5 Apr 2013 20:03:14 -0700
+Message-ID: <1365217394-30404-1-git-send-email-vlee@freedesktop.org>
 Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20130402134003.747af8ed@absol.kitzblitz>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Nicolas Kaiser <nikai@nikai.net>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
-On Tue, Apr 02, 2013 at 01:40:03PM +0200, Nicolas Kaiser wrote:
- > I noticed an assignment that gets immediately overwritten, contradicting
- > a nearby comment.
- > According to the comment, 'optval' should get disabled half of the time.
- > 
- > As at the time of the conditional assignment optval was already set to
- > different nonzero values, it looks to me like the trailing assignment,
- > which was introduced in commit 737e1a71, may be unintended.
+=46rom: Vinson Lee <vlee@twitter.com>
 
-Good catch. Applied.
+This patch fixes this build error on Linux 3.7 and older.
 
-thanks,
+  CC	syscalls/msgsnd.o
+syscalls/msgsnd.c:19:40: error: =E2=80=98MSG_COPY=E2=80=99 undeclared h=
+ere (not in a function)
+make: *** [syscalls/msgsnd.o] Error 1
 
-	Dave
+Signed-off-by: Vinson Lee <vlee@twitter.com>
+---
+ syscalls/msgsnd.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/syscalls/msgsnd.c b/syscalls/msgsnd.c
+index 13e663f..132336b 100644
+--- a/syscalls/msgsnd.c
++++ b/syscalls/msgsnd.c
+@@ -2,6 +2,7 @@
+  * SYSCALL_DEFINE4(msgsnd, int, msqid, struct msgbuf __user *, msgp, s=
+ize_t, msgsz, int, msgflg)
+  */
+ #include <linux/msg.h>
++#include "compat.h"
+ #include "sanitise.h"
+=20
+ struct syscall syscall_msgsnd =3D {
+--=20
+1.7.9.5
