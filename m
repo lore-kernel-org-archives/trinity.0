@@ -1,33 +1,28 @@
-From: Dave Jones <davej@redhat.com>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
 Subject: Re: -r not mentioned in --help
-Date: Mon, 15 Apr 2013 14:06:25 -0400
-Message-ID: <20130415180625.GA1339@redhat.com>
-References: <516C3431.2000102@gmx.de>
+Date: Mon, 15 Apr 2013 20:23:29 +0200
+Message-ID: <516C45A1.7080103@gmx.de>
+References: <516C3431.2000102@gmx.de> <20130415180625.GA1339@redhat.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <516C3431.2000102@gmx.de>
+In-Reply-To: <20130415180625.GA1339@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="iso-8859-1"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
+To: Dave Jones <davej@redhat.com>
 Cc: trinity@vger.kernel.org
 
-On Mon, Apr 15, 2013 at 07:09:05PM +0200, Toralf F=F6rster wrote:
- > And it seems that a command line like
- >=20
- > $> trinity --children 4 --victims \$W/victims -x mremap -N 40000 -r =
--q
- >=20
- > now no longer works, trinity complains about "-r":
- >=20
- > trinity: invalid option -- 'r'
+On 04/15/2013 08:06 PM, Dave Jones wrote:
+> Strange failure mode
 
-Strange failure mode, but I think this may have been due to -x being be=
-fore -r.
-I just pushed out a change that enforces the right ordering.
+sometimes I wish there would be a "delete after sent"-button for an
+email - the root cause was just PEBKAC - I run an outdated image.
 
-Does that fix it for you if you move the -r earlier ?
+sry.
 
-	Dave
+
+--=20
+MfG/Sincerely
+Toralf F=C3=B6rster
+pgp finger print: 7B1A 07F4 EC82 0F90 D4C2 8936 872A E508 7DB6 9DA3
