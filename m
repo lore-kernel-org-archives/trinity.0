@@ -1,37 +1,26 @@
-From: =?UTF-8?q?Toralf=20F=C3=B6rster?= <toralf.foerster@gmx.de>
-Subject: [PATCH] print out the # of killed processes too
-Date: Wed, 24 Apr 2013 22:43:44 +0200
-Message-ID: <1366836224-572-1-git-send-email-toralf.foerster@gmx.de>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
+Subject: compile error in latest git tree
+Date: Mon, 29 Apr 2013 22:25:39 +0200
+Message-ID: <517ED743.2020900@gmx.de>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
+Content-Type: text/plain; charset="utf-8"
 To: trinity@vger.kernel.org
-Cc: toralf.foerster@gmx.de
 
-Signed-off-by: Toralf F=C3=B6rster <toralf.foerster@gmx.de>
----
- trinity.c | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
+At an 32 bit stable Gentoo w/ kernel 3.9 I get :
 
-diff --git a/trinity.c b/trinity.c
-index b95d287..a68dc18 100644
---- a/trinity.c
-+++ b/trinity.c
-@@ -235,8 +235,9 @@ int main(int argc, char* argv[])
-=20
- 	waitpid(shm->watchdog_pid, &childstatus, 0);
-=20
--	printf("\nRan %ld syscalls. Successes: %ld  Failures: %ld\n",
--		shm->total_syscalls_done - 1, shm->successes, shm->failures);
-+	printf("\nRan %ld syscalls. Successes: %ld  Failures: %ld  Killed: %l=
-d\n",
-+		shm->total_syscalls_done - 1, shm->successes, shm->failures,
-+		shm->total_syscalls_done - 1 - shm->successes - shm->failures);
-=20
- 	ret =3D EXIT_SUCCESS;
-=20
+  CC    ioctls/vt.o
+ioctls/kvm.c:114:2: error: =E2=80=98KVM_GET_REG_LIST=E2=80=99 undeclare=
+d here (not in a
+function)
+  CC    ioctls/firewire.o
+make: *** [ioctls/kvm.o] Error 1
+make: *** Waiting for unfinished jobs....
+
 --=20
-1.8.1.5
+MfG/Sincerely
+Toralf F=C3=B6rster
+pgp finger print: 7B1A 07F4 EC82 0F90 D4C2 8936 872A E508 7DB6 9DA3
