@@ -1,108 +1,274 @@
-From: richard -rw- weinberger <richard.weinberger@gmail.com>
-Subject: Re: [uml-devel] WARNING: at mm/mmap.c:2757 exit_mmap+0x161/0x170()
-Date: Wed, 15 May 2013 21:35:35 +0200
-Message-ID: <CAFLxGvyggXx0grnef3RNPbyDq0scNjDJQ_h0=aRdbe_Aa-p-gQ@mail.gmail.com>
-References: <518FB97A.5070907@gmx.de>
-	<CAFLxGvzn+Q=D4vjTNuggSTnQKVp0QYLPoHmUwAVBcRbSmD3HWQ@mail.gmail.com>
-	<518FBE6A.50605@gmx.de>
-	<CAFLxGvyvRb+WD-eLBFnH5O-sXjUdtUkXbKzG6HFqgzm+x2LUow@mail.gmail.com>
-	<CAFLxGvwEiE0dfw9Vju_Xg6mXkF_NH_OU_t7puPceYN42dphTLA@mail.gmail.com>
-	<518FE33B.60701@gmx.de>
-	<CAFLxGvyiKbbkPAG0h42y1fb=Z6YuboJPdyb+2Xk9Z2YYt7oryg@mail.gmail.com>
-	<518FF354.7020408@gmx.de>
-	<CAFLxGvxYjpt6X9MQF3Huh-Sqzm3CBMJAfGb_Qjpqu00iUzj=qg@mail.gmail.com>
-	<518FFBA3.6000800@gmx.de>
-	<CAFLxGvx+8wpBeF_TqOk3JKBEoADAS-NeatpJMuSVvaDhZNqE0g@mail.gmail.com>
-	<CAFLxGvzSEY8iciEONkxNGeO6Lt5v4VcB2sF1XPcqLA=n8PUaAQ@mail.gmail.com>
-	<51901400.4060302@gmx.de>
-	<CAFLxGvx-saWcJ+JCubUBAVT70OSMZDYNETqiNijJgXeqCPwwUA@mail.gmail.com>
-	<5193DCA7.1070708@gmx.de>
-	<CAFLxGvxhDu6jVHZ0iOhjSBEfEY5JZRJ9xw0gxcduvuTR6BGOPg@mail.gmail.com>
-	<5193E26E.90003@gmx.de>
-Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+From: Daniel Borkmann <dborkman@redhat.com>
+Subject: [PATCH trinity] net: add generation of semi-random BPF filters
+Date: Thu, 16 May 2013 11:54:16 +0200
+Message-ID: <1368698056-411-1-git-send-email-dborkman@redhat.com>
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=mime-version:x-received:in-reply-to:references:date:message-id
-         :subject:from:to:cc:content-type:content-transfer-encoding;
-        bh=Lvxhmvj0oLL8uZDT+N1F3fSI+1rrFuJQZhsgkcOZyFw=;
-        b=qAz+TD14AX8rXYAOZ2bygH84asXkHqNx9QCZ02fF4+Ew0Iha5JgxodZz8Q6Lv1Olgk
-         2iRk+Oy1KHPjFOQyI/4+4IOrLreBegzcBOlPNFYxmIHNJ1Qu9pyqPvs1HSbjE+AsOOuV
-         ktOGJFY2OTSAOcwqkHYnq9PDlFyUSqflvp1/g32LvfccZZvtCBzyoyjrXO+CSy7v9vKg
-         V1vMGD64DCWKD4ahFPWr/gbBkzb9/wpz3qr/8zObNFA1HW+lx6Ra7YOP07lOXejVn3q4
-         UTNywEJ0AniZWVNSAbVMmeRmHy80wVDjc/fK9yq4KW6yBaa8y7kikpqY2a9UpIR0jheZ
-         MrGg==
-In-Reply-To: <5193E26E.90003@gmx.de>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: =?ISO-8859-1?Q?Toralf_F=F6rster?= <toralf.foerster@gmx.de>
-Cc: "user-mode-linux-devel@lists.sourceforge.net" <user-mode-linux-devel@lists.sourceforge.net>, trinity@vger.kernel.org
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: davej@redhat.com
+Cc: trinity@vger.kernel.org
 
-On Wed, May 15, 2013 at 9:30 PM, Toralf F=F6rster <toralf.foerster@gmx.=
-de> wrote:
-> On 05/15/2013 09:11 PM, richard -rw- weinberger wrote:
->> On Wed, May 15, 2013 at 9:06 PM, Toralf F=F6rster <toralf.foerster@g=
-mx.de> wrote:
->>> On 05/13/2013 09:12 AM, richard -rw- weinberger wrote:
->>>> This looks like another issue.
->>>> Are you testing process_vm_writev() with trinity?
->>>> Looks like it managed to overwrite the stub page of a process, whi=
-ch
->>>> is not good.
->>> nope, it is the mremap syscall.
->>>
->>> A command like
->>>
->>> $>trinity -c mremap -N 10
->>>
->>> immediately after starting a 32 bit Gentoo linux guest with current=
- kernel 3.10-rc1-... +
->>> strnlen + stub4 patch works, but later a
->>>
->>> $>trinity -c mremap -N 1000
->>>
->>> yields into
->>>
->>> 2013-05-15T21:02:04.061+02:00 trinity kernel: Stub registers -
->>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   0 - 100000
->>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   1 - 300000
->>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   2 - 0
->>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   3 - 0
->>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   4 - 0
->>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   5 - 0
->>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   6 - 0
->>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   7 - 7b
->>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   8 - 7b
->>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   9 - 0
->>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   10 - 33
->>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   11 - ffffffff
->>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   12 - 1000c3
->>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   13 - 73
->>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   14 - 10206
->>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   15 - 101028
->>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   16 - 7b
->>> 2013-05-15T21:02:04.065+02:00 trinity kernel: wait_stub_done : fail=
-ed to wait for SIGTRAP, pid =3D 15692, n =3D 15692, errno =3D 0, status=
- =3D 0xb7f
->>>
->>> and now that process can't be killed - I had to stop the UML guest.
->>
->> Hmm, you've remapped the stub page and therefore the process broke.
->> I think it would make sense to kill the process in stead of writing
->> the "wait_stub_done ..." message.
->> Changing the stub page is as destructive than overwriting the stack.
->
-> Unfortunately no trinity process can be killed as soon as that happen=
-=2E
-> Neither pgrep, pkill, nor "ps -efla" do return any result.
-> Killing any of those processes by its pid won't work too.
+BPF filters are used in networking and in application sand-boxing
+and even have a arch-dependant JIT compiler in the kernel, so add
+a more detailed semi-random BPF generator.
 
-Hmm, not good.
-I need to create me a reproducer for that.
-I'm unsure what exactly is going on.
+Signed-off-by: Daniel Borkmann <dborkman@redhat.com>
+---
+ Compile-tested only!
 
---
-Thanks,
-//richard
+ include/net.h         |   3 +
+ net/bpf.c             | 205 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ syscalls/setsockopt.c |   2 +
+ 3 files changed, 210 insertions(+)
+ create mode 100644 net/bpf.c
+
+diff --git a/include/net.h b/include/net.h
+index e14430c..256533c 100644
+--- a/include/net.h
++++ b/include/net.h
+@@ -35,6 +35,9 @@ void gen_pppox(unsigned long *addr, unsigned long *addrlen);
+ /* unix */
+ void gen_unixsock(unsigned long *addr, unsigned long *addrlen);
+ 
++/* bpf */
++void gen_bpf(unsigned long *addr, unsigned long *addrlen);
++
+ /* caif */
+ void gen_caif(unsigned long *addr, unsigned long *addrlen);
+ 
+diff --git a/net/bpf.c b/net/bpf.c
+new file mode 100644
+index 0000000..c628ac0
+--- /dev/null
++++ b/net/bpf.c
+@@ -0,0 +1,205 @@
++#include <linux/filter.h>
++#include <stdlib.h>
++#include <stdint.h>
++#include <string.h>
++
++#include "trinity.h"
++
++/**
++ * BPF filters are used in networking such as in pf_packet, but also
++ * in seccomp for application sand-boxing. Additionally, with arch
++ * specific BPF JIT compilers, this might be good to fuzz for errors.
++ *    -- Daniel Borkmann, <borkmann@redhat.com>
++ */
++
++/* Both here likely defined in linux/filter.h already */
++#ifndef SKF_AD_OFF
++# define SKF_AD_OFF	(-0x1000)
++#endif
++
++#ifndef SKF_AD_MAX
++# define SKF_AD_MAX	56
++#endif
++
++#define BPF_CLASS(code) ((code) & 0x07)
++#define	BPF_LD		0x00
++#define	BPF_LDX		0x01
++#define	BPF_ST		0x02
++#define	BPF_STX		0x03
++#define	BPF_ALU		0x04
++#define	BPF_JMP		0x05
++#define	BPF_RET		0x06
++#define	BPF_MISC	0x07
++
++static const uint16_t bpf_class_vars[] = {
++	BPF_LD, BPF_LDX, BPF_ST, BPF_STX, BPF_ALU, BPF_JMP, BPF_RET, BPF_MISC,
++};
++
++#define BPF_SIZE(code)	((code) & 0x18)
++#define	BPF_W		0x00
++#define	BPF_H		0x08
++#define	BPF_B		0x10
++
++static const uint16_t bpf_size_vars[] = {
++	BPF_W, BPF_H, BPF_B,
++};
++
++#define BPF_MODE(code)	((code) & 0xe0)
++#define	BPF_IMM 	0x00
++#define	BPF_ABS		0x20
++#define	BPF_IND		0x40
++#define	BPF_MEM		0x60
++#define	BPF_LEN		0x80
++#define	BPF_MSH		0xa0
++
++static const uint16_t bpf_mode_vars[] = {
++	BPF_IMM, BPF_ABS, BPF_IND, BPF_MEM, BPF_LEN, BPF_MSH,
++};
++
++#define BPF_OP(code)	((code) & 0xf0)
++#define	BPF_ADD		0x00
++#define	BPF_SUB		0x10
++#define	BPF_MUL		0x20
++#define	BPF_DIV		0x30
++#define	BPF_OR		0x40
++#define	BPF_AND		0x50
++#define	BPF_LSH		0x60
++#define	BPF_RSH		0x70
++#define	BPF_NEG		0x80
++#define BPF_MOD		0x90
++#define	BPF_XOR		0xa0
++
++static const uint16_t bpf_alu_op_vars[] = {
++	BPF_ADD, BPF_SUB, BPF_MUL, BPF_DIV, BPF_OR, BPF_AND, BPF_LSH, BPF_RSH,
++	BPF_NEG, BPF_MOD, BPF_XOR,
++};
++
++#define	BPF_JA		0x00
++#define	BPF_JEQ		0x10
++#define	BPF_JGT		0x20
++#define	BPF_JGE		0x30
++#define	BPF_JSET	0x40
++
++static const uint16_t bpf_jmp_op_vars[] = {
++	BPF_JA, BPF_JEQ, BPF_JGT, BPF_JGE, BPF_JSET,
++};
++
++#define BPF_SRC(code)	((code) & 0x08)
++#define	BPF_K		0x00
++#define	BPF_X		0x08
++
++static const uint16_t bpf_src_vars[] = {
++	BPF_K, BPF_X,
++};
++
++#define BPF_RVAL(code)	((code) & 0x18)
++#define	BPF_A		0x10
++
++static const uint16_t bpf_ret_vars[] = {
++	BPF_A, BPF_K, BPF_X,
++};
++
++#define BPF_MISCOP(code) ((code) & 0xf8)
++#define	BPF_TAX		0x00
++#define	BPF_TXA		0x80
++
++static const uint16_t bpf_misc_vars[] = {
++	BPF_TAX, BPF_TXA,
++};
++
++#define bpf_rand(type) \
++	(bpf_##type##_vars[rand() % ARRAY_SIZE(bpf_##type##_vars)])
++
++static uint16_t gen_bpf_code(void)
++{
++	uint16_t ret = bpf_rand(class);
++
++	switch (ret) {
++	case BPF_LD:
++	case BPF_LDX:
++	case BPF_ST:
++	case BPF_STX:
++		ret |= bpf_rand(size) | bpf_rand(mode) | bpf_rand(src);
++		break;
++	case BPF_ALU:
++		ret |= bpf_rand(alu_op) | bpf_rand(src);
++		break;
++	case BPF_JMP:
++		ret |= bpf_rand(jmp_op) | bpf_rand(src);
++		break;
++	case BPF_RET:
++		ret |= bpf_rand(ret);
++		break;
++	case BPF_MISC:
++		ret |= bpf_rand(misc);
++		break;
++	default:
++		ret = (uint16_t) rand();
++		break;
++	}
++
++	/* Also give it a chance to fuzz some crap into it */
++	if (rand() % 10 == 0)
++		ret |= (uint16_t) rand();
++
++	return ret;
++}
++
++void gen_bpf(unsigned long *addr, unsigned long *addrlen)
++{
++	int i;
++	struct sock_fprog *bpf = (void *) addr;
++
++	if (addrlen != NULL) {
++		bpf = malloc(sizeof(struct sock_fprog));
++		if (bpf == NULL)
++			return;
++	}
++
++	bpf->len = rand() % BPF_MAXINSNS;
++
++	bpf->filter = malloc(bpf->len * sizeof(struct sock_filter));
++	if (bpf->filter == NULL) {
++		if (addrlen != NULL)
++			free(bpf);
++		return;
++	}
++
++	for (i = 0; i < bpf->len; i++) {
++		memset(&bpf->filter[i], 0, sizeof(bpf->filter[i]));
++
++		bpf->filter[i].code = gen_bpf_code();
++
++		/* Fill out jump offsets if jmp instruction */
++		if (BPF_CLASS(bpf->filter[i].code) == BPF_JMP) {
++			bpf->filter[i].jt = (uint8_t) rand();
++			bpf->filter[i].jf = (uint8_t) rand();
++		}
++
++		/* Also give it a chance if not BPF_JMP */
++		if (rand() % 10 == 0)
++			bpf->filter[i].jt |= (uint8_t) rand();
++		if (rand() % 10 == 0)
++			bpf->filter[i].jf |= (uint8_t) rand();
++
++		/* Not always fill out k */
++		bpf->filter[i].k = rand() % 2 == 0 ? 0 : (uint32_t) rand();
++
++		/* Also try to jump into BPF extensions by chance */
++		if (BPF_CLASS(bpf->filter[i].code) == BPF_LD ||
++		    BPF_CLASS(bpf->filter[i].code) == BPF_LDX) {
++			if (bpf->filter[i].k > 65000 &&
++			    bpf->filter[i].k < (uint32_t) SKF_AD_OFF) {
++				if (rand() % 2 == 0) {
++					bpf->filter[i].k = (uint32_t) (SKF_AD_OFF +
++							   rand() % SKF_AD_MAX);
++				}
++			}
++		}
++	}
++
++	if (addrlen != NULL) {
++		*addr = (unsigned long) bpf;
++		*addrlen = sizeof(struct sock_fprog);
++	}
++}
+diff --git a/syscalls/setsockopt.c b/syscalls/setsockopt.c
+index 1c18847..43ffb05 100644
+--- a/syscalls/setsockopt.c
++++ b/syscalls/setsockopt.c
+@@ -9,6 +9,7 @@
+ #include "compat.h"
+ #include "maps.h"
+ #include "shm.h"
++#include "net.h"
+ #include "config.h"
+ #include "syscalls/setsockopt.h"
+ 
+@@ -84,6 +85,7 @@ void sanitise_setsockopt(int childno)
+ 			shm->a5[childno] = sizeof(struct timeval);
+ 			break;
+ 		case SO_ATTACH_FILTER:
++			gen_bpf((unsigned long *) page_rand, NULL);
+ 			shm->a5[childno] = sizeof(struct sock_fprog);
+ 			break;
+ 		default:
+-- 
+1.7.11.7
