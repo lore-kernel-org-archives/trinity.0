@@ -1,118 +1,118 @@
-From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] Add KVM symbols for older kernels.
-Date: Thu, 16 May 2013 18:35:40 -0700
-Message-ID: <1368754540-28999-1-git-send-email-vlee@freedesktop.org>
+From: richard -rw- weinberger <richard.weinberger@gmail.com>
+Subject: Re: [uml-devel] WARNING: at mm/mmap.c:2757 exit_mmap+0x161/0x170()
+Date: Fri, 17 May 2013 12:00:05 +0200
+Message-ID: <CAFLxGvz4Ru-TKb34_WE-EC7Z8SenR3HcrDfbpNeO1oOROpzk=A@mail.gmail.com>
+References: <518FB97A.5070907@gmx.de>
+	<CAFLxGvzn+Q=D4vjTNuggSTnQKVp0QYLPoHmUwAVBcRbSmD3HWQ@mail.gmail.com>
+	<518FBE6A.50605@gmx.de>
+	<CAFLxGvyvRb+WD-eLBFnH5O-sXjUdtUkXbKzG6HFqgzm+x2LUow@mail.gmail.com>
+	<CAFLxGvwEiE0dfw9Vju_Xg6mXkF_NH_OU_t7puPceYN42dphTLA@mail.gmail.com>
+	<518FE33B.60701@gmx.de>
+	<CAFLxGvyiKbbkPAG0h42y1fb=Z6YuboJPdyb+2Xk9Z2YYt7oryg@mail.gmail.com>
+	<518FF354.7020408@gmx.de>
+	<CAFLxGvxYjpt6X9MQF3Huh-Sqzm3CBMJAfGb_Qjpqu00iUzj=qg@mail.gmail.com>
+	<518FFBA3.6000800@gmx.de>
+	<CAFLxGvx+8wpBeF_TqOk3JKBEoADAS-NeatpJMuSVvaDhZNqE0g@mail.gmail.com>
+	<CAFLxGvzSEY8iciEONkxNGeO6Lt5v4VcB2sF1XPcqLA=n8PUaAQ@mail.gmail.com>
+	<51901400.4060302@gmx.de>
+	<CAFLxGvx-saWcJ+JCubUBAVT70OSMZDYNETqiNijJgXeqCPwwUA@mail.gmail.com>
+	<5193DCA7.1070708@gmx.de>
+	<CAFLxGvxhDu6jVHZ0iOhjSBEfEY5JZRJ9xw0gxcduvuTR6BGOPg@mail.gmail.com>
+	<5193E26E.90003@gmx.de>
+	<CAFLxGvyggXx0grnef3RNPbyDq0scNjDJQ_h0=aRdbe_Aa-p-gQ@mail.gmail.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=mime-version:x-received:in-reply-to:references:date:message-id
+         :subject:from:to:cc:content-type:content-transfer-encoding;
+        bh=UgKcnlSxVN0Z4tbiffUGi82nPVl9YEHq4yEbOOgEVis=;
+        b=sc0FcErolPhfiDBxLYFAKT855hUQ10R1Y0caz7B0MlevfBvceOzyd6qNDYeZiM91/3
+         2sQxL9+ZoXs8+LL1uFmtIYkDjjvop6zDRXZrSqABL5jGrUw3RQr4HFCgel1mJES5BGbu
+         8PWpa3lgIDqdYu6LgiMmghd8jGld3o8NbsEsA7LjqditOJYG0InOx6FknlBfjCyKo+Wq
+         Xx14vbqk4gP/V/7YX/cLYDyRuvgEl2Q9ICDcN0ng+P+w+8bhKC2m27N4YU5GwY2oJR7B
+         ZCz2j2I4H9YXuniKEXeDaL0pHkaJEl4OCjpEZDOgWrhyXZjixcq2JR9x9kN4cpjzkQ02
+         P6WQ==
+In-Reply-To: <CAFLxGvyggXx0grnef3RNPbyDq0scNjDJQ_h0=aRdbe_Aa-p-gQ@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
+Content-Type: text/plain; charset="iso-8859-1"
+To: =?ISO-8859-1?Q?Toralf_F=F6rster?= <toralf.foerster@gmx.de>
+Cc: "user-mode-linux-devel@lists.sourceforge.net" <user-mode-linux-devel@lists.sourceforge.net>, trinity@vger.kernel.org
 
-=46rom: Vinson Lee <vlee@twitter.com>
+On Wed, May 15, 2013 at 9:35 PM, richard -rw- weinberger
+<richard.weinberger@gmail.com> wrote:
+> On Wed, May 15, 2013 at 9:30 PM, Toralf F=F6rster <toralf.foerster@gm=
+x.de> wrote:
+>> On 05/15/2013 09:11 PM, richard -rw- weinberger wrote:
+>>> On Wed, May 15, 2013 at 9:06 PM, Toralf F=F6rster <toralf.foerster@=
+gmx.de> wrote:
+>>>> On 05/13/2013 09:12 AM, richard -rw- weinberger wrote:
+>>>>> This looks like another issue.
+>>>>> Are you testing process_vm_writev() with trinity?
+>>>>> Looks like it managed to overwrite the stub page of a process, wh=
+ich
+>>>>> is not good.
+>>>> nope, it is the mremap syscall.
+>>>>
+>>>> A command like
+>>>>
+>>>> $>trinity -c mremap -N 10
+>>>>
+>>>> immediately after starting a 32 bit Gentoo linux guest with curren=
+t kernel 3.10-rc1-... +
+>>>> strnlen + stub4 patch works, but later a
+>>>>
+>>>> $>trinity -c mremap -N 1000
+>>>>
+>>>> yields into
+>>>>
+>>>> 2013-05-15T21:02:04.061+02:00 trinity kernel: Stub registers -
+>>>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   0 - 100000
+>>>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   1 - 300000
+>>>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   2 - 0
+>>>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   3 - 0
+>>>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   4 - 0
+>>>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   5 - 0
+>>>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   6 - 0
+>>>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   7 - 7b
+>>>> 2013-05-15T21:02:04.061+02:00 trinity kernel:   8 - 7b
+>>>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   9 - 0
+>>>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   10 - 33
+>>>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   11 - ffffffff
+>>>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   12 - 1000c3
+>>>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   13 - 73
+>>>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   14 - 10206
+>>>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   15 - 101028
+>>>> 2013-05-15T21:02:04.065+02:00 trinity kernel:   16 - 7b
+>>>> 2013-05-15T21:02:04.065+02:00 trinity kernel: wait_stub_done : fai=
+led to wait for SIGTRAP, pid =3D 15692, n =3D 15692, errno =3D 0, statu=
+s =3D 0xb7f
+>>>>
+>>>> and now that process can't be killed - I had to stop the UML guest=
+=2E
+>>>
+>>> Hmm, you've remapped the stub page and therefore the process broke.
+>>> I think it would make sense to kill the process in stead of writing
+>>> the "wait_stub_done ..." message.
+>>> Changing the stub page is as destructive than overwriting the stack=
+=2E
+>>
+>> Unfortunately no trinity process can be killed as soon as that happe=
+n.
+>> Neither pgrep, pkill, nor "ps -efla" do return any result.
+>> Killing any of those processes by its pid won't work too.
+>
+> Hmm, not good.
+> I need to create me a reproducer for that.
+> I'm unsure what exactly is going on.
 
-This patch fixes these build errors on 3.4 and older.
+Good news, I have a reproducer for the problem and found out what the
+root cause is.
+UML is unable to terminate the task with the broken skas page.
+A fix is on the way...
 
-  CC	ioctls/kvm.o
-ioctls/kvm.c:21:2: error: =E2=80=98KVM_S390_UCAS_MAP=E2=80=99 undeclare=
-d here (not in a function)
-ioctls/kvm.c:22:2: error: =E2=80=98KVM_S390_UCAS_UNMAP=E2=80=99 undecla=
-red here (not in a function)
-ioctls/kvm.c:23:2: error: =E2=80=98KVM_S390_VCPU_FAULT=E2=80=99 undecla=
-red here (not in a function)
-ioctls/kvm.c:55:2: error: =E2=80=98KVM_ASSIGN_SET_INTX_MASK=E2=80=99 un=
-declared here (not in a function)
-ioctls/kvm.c:56:2: error: =E2=80=98KVM_SIGNAL_MSI=E2=80=99 undeclared h=
-ere (not in a function)
-ioctls/kvm.c:114:2: error: =E2=80=98KVM_DIRTY_TLB=E2=80=99 undeclared h=
-ere (not in a function)
-ioctls/kvm.c:115:2: error: =E2=80=98KVM_GET_ONE_REG=E2=80=99 undeclared=
- here (not in a function)
-ioctls/kvm.c:116:2: error: =E2=80=98KVM_SET_ONE_REG=E2=80=99 undeclared=
- here (not in a function)
-ioctls/kvm.c:117:2: error: =E2=80=98KVM_KVMCLOCK_CTRL=E2=80=99 undeclar=
-ed here (not in a function)
-make: *** [ioctls/kvm.o] Error 1
-
-Signed-off-by: Vinson Lee <vlee@twitter.com>
----
- include/compat.h |   56 ++++++++++++++++++++++++++++++++++++++++++++++=
-++++++++
- 1 file changed, 56 insertions(+)
-
-diff --git a/include/compat.h b/include/compat.h
-index 10457ad..b98f714 100644
---- a/include/compat.h
-+++ b/include/compat.h
-@@ -513,4 +513,60 @@ struct kvm_reg_list {
- #define KVM_GET_REG_LIST          _IOWR(KVMIO, 0xb0, struct kvm_reg_li=
-st)
- #endif
-=20
-+#ifndef KVM_S390_UCAS_MAP
-+struct kvm_s390_ucas_mapping {
-+        __u64 user_addr;
-+        __u64 vcpu_addr;
-+        __u64 length;
-+};
-+#define KVM_S390_UCAS_MAP         _IOW(KVMIO, 0x50, struct kvm_s390_uc=
-as_mapping)
-+#endif
-+
-+#ifndef KVM_S390_UCAS_UNMAP
-+#define KVM_S390_UCAS_UNMAP       _IOW(KVMIO, 0x51, struct kvm_s390_uc=
-as_mapping)
-+#endif
-+
-+#ifndef KVM_S390_VCPU_FAULT
-+#define KVM_S390_VCPU_FAULT       _IOW(KVMIO, 0x52, unsigned long)
-+#endif
-+
-+#ifndef KVM_ASSIGN_SET_INTX_MASK
-+#define KVM_ASSIGN_SET_INTX_MASK  _IOW(KVMIO,  0xa4, struct kvm_assign=
-ed_pci_dev)
-+#endif
-+
-+#ifndef KVM_SIGNAL_MSI
-+struct kvm_msi {
-+        __u32 address_lo;
-+        __u32 address_hi;
-+        __u32 data;
-+        __u32 flags;
-+        __u8  pad[16];
-+};
-+#define KVM_SIGNAL_MSI            _IOW(KVMIO,  0xa5, struct kvm_msi)
-+#endif
-+
-+#ifndef KVM_DIRTY_TLB
-+struct kvm_dirty_tlb {
-+        __u64 bitmap;
-+        __u32 num_dirty;
-+};
-+#define KVM_DIRTY_TLB             _IOW(KVMIO,  0xaa, struct kvm_dirty_=
-tlb)
-+#endif
-+
-+#ifndef KVM_GET_ONE_REG
-+struct kvm_one_reg {
-+        __u64 id;
-+        __u64 addr;
-+};
-+#define KVM_GET_ONE_REG           _IOW(KVMIO,  0xab, struct kvm_one_re=
-g)
-+#endif
-+
-+#ifndef KVM_SET_ONE_REG
-+#define KVM_SET_ONE_REG           _IOW(KVMIO,  0xac, struct kvm_one_re=
-g)
-+#endif
-+
-+#ifndef KVM_KVMCLOCK_CTRL
-+#define KVM_KVMCLOCK_CTRL         _IO(KVMIO,   0xad)
-+#endif
-+
- #endif	/* _TRINITY_COMPAT_H */
---=20
-1.7.9.5
+--
+Thanks,
+//richard
