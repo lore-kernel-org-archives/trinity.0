@@ -1,8 +1,12 @@
 From: Andy Lutomirski <luto@amacapital.net>
-Subject: [PATCH 0/5] x86: oops on uaccess faults outside of user addresses
-Date: Wed, 22 May 2013 14:07:39 -0700
-Message-ID: <cover.1369177867.git.luto@amacapital.net>
+Subject: [PATCH 1/5] x86: Split "utter crap" pnpbios fixup out of fixup_exception
+Date: Wed, 22 May 2013 14:07:40 -0700
+Message-ID: <c35fe5a1a29b05384b16f68dca0bdc0ee966070b.1369177867.git.luto@amacapital.net>
+References: <cover.1369177867.git.luto@amacapital.net>
 Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <cover.1369177867.git.luto@amacapital.net>
+In-Reply-To: <cover.1369177867.git.luto@amacapital.net>
+References: <cover.1369177867.git.luto@amacapital.net>
 Sender: linux-kernel-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -11,65 +15,107 @@ Content-Transfer-Encoding: 7bit
 To: linux-kernel@vger.kernel.org
 Cc: x86@kernel.org, trinity@vger.kernel.org, Andy Lutomirski <luto@amacapital.net>
 
-Currently, __get_user can't trigger an OOPS -- any exception will be
-caught and return -EFAULT.  This means that, if an access_ok check is
-missing somewhere, then an attacker can freely use it to probe for valid
-kernel mappings.
+It has odd semantics, and it's only applicable (AFAICS) to #GP and #PF.
 
-This series annotates all of the exception fixups as "catch anything" or
-"catch valid uaccess faults", and skips the fixup (and hence oopses) if
-an instruction of the latter type faults for any reason other than a
-page fault to a user address.
+Signed-off-by: Andy Lutomirski <luto@amacapital.net>
+---
+ arch/x86/include/asm/traps.h |  6 ++++++
+ arch/x86/kernel/traps.c      |  2 ++
+ arch/x86/mm/extable.c        | 14 --------------
+ arch/x86/mm/fault.c          | 19 +++++++++++++++++++
+ 4 files changed, 27 insertions(+), 14 deletions(-)
 
-I know of only one bug of this type; it's fixed in patch 5.
-
-Perhaps surprisingly, this seems to survive Trinity fairly well.
-
-Andy Lutomirski (5):
-  x86: Split "utter crap" pnpbios fixup out of fixup_exception
-  x86: Clean up extable entry format (and free up a bit)
-  x86: Annotate _ASM_EXTABLE users to distinguish uaccess from
-    everything else
-  x86: Don't fixup uaccess faults to kernel or non-canonical addresses
-  net: Block MSG_CMSG_COMPAT in send(m)msg and recv(m)msg
-
- arch/x86/ia32/ia32entry.S             |   4 +-
- arch/x86/include/asm/asm.h            |  75 ++++++++----
- arch/x86/include/asm/fpu-internal.h   |   6 +-
- arch/x86/include/asm/futex.h          |   8 +-
- arch/x86/include/asm/kvm_host.h       |   2 +-
- arch/x86/include/asm/msr.h            |   4 +-
- arch/x86/include/asm/segment.h        |   2 +-
- arch/x86/include/asm/special_insns.h  |   2 +-
- arch/x86/include/asm/traps.h          |   6 +
- arch/x86/include/asm/uaccess.h        |  10 +-
- arch/x86/include/asm/word-at-a-time.h |   2 +-
- arch/x86/include/asm/xsave.h          |   6 +-
- arch/x86/kernel/entry_32.S            |  26 ++---
- arch/x86/kernel/entry_64.S            |   6 +-
- arch/x86/kernel/ftrace.c              |   4 +-
- arch/x86/kernel/kprobes/core.c        |   4 +-
- arch/x86/kernel/test_nx.c             |   2 +-
- arch/x86/kernel/test_rodata.c         |   2 +-
- arch/x86/kernel/traps.c               |  12 +-
- arch/x86/kvm/emulate.c                |   4 +-
- arch/x86/lib/checksum_32.S            |   4 +-
- arch/x86/lib/copy_user_64.S           |  50 ++++----
- arch/x86/lib/copy_user_nocache_64.S   |  44 +++----
- arch/x86/lib/csum-copy_64.S           |   6 +-
- arch/x86/lib/getuser.S                |  12 +-
- arch/x86/lib/mmx_32.c                 |  12 +-
- arch/x86/lib/msr-reg.S                |   4 +-
- arch/x86/lib/putuser.S                |  10 +-
- arch/x86/lib/usercopy_32.c            | 212 +++++++++++++++++-----------------
- arch/x86/lib/usercopy_64.c            |   4 +-
- arch/x86/mm/extable.c                 |  41 +++----
- arch/x86/mm/fault.c                   |  36 ++++--
- arch/x86/mm/init_32.c                 |   2 +-
- arch/x86/um/checksum_32.S             |   4 +-
- arch/x86/xen/xen-asm_32.S             |   2 +-
- net/socket.c                          |  33 +++++-
- 36 files changed, 375 insertions(+), 288 deletions(-)
-
+diff --git a/arch/x86/include/asm/traps.h b/arch/x86/include/asm/traps.h
+index 88eae2a..55521de 100644
+--- a/arch/x86/include/asm/traps.h
++++ b/arch/x86/include/asm/traps.h
+@@ -89,6 +89,12 @@ asmlinkage void smp_thermal_interrupt(void);
+ asmlinkage void mce_threshold_interrupt(void);
+ #endif
+ 
++#ifdef CONFIG_PNPBIOS
++extern void fixup_pnpbios_exception(struct pt_regs *regs);
++#else
++static inline void fixup_pnpbios_exception(struct pt_regs *regs) {}
++#endif
++
+ /* Interrupts/Exceptions */
+ enum {
+ 	X86_TRAP_DE = 0,	/*  0, Divide-by-zero */
+diff --git a/arch/x86/kernel/traps.c b/arch/x86/kernel/traps.c
+index 68bda7a..8647670 100644
+--- a/arch/x86/kernel/traps.c
++++ b/arch/x86/kernel/traps.c
+@@ -275,6 +275,8 @@ do_general_protection(struct pt_regs *regs, long error_code)
+ 
+ 	tsk = current;
+ 	if (!user_mode(regs)) {
++		fixup_pnpbios_exception(regs);  /* Might not return */
++
+ 		if (fixup_exception(regs))
+ 			goto exit;
+ 
+diff --git a/arch/x86/mm/extable.c b/arch/x86/mm/extable.c
+index 903ec1e..82e4ae8 100644
+--- a/arch/x86/mm/extable.c
++++ b/arch/x86/mm/extable.c
+@@ -19,20 +19,6 @@ int fixup_exception(struct pt_regs *regs)
+ 	const struct exception_table_entry *fixup;
+ 	unsigned long new_ip;
+ 
+-#ifdef CONFIG_PNPBIOS
+-	if (unlikely(SEGMENT_IS_PNP_CODE(regs->cs))) {
+-		extern u32 pnp_bios_fault_eip, pnp_bios_fault_esp;
+-		extern u32 pnp_bios_is_utter_crap;
+-		pnp_bios_is_utter_crap = 1;
+-		printk(KERN_CRIT "PNPBIOS fault.. attempting recovery.\n");
+-		__asm__ volatile(
+-			"movl %0, %%esp\n\t"
+-			"jmp *%1\n\t"
+-			: : "g" (pnp_bios_fault_esp), "g" (pnp_bios_fault_eip));
+-		panic("do_trap: can't hit this");
+-	}
+-#endif
+-
+ 	fixup = search_exception_tables(regs->ip);
+ 	if (fixup) {
+ 		new_ip = ex_fixup_addr(fixup);
+diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
+index 0e88336..58afb50 100644
+--- a/arch/x86/mm/fault.c
++++ b/arch/x86/mm/fault.c
+@@ -569,6 +569,23 @@ static int is_f00f_bug(struct pt_regs *regs, unsigned long address)
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_PNPBIOS
++void fixup_pnpbios_exception(struct pt_regs *regs)
++{
++	if (unlikely(SEGMENT_IS_PNP_CODE(regs->cs))) {
++		extern u32 pnp_bios_fault_eip, pnp_bios_fault_esp;
++		extern u32 pnp_bios_is_utter_crap;
++		pnp_bios_is_utter_crap = 1;
++		printk(KERN_CRIT "PNPBIOS fault.. attempting recovery.\n");
++		__asm__ volatile(
++			"movl %0, %%esp\n\t"
++			"jmp *%1\n\t"
++			: : "g" (pnp_bios_fault_esp), "g" (pnp_bios_fault_eip));
++		panic("do_trap: can't hit this");
++	}
++}
++#endif
++
+ static const char nx_warning[] = KERN_CRIT
+ "kernel tried to execute NX-protected page - exploit attempt? (uid: %d)\n";
+ 
+@@ -636,6 +653,8 @@ no_context(struct pt_regs *regs, unsigned long error_code,
+ 	unsigned long flags;
+ 	int sig;
+ 
++	fixup_pnpbios_exception(regs);  /* Might not return */
++
+ 	/* Are we prepared to handle this kernel fault? */
+ 	if (fixup_exception(regs)) {
+ 		if (current_thread_info()->sig_on_uaccess_error && signal) {
 -- 
 1.8.1.4
