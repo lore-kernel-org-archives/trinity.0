@@ -1,36 +1,35 @@
-From: Vince Weaver <vincent.weaver@maine.edu>
+From: Christoph Lameter <cl@linux.com>
 Subject: Re: OOPS in perf_mmap_close()
-Date: Thu, 23 May 2013 10:10:36 -0400 (EDT)
-Message-ID: <alpine.DEB.2.10.1305231006280.17701@vincent-weaver-1.um.maine.edu>
+Date: Thu, 23 May 2013 14:09:10 +0000
+Message-ID: <0000013ed1b8d0cc-ad2bb878-51bd-430c-8159-629b23ed1b44-000000@email.amazonses.com>
 References: <alpine.DEB.2.10.1305221523420.9944@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1305221953370.11450@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu> <20130523044803.GA25399@ZenIV.linux.org.uk>
- <20130523125218.GB23650@twins.programming.kicks-ass.net>
+ <20130523104154.GA23650@twins.programming.kicks-ass.net>
 Mime-Version: 1.0
-Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20130523125218.GB23650@twins.programming.kicks-ass.net>
-Sender: trinity-owner@vger.kernel.org
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <20130523104154.GA23650@twins.programming.kicks-ass.net>
+Sender: linux-kernel-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: Peter Zijlstra <peterz@infradead.org>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, Vince Weaver <vincent.weaver@maine.edu>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
+Cc: Al Viro <viro@ZenIV.linux.org.uk>, Vince Weaver <vincent.weaver@maine.edu>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
+On Thu, 23 May 2013, Peter Zijlstra wrote:
 
-I can confirm your patch avoids the oops on my machine.
+> Right it doesn't. I think the easiest solution for now is to not copy the VMA
+> on fork().
 
-It does lead to interesting behavior if I run the sample program
-multiple times (with added printfs):
+Right. Pinned pages are not inherited. If a page is unpinned then that is
+going to happen for all address spaces that reference the page.
 
-vince@core2:~$ ./perf_mmap_close_bug 
-mmap1=0x7f06a6e90000
-mmap2=0x7f06a6e7f000
-vince@core2:~$ ./perf_mmap_close_bug 
-mmap1=0x7f878a138000
-mmap2=0x7f878a127000
-vince@core2:~$ ./perf_mmap_close_bug 
-mmap1=0xffffffffffffffff
-Error opening fd2 Invalid argument
+> But I totally missed patch bc3e53f682d that introduced pinned_vm, AFAICT that
+> also wrecked some accounting. We should still account both against
+> RLIMIT_MEMLOCK.
 
-and then it never successfully completes again.  Is this unexpected 
-behavior?  Or just a normal mmap/perf interaction that I don't understand?
+The point of the patch was to unwreck accounting. Before the patch mlocked
+pages were counted twice which resulted in stramge VM scenarios where more
+pages were mlocked than memory available. Note that a pinned page may also
+be mlocked.
 
-Vince
+Simply adding the two will reintroduce the problems that were fixed by the
+patch.
