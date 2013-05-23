@@ -1,59 +1,46 @@
-From: Peter Zijlstra <peterz@infradead.org>
+From: Christoph Lameter <cl@linux.com>
 Subject: Re: OOPS in perf_mmap_close()
-Date: Thu, 23 May 2013 18:39:01 +0200
-Message-ID: <20130523163901.GG23650@twins.programming.kicks-ass.net>
-References: <alpine.DEB.2.10.1305221523420.9944@vincent-weaver-1.um.maine.edu>
- <alpine.DEB.2.10.1305221953370.11450@vincent-weaver-1.um.maine.edu>
- <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu>
- <20130523044803.GA25399@ZenIV.linux.org.uk>
- <20130523104154.GA23650@twins.programming.kicks-ass.net>
- <0000013ed1b8d0cc-ad2bb878-51bd-430c-8159-629b23ed1b44-000000@email.amazonses.com>
- <20130523152458.GD23650@twins.programming.kicks-ass.net>
- <0000013ed2297ba8-467d474a-7068-45b3-9fa3-82641e6aa363-000000@email.amazonses.com>
+Date: Thu, 23 May 2013 17:59:10 +0000
+Message-ID: <0000013ed28b638a-066d7dc7-b590-49f8-9423-badb9537b8b6-000000@email.amazonses.com>
+References: <alpine.DEB.2.10.1305221523420.9944@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1305221953370.11450@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu> <20130523044803.GA25399@ZenIV.linux.org.uk>
+ <20130523104154.GA23650@twins.programming.kicks-ass.net> <0000013ed1b8d0cc-ad2bb878-51bd-430c-8159-629b23ed1b44-000000@email.amazonses.com> <20130523152458.GD23650@twins.programming.kicks-ass.net> <0000013ed2297ba8-467d474a-7068-45b3-9fa3-82641e6aa363-000000@email.amazonses.com>
+ <20130523163901.GG23650@twins.programming.kicks-ass.net>
 Mime-Version: 1.0
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <0000013ed2297ba8-467d474a-7068-45b3-9fa3-82641e6aa363-000000@email.amazonses.com>
-Sender: linux-kernel-owner@vger.kernel.org
+Return-path: <trinity-owner@vger.kernel.org>
+In-Reply-To: <20130523163901.GG23650@twins.programming.kicks-ass.net>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Christoph Lameter <cl@linux.com>
+To: Peter Zijlstra <peterz@infradead.org>
 Cc: Al Viro <viro@ZenIV.linux.org.uk>, Vince Weaver <vincent.weaver@maine.edu>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
-On Thu, May 23, 2013 at 04:12:14PM +0000, Christoph Lameter wrote:
-> On Thu, 23 May 2013, Peter Zijlstra wrote:
-> 
-> > The patch completely fails to explain how RLIMIT_LOCKED is supposed to
-> > deal with pinned vs locked. Perf used to account its pages against
-> > RLIMIT_LOCKED, with the patch it compares pinned against RLIMIT_LOCKED
-> > but completely discards any possible locked pages.
-> 
-> Pinned pages are different from mlock. Mlock semantics means that the
-> pages are kept in memory but the pages are movable (subject to page
-> migration f.e.).
-> 
-> Pinned pages have to stay where they are since the physical addresses may
-> be used for device I/O or other stuff.
-> 
-> Both pinned and mlocked pages cannot be evicted from memory. If one wants
-> to account for unevictable pages then both are contributing. However,
-> since a pinned page may be mlocked simply adding up the counter may cause
-> problems. The sum could be used as a worst case estimate though.
-> 
-> We could mlock all pinned pages but then the issue arises on how to track
-> that properly in order to unpin when the I/O action is done since the app
-> may have also mlocked pages.
+On Thu, 23 May 2013, Peter Zijlstra wrote:
 
-I know all that, and its completely irrelevant to the discussion.
+> I know all that, and its completely irrelevant to the discussion.
 
-You cannot simply take away pinned pages from the RLIMIT_MEMLOCK
-accounting without mention nor replacement limits.
+What you said in the rest of the email seems to indicate that you
+still do not know that and I am repeating what I have said before here.
 
-You now have double the amount of memory you can loose, once to actual
-mlock() and once through whatever generates pinned -- if it bothers with
-checking limits at all.
+> You now have double the amount of memory you can loose, once to actual
+> mlock() and once through whatever generates pinned -- if it bothers with
+> checking limits at all.
 
-Where we had the guarantee that x < y; you did x := x1 + x2; which then
-should result in: x1 + x2 < y, instead you did: x1 < y && x2 < y, not
-the same and completely wrong.
+It was already doubled which was the reason for the patch. The patch
+avoided the doubling that we saw and it allowed to distinguish between
+mlocked and pinned pages.
+
+> Where we had the guarantee that x < y; you did x := x1 + x2; which then
+> should result in: x1 + x2 < y, instead you did: x1 < y && x2 < y, not
+> the same and completely wrong.
+
+We never had that guarantee. We were accounting many pages twice in
+the same counter. Once for mlocking and once for pinning. Thus the problem
+that the patch addresses. Read the changelog?
+
+There are other sources that cause pages to be not evictable (like f.e.
+dirtying). Mlock accounting is not accurate in any case. The mlocked page
+limit is per thread which is another issue and so is the vm_pinned
+counter. The pages actually may be shared between many processes and the
+ownership of those pages is not clear. The accounting for mlock and
+pinning also is a bit problematic as a result.
