@@ -1,90 +1,66 @@
-From: Peter Zijlstra <peterz@infradead.org>
+From: Vince Weaver <vincent.weaver@maine.edu>
 Subject: Re: OOPS in perf_mmap_close()
-Date: Thu, 23 May 2013 21:24:26 +0200
-Message-ID: <20130523192426.GH23650@twins.programming.kicks-ass.net>
-References: <alpine.DEB.2.10.1305221523420.9944@vincent-weaver-1.um.maine.edu>
- <alpine.DEB.2.10.1305221953370.11450@vincent-weaver-1.um.maine.edu>
- <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu>
- <20130523044803.GA25399@ZenIV.linux.org.uk>
- <20130523104154.GA23650@twins.programming.kicks-ass.net>
- <0000013ed1b8d0cc-ad2bb878-51bd-430c-8159-629b23ed1b44-000000@email.amazonses.com>
- <20130523152458.GD23650@twins.programming.kicks-ass.net>
- <0000013ed2297ba8-467d474a-7068-45b3-9fa3-82641e6aa363-000000@email.amazonses.com>
- <20130523163901.GG23650@twins.programming.kicks-ass.net>
- <0000013ed28b638a-066d7dc7-b590-49f8-9423-badb9537b8b6-000000@email.amazonses.com>
+Date: Thu, 23 May 2013 19:40:12 -0400 (EDT)
+Message-ID: <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu>
+References: <alpine.DEB.2.10.1305221523420.9944@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1305221953370.11450@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu> <20130523044803.GA25399@ZenIV.linux.org.uk>
+ <20130523125218.GB23650@twins.programming.kicks-ass.net> <alpine.DEB.2.10.1305231006280.17701@vincent-weaver-1.um.maine.edu> <20130523152611.GE23650@twins.programming.kicks-ass.net>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <0000013ed28b638a-066d7dc7-b590-49f8-9423-badb9537b8b6-000000@email.amazonses.com>
+In-Reply-To: <20130523152611.GE23650@twins.programming.kicks-ass.net>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Christoph Lameter <cl@linux.com>
-Cc: Al Viro <viro@ZenIV.linux.org.uk>, Vince Weaver <vincent.weaver@maine.edu>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Vince Weaver <vincent.weaver@maine.edu>, Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
-On Thu, May 23, 2013 at 05:59:10PM +0000, Christoph Lameter wrote:
-> On Thu, 23 May 2013, Peter Zijlstra wrote:
+On Thu, 23 May 2013, Peter Zijlstra wrote:
+
+> On Thu, May 23, 2013 at 10:10:36AM -0400, Vince Weaver wrote:
+> > 
+> > I can confirm your patch avoids the oops on my machine.
+> > 
+> > It does lead to interesting behavior if I run the sample program
+> > multiple times (with added printfs):
+> > 
+> > vince@core2:~$ ./perf_mmap_close_bug 
+> > mmap1=0x7f06a6e90000
+> > mmap2=0x7f06a6e7f000
+> > vince@core2:~$ ./perf_mmap_close_bug 
+> > mmap1=0x7f878a138000
+> > mmap2=0x7f878a127000
+> > vince@core2:~$ ./perf_mmap_close_bug 
+> > mmap1=0xffffffffffffffff
+> > Error opening fd2 Invalid argument
+> > 
+> > and then it never successfully completes again.  Is this unexpected 
+> > behavior?  
 > 
-> > I know all that, and its completely irrelevant to the discussion.
-> 
-> What you said in the rest of the email seems to indicate that you
-> still do not know that and I am repeating what I have said before here.
+> Sounds weird to me, I'll see if I can reproduce/understand.
 
-I'm very much aware of the difference between locked and pinned pages;
-and I don't object to accounting them separately per se. I do however
-object to making a joke out of resource limits and silently changing
-behaviour.
+I tracked this down in case you haven't already.
 
-Your changelog (that you seem to be so proud of that you want me to read
-it yet again) completely fails to mention what happens to resource
-limits.
+The problem is that in the kernel patched 
+with your patch locked_vm is getting decremented twice in the sample code 
+and going negative.  I'm not sure why this isn't a problem until the 
+third time through.  Here are my crude debug printk 
+results from kernel/events/core.c
 
-> > You now have double the amount of memory you can loose, once to actual
-> > mlock() and once through whatever generates pinned -- if it bothers with
-> > checking limits at all.
-> 
-> It was already doubled which was the reason for the patch. The patch
-> avoided the doubling that we saw and it allowed to distinguish between
-> mlocked and pinned pages.
+[   28.684862] user_extra: 17 user_lock_limit: 129
+[   28.698458] user_locked: 17 locked_vm: 0 user_extra 17
+[   28.713853] locked: 0 locked_vm: 0 pinned_vm: 0 extra: 0 lock_limit: 16
+[   28.733728] perf_mmap: locked_vm: 17
+[   28.744509] mmap_close: locked_vm=0
+[   28.754939] mmap_close: locked_vm=-17
+[   29.472741] user_extra: 17 user_lock_limit: 129
+[   29.486332] user_locked: 0 locked_vm: -17 user_extra 17
+[   29.501996] locked: 0 locked_vm: 0 pinned_vm: 0 extra: 0 lock_limit: 16
+[   29.521874] perf_mmap: locked_vm: 0
+[   29.532400] mmap_close: locked_vm=-17
+[   29.543352] mmap_close: locked_vm=-34
+[   30.028236] user_extra: 17 user_lock_limit: 129
+[   30.041835] user_locked: -17 locked_vm: -34 user_extra 17
+[   30.058018] extra: -275 user_locked: -17 user_lock_limit: 258
+[   30.075232] locked: -275 locked_vm: 0 pinned_vm: 0 extra: -275 lock_limit: 16
 
-So it was double and now its still double, so your patch fixed what
-exactly?
-
-> > Where we had the guarantee that x < y; you did x := x1 + x2; which then
-> > should result in: x1 + x2 < y, instead you did: x1 < y && x2 < y, not
-> > the same and completely wrong.
-> 
-> We never had that guarantee.
-
-Rlimits says we have; if it was buggy we should've fixed it, not made it
-worse. What's the point of pretending we have RLIMIT_MEMLOCK if we then
-feel free to ignore it?
-
-> We were accounting many pages twice in
-> the same counter. Once for mlocking and once for pinning. Thus the problem
-> that the patch addresses. Read the changelog?
-
-Splitting the counter doesn't magically fix it. Who was accounting
-double and why not fix those? 
-
-Splitting things doesn't fix anything; the sum is still counting double
-and you've made resource limits more complex.
-
-We should make mlock skip over the special pinned vmas instead of
-pretending pinned pages shouldn't be part of resource limits.
-
-> There are other sources that cause pages to be not evictable (like f.e.
-> dirtying). Mlock accounting is not accurate in any case. The mlocked page
-> limit is per thread
-
-Its per process; see how locked_vm and pinned_vm are part of mm_struct
-and modified under mmap_sem.
-
-> which is another issue and so is the vm_pinned
-> counter. The pages actually may be shared between many processes and the
-> ownership of those pages is not clear. The accounting for mlock and
-> pinning also is a bit problematic as a result.
-
-I maintain that you cannot simply split a resource counter without
-properly explaining what happens to resource limits.
+Vince
