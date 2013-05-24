@@ -1,35 +1,108 @@
-From: Nico Golde <nico@ngolde.de>
-Subject: Re: minor trinity patch
-Date: Fri, 24 May 2013 01:47:12 +0200
-Message-ID: <20130523234712.GS14739@ngolde.de>
-References: <20121220165100.GA8748@ngolde.de> <20121220171726.GA7543@redhat.com> <20121220172246.GA16285@ngolde.de> <20121220172741.GA17760@redhat.com> <20121220200255.GB16285@ngolde.de> <20121220201903.GA14944@redhat.com> <20130522141458.GA18931@ngolde.de> <CA+ydwtrggwedMpTeOfbSDAYDT7H=zZU7qAzSs6SzDW1Yx3Gi4g@mail.gmail.com>
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] Fix build on kernels without perf_event_attr exclude_callchain_kernel.
+Date: Thu, 23 May 2013 21:08:47 -0700
+Message-ID: <1369368527-21362-1-git-send-email-vlee@freedesktop.org>
 Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <CA+ydwtrggwedMpTeOfbSDAYDT7H=zZU7qAzSs6SzDW1Yx3Gi4g@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
 To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
-Hi,
-* Tommi Rantala <tt.rantala@gmail.com> [2013-05-23 20:58]:
-> 2013/5/22 Nico Golde <nico@ngolde.de>:
-> > I changed the code the following way:
-> > @@ -21,7 +22,8 @@ static size_t bldevs, chrdevs, miscdevs;
-> >  static void parse_proc_devices(void)
-> >  {
-> >         FILE *fp;
-> > -       char *name, *line = NULL;
-> > +       char *line = NULL;
-> > +       char name[32];
-> 
-> It would be IMO preferable to not hardcode the max length.
+=46rom: Vinson Lee <vlee@twitter.com>
 
-I agree, this is actually left over from quickly changing this.
-Are you aware of a proper maximum defined in the kernel headers or do we want to 
-allocate this completely dynamically?
+This patch fixes these build errors on 3.6 and older.
 
-Cheers
-Nico
+  CC	syscalls/perf_event_open.o
+syscalls/perf_event_open.c: In function =E2=80=98create_mostly_valid_co=
+unting_event=E2=80=99:
+syscalls/perf_event_open.c:382:6: error: =E2=80=98struct perf_event_att=
+r=E2=80=99 has no member named =E2=80=98exclude_callchain_kernel=E2=80=99
+syscalls/perf_event_open.c:383:6: error: =E2=80=98struct perf_event_att=
+r=E2=80=99 has no member named =E2=80=98exclude_callchain_user=E2=80=99
+syscalls/perf_event_open.c: In function =E2=80=98create_mostly_valid_sa=
+mpling_event=E2=80=99:
+syscalls/perf_event_open.c:431:6: error: =E2=80=98struct perf_event_att=
+r=E2=80=99 has no member named =E2=80=98exclude_callchain_kernel=E2=80=99
+syscalls/perf_event_open.c:432:6: error: =E2=80=98struct perf_event_att=
+r=E2=80=99 has no member named =E2=80=98exclude_callchain_user=E2=80=99
+make: *** [syscalls/perf_event_open.o] Error 1
+
+Signed-off-by: Vinson Lee <vlee@twitter.com>
+---
+ configure.sh               |   26 ++++++++++++++++++++++++++
+ syscalls/perf_event_open.c |    4 ++++
+ 2 files changed, 30 insertions(+)
+
+diff --git a/configure.sh b/configure.sh
+index e676418..4be1e59 100755
+--- a/configure.sh
++++ b/configure.sh
+@@ -182,6 +182,32 @@ else
+ fi
+=20
+ ######################################################################=
+#######################
++# Does perf_event_attr have exclude_callchain_kernel?
++
++echo -n "[*] Checking if perf_event_attr can use exclude_callchain_ker=
+nel.. "
++rm -f "$TMP" || exit 1
++
++cat >"$TMP.c" << EOF
++#include <stdio.h>
++#include <linux/perf_event.h>
++
++int main() {
++	struct perf_event_attr attr;
++	printf("%d\n", attr.exclude_callchain_kernel);
++}
++EOF
++
++${CC} "$TMP.c" -o "$TMP" &>"$TMP.log"
++
++if [ ! -x "$TMP" ]; then
++	echo $RED "[NO]" $COL_RESET
++	MISSING_DEFS=3D1
++else
++	echo $GREEN "[YES]" $COL_RESET
++	echo "#define USE_PERF_EVENT_EXCLUDE_CALLCHAINS" >> config.h
++fi
++
++######################################################################=
+#######################
+=20
+ check_header linux/caif/caif_socket.h USE_CAIF
+ check_header linux/if_alg.h USE_IF_ALG
+diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
+index 627ba48..bffd33d 100644
+--- a/syscalls/perf_event_open.c
++++ b/syscalls/perf_event_open.c
+@@ -379,8 +379,10 @@ static void create_mostly_valid_counting_event(str=
+uct perf_event_attr *attr)
+ 	attr->sample_id_all =3D rand_bool();
+ 	attr->exclude_host =3D rand_bool();
+ 	attr->exclude_guest =3D rand_bool();
++#ifdef USE_PERF_EVENT_EXCLUDE_CALLCHAINS
+ 	attr->exclude_callchain_kernel =3D rand_bool();
+ 	attr->exclude_callchain_user =3D rand_bool();
++#endif
+=20
+ 	attr->wakeup_events =3D rand();	// also wakeup_watermark
+=20
+@@ -428,8 +430,10 @@ static void create_mostly_valid_sampling_event(str=
+uct perf_event_attr *attr)
+ 	attr->sample_id_all =3D rand_bool();
+ 	attr->exclude_host =3D rand_bool();
+ 	attr->exclude_guest =3D rand_bool();
++#ifdef USE_PERF_EVENT_EXCLUDE_CALLCHAINS
+ 	attr->exclude_callchain_kernel =3D rand_bool();
+ 	attr->exclude_callchain_user =3D rand_bool();
++#endif
+=20
+ 	attr->wakeup_events =3D rand();	// also wakeup_watermark
+=20
+--=20
+1.7.9.5
