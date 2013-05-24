@@ -1,108 +1,61 @@
-From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] Fix build on kernels without perf_event_attr exclude_callchain_kernel.
-Date: Thu, 23 May 2013 21:08:47 -0700
-Message-ID: <1369368527-21362-1-git-send-email-vlee@freedesktop.org>
+From: Peter Zijlstra <peterz@infradead.org>
+Subject: Re: OOPS in perf_mmap_close()
+Date: Fri, 24 May 2013 11:21:00 +0200
+Message-ID: <20130524092100.GI23650@twins.programming.kicks-ass.net>
+References: <alpine.DEB.2.10.1305221523420.9944@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1305221953370.11450@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu>
+ <20130523044803.GA25399@ZenIV.linux.org.uk>
+ <20130523125218.GB23650@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305231006280.17701@vincent-weaver-1.um.maine.edu>
+ <20130523152611.GE23650@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
-=46rom: Vinson Lee <vlee@twitter.com>
+On Thu, May 23, 2013 at 07:40:12PM -0400, Vince Weaver wrote:
+> On Thu, 23 May 2013, Peter Zijlstra wrote:
+> 
+> > On Thu, May 23, 2013 at 10:10:36AM -0400, Vince Weaver wrote:
+> > > 
+> > > I can confirm your patch avoids the oops on my machine.
+> > > 
+> > > It does lead to interesting behavior if I run the sample program
+> > > multiple times (with added printfs):
+> > > 
+> > > vince@core2:~$ ./perf_mmap_close_bug 
+> > > mmap1=0x7f06a6e90000
+> > > mmap2=0x7f06a6e7f000
+> > > vince@core2:~$ ./perf_mmap_close_bug 
+> > > mmap1=0x7f878a138000
+> > > mmap2=0x7f878a127000
+> > > vince@core2:~$ ./perf_mmap_close_bug 
+> > > mmap1=0xffffffffffffffff
+> > > Error opening fd2 Invalid argument
+> > > 
+> > > and then it never successfully completes again.  Is this unexpected 
+> > > behavior?  
+> > 
+> > Sounds weird to me, I'll see if I can reproduce/understand.
+> 
+> I tracked this down in case you haven't already.
+> 
+> The problem is that in the kernel patched 
+> with your patch locked_vm is getting decremented twice in the sample code 
+> and going negative.  I'm not sure why this isn't a problem until the 
+> third time through.  Here are my crude debug printk 
+> results from kernel/events/core.c
 
-This patch fixes these build errors on 3.6 and older.
+D'uh I think I see what's happening.. we haev split the mmap state
+between the ringbuffer and event objects and since we have two events
+and one ringbuffer we're hosed.
 
-  CC	syscalls/perf_event_open.o
-syscalls/perf_event_open.c: In function =E2=80=98create_mostly_valid_co=
-unting_event=E2=80=99:
-syscalls/perf_event_open.c:382:6: error: =E2=80=98struct perf_event_att=
-r=E2=80=99 has no member named =E2=80=98exclude_callchain_kernel=E2=80=99
-syscalls/perf_event_open.c:383:6: error: =E2=80=98struct perf_event_att=
-r=E2=80=99 has no member named =E2=80=98exclude_callchain_user=E2=80=99
-syscalls/perf_event_open.c: In function =E2=80=98create_mostly_valid_sa=
-mpling_event=E2=80=99:
-syscalls/perf_event_open.c:431:6: error: =E2=80=98struct perf_event_att=
-r=E2=80=99 has no member named =E2=80=98exclude_callchain_kernel=E2=80=99
-syscalls/perf_event_open.c:432:6: error: =E2=80=98struct perf_event_att=
-r=E2=80=99 has no member named =E2=80=98exclude_callchain_user=E2=80=99
-make: *** [syscalls/perf_event_open.o] Error 1
-
-Signed-off-by: Vinson Lee <vlee@twitter.com>
----
- configure.sh               |   26 ++++++++++++++++++++++++++
- syscalls/perf_event_open.c |    4 ++++
- 2 files changed, 30 insertions(+)
-
-diff --git a/configure.sh b/configure.sh
-index e676418..4be1e59 100755
---- a/configure.sh
-+++ b/configure.sh
-@@ -182,6 +182,32 @@ else
- fi
-=20
- ######################################################################=
-#######################
-+# Does perf_event_attr have exclude_callchain_kernel?
-+
-+echo -n "[*] Checking if perf_event_attr can use exclude_callchain_ker=
-nel.. "
-+rm -f "$TMP" || exit 1
-+
-+cat >"$TMP.c" << EOF
-+#include <stdio.h>
-+#include <linux/perf_event.h>
-+
-+int main() {
-+	struct perf_event_attr attr;
-+	printf("%d\n", attr.exclude_callchain_kernel);
-+}
-+EOF
-+
-+${CC} "$TMP.c" -o "$TMP" &>"$TMP.log"
-+
-+if [ ! -x "$TMP" ]; then
-+	echo $RED "[NO]" $COL_RESET
-+	MISSING_DEFS=3D1
-+else
-+	echo $GREEN "[YES]" $COL_RESET
-+	echo "#define USE_PERF_EVENT_EXCLUDE_CALLCHAINS" >> config.h
-+fi
-+
-+######################################################################=
-#######################
-=20
- check_header linux/caif/caif_socket.h USE_CAIF
- check_header linux/if_alg.h USE_IF_ALG
-diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
-index 627ba48..bffd33d 100644
---- a/syscalls/perf_event_open.c
-+++ b/syscalls/perf_event_open.c
-@@ -379,8 +379,10 @@ static void create_mostly_valid_counting_event(str=
-uct perf_event_attr *attr)
- 	attr->sample_id_all =3D rand_bool();
- 	attr->exclude_host =3D rand_bool();
- 	attr->exclude_guest =3D rand_bool();
-+#ifdef USE_PERF_EVENT_EXCLUDE_CALLCHAINS
- 	attr->exclude_callchain_kernel =3D rand_bool();
- 	attr->exclude_callchain_user =3D rand_bool();
-+#endif
-=20
- 	attr->wakeup_events =3D rand();	// also wakeup_watermark
-=20
-@@ -428,8 +430,10 @@ static void create_mostly_valid_sampling_event(str=
-uct perf_event_attr *attr)
- 	attr->sample_id_all =3D rand_bool();
- 	attr->exclude_host =3D rand_bool();
- 	attr->exclude_guest =3D rand_bool();
-+#ifdef USE_PERF_EVENT_EXCLUDE_CALLCHAINS
- 	attr->exclude_callchain_kernel =3D rand_bool();
- 	attr->exclude_callchain_user =3D rand_bool();
-+#endif
-=20
- 	attr->wakeup_events =3D rand();	// also wakeup_watermark
-=20
---=20
-1.7.9.5
+Let me try and straighten this out.
