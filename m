@@ -1,169 +1,190 @@
-From: Ingo Molnar <mingo@kernel.org>
-Subject: [PATCH/FIX] net: Block MSG_CMSG_COMPAT in send(m)msg and recv(m)msg
-Date: Tue, 28 May 2013 10:56:00 +0200
-Message-ID: <20130528085600.GD30172@gmail.com>
-References: <cover.1369177867.git.luto@amacapital.net>
- <aa015609319786835bcab445d507faa75c11f111.1369177867.git.luto@amacapital.net>
+From: Peter Zijlstra <peterz@infradead.org>
+Subject: Re: OOPS in perf_mmap_close()
+Date: Tue, 28 May 2013 10:55:48 +0200
+Message-ID: <20130528085548.GA12193@twins.programming.kicks-ass.net>
+References: <alpine.DEB.2.10.1305221523420.9944@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1305221953370.11450@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu>
+ <20130523044803.GA25399@ZenIV.linux.org.uk>
+ <20130523125218.GB23650@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305231006280.17701@vincent-weaver-1.um.maine.edu>
+ <20130523152611.GE23650@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
 Return-path: <linux-kernel-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=sender:date:from:to:cc:subject:message-id:references:mime-version
-         :content-type:content-disposition:in-reply-to:user-agent;
-        bh=qi9gGoyKXuWyFnjMH7FxaGnbeXWFK1qdAtqz6Bt1TzU=;
-        b=RClfQOFDGY8GN6kpakQEWI6I4sIoB+Kp+eCmD4ov5NpDZTdq7SE4RQgFIZdoHc1rj4
-         KUcG7oT2TiXWhxJZCrRK99BzXJR3Zim833iSFzjob5aK0k0eyT/OlWbFZt+a9kQg+2Z6
-         K/3a6eSgr1uKtDiAH9FJ6LtuOr4wOiw51PqMAmmawxLVBSAZMYlxhZKqOpLkTvASKkhP
-         5La9oW7FVmYT/ZTRZ6ifQOIISgCI4GvIunr2zuy4Ko9giOhIIM/uuPfzU5b/tr9Bb/P4
-         QTSZy2EsOuK+ViYI3WKYGSKOXRHPLvKjTVaYdR2IIBQkRb9+DwtlEoUprxCb/HpB+Y57
-         T70w==
 Content-Disposition: inline
-In-Reply-To: <aa015609319786835bcab445d507faa75c11f111.1369177867.git.luto@amacapital.net>
+In-Reply-To: <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu>
 Sender: linux-kernel-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, trinity@vger.kernel.org, netdev@vger.kernel.org, "David S. Miller" <davem@davemloft.net>
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
 
-(edited the title to make sure everyone sees that this fix is standalone.)
+Take 2.. :-)
 
------ Forwarded message from Andy Lutomirski <luto@amacapital.net> -----
+Leaving the locked vs pinned debacle for another time. The below patch
+survives many non-priv execution of the problem prog.
 
-Date: Wed, 22 May 2013 14:07:44 -0700
-From: Andy Lutomirski <luto@amacapital.net>
-To: linux-kernel@vger.kernel.org
-Cc: x86@kernel.org, trinity@vger.kernel.org, Andy Lutomirski <luto@amacapital.net>, netdev@vger.kernel.org, "David S.
-	Miller" <davem@davemloft.net>
-Subject: [PATCH 5/5] net: Block MSG_CMSG_COMPAT in send(m)msg and recv(m)msg
-
-MSG_CMSG_COMPAT is (AFAIK) not intended to be part of the API --
-it's a hack that steals a bit to indicate to other networking code
-that a compat entry was used.  So don't allow it from a non-compat
-syscall.
-
-This prevents an oops when running this code:
-
-int main()
-{
-	int s;
-	struct sockaddr_in addr;
-	struct msghdr *hdr;
-
-	char *highpage = mmap((void*)(TASK_SIZE_MAX - 4096), 4096,
-	                      PROT_READ | PROT_WRITE,
-	                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-	if (highpage == MAP_FAILED)
-		err(1, "mmap");
-
-	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (s == -1)
-		err(1, "socket");
-
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(1);
-        addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	if (connect(s, (struct sockaddr*)&addr, sizeof(addr)) != 0)
-		err(1, "connect");
-
-	void *evil = highpage + 4096 - COMPAT_MSGHDR_SIZE;
-	printf("Evil address is %p\n", evil);
-
-	if (syscall(__NR_sendmmsg, s, evil, 1, MSG_CMSG_COMPAT) < 0)
-		err(1, "sendmmsg");
-
-	return 0;
-}
-
-Cc: David S. Miller <davem@davemloft.net>
-Signed-off-by: Andy Lutomirski <luto@amacapital.net>
 ---
- net/socket.c | 33 +++++++++++++++++++++++++++++++--
- 1 file changed, 31 insertions(+), 2 deletions(-)
+Subject: perf: Fix perf mmap issues
 
-diff --git a/net/socket.c b/net/socket.c
-index 88f759a..0e16888 100644
---- a/net/socket.c
-+++ b/net/socket.c
-@@ -2097,8 +2097,12 @@ SYSCALL_DEFINE3(sendmsg, int, fd, struct msghdr __user *, msg, unsigned int, fla
- {
- 	int fput_needed, err;
- 	struct msghdr msg_sys;
--	struct socket *sock = sockfd_lookup_light(fd, &err, &fput_needed);
-+	struct socket *sock;
+Vince reported a problem found by his perf specific trinity fuzzer. 
+
+Al noticed 2 problems with perf's mmap(): 
+ - it has issues against fork() since we use vma->vm_mm for accounting.
+ - it has an rb refcount leak on double mmap().
+
+We fix the issues against fork() by using VM_DONTCOPY; I don't think there's
+code out there that uses this; we didn't hear about weird accounting
+problems/crashes. If we do need this to work, the previously proposed VM_PINNED
+could make this work.
+
+Aside from the rb reference leak spotted by Al, Vince's example prog was indeed
+doing a double mmap() through the use of perf_event_set_output(). 
+
+This exposes another problem, since we now have 2 events with one buffer, the
+accounting gets screwy because we account per event. Fix this by making the
+buffer responsible for its own accounting.
+
+Cc: Al Viro <viro@ZenIV.linux.org.uk>
+Reported-by: Vince Weaver <vincent.weaver@maine.edu>
+Signed-off-by: Peter Zijlstra <peterz@infradead.org>
+---
+ include/linux/perf_event.h |    3 +--
+ kernel/events/core.c       |   37 ++++++++++++++++++++-----------------
+ kernel/events/internal.h   |    3 +++
+ 3 files changed, 24 insertions(+), 19 deletions(-)
+
+diff --git a/include/linux/perf_event.h b/include/linux/perf_event.h
+index f463a46..c5b6dbf 100644
+--- a/include/linux/perf_event.h
++++ b/include/linux/perf_event.h
+@@ -389,8 +389,7 @@ struct perf_event {
+ 	/* mmap bits */
+ 	struct mutex			mmap_mutex;
+ 	atomic_t			mmap_count;
+-	int				mmap_locked;
+-	struct user_struct		*mmap_user;
 +
-+	if (flags & MSG_CMSG_COMPAT)
-+		return -EINVAL;
+ 	struct ring_buffer		*rb;
+ 	struct list_head		rb_entry;
  
-+	sock = sockfd_lookup_light(fd, &err, &fput_needed);
- 	if (!sock)
- 		goto out;
- 
-@@ -2171,6 +2175,8 @@ int __sys_sendmmsg(int fd, struct mmsghdr __user *mmsg, unsigned int vlen,
- SYSCALL_DEFINE4(sendmmsg, int, fd, struct mmsghdr __user *, mmsg,
- 		unsigned int, vlen, unsigned int, flags)
- {
-+	if (flags & MSG_CMSG_COMPAT)
-+		return -EINVAL;
- 	return __sys_sendmmsg(fd, mmsg, vlen, flags);
+diff --git a/kernel/events/core.c b/kernel/events/core.c
+index 9dc297f..ae752cd 100644
+--- a/kernel/events/core.c
++++ b/kernel/events/core.c
+@@ -2917,7 +2917,7 @@ static void free_event_rcu(struct rcu_head *head)
+ 	kfree(event);
  }
  
-@@ -2271,8 +2277,12 @@ SYSCALL_DEFINE3(recvmsg, int, fd, struct msghdr __user *, msg,
+-static void ring_buffer_put(struct ring_buffer *rb);
++static bool ring_buffer_put(struct ring_buffer *rb);
+ 
+ static void free_event(struct perf_event *event)
  {
- 	int fput_needed, err;
- 	struct msghdr msg_sys;
--	struct socket *sock = sockfd_lookup_light(fd, &err, &fput_needed);
-+	struct socket *sock;
+@@ -3582,13 +3582,13 @@ static struct ring_buffer *ring_buffer_get(struct perf_event *event)
+ 	return rb;
+ }
+ 
+-static void ring_buffer_put(struct ring_buffer *rb)
++static bool ring_buffer_put(struct ring_buffer *rb)
+ {
+ 	struct perf_event *event, *n;
+ 	unsigned long flags;
+ 
+ 	if (!atomic_dec_and_test(&rb->refcount))
+-		return;
++		return false;
+ 
+ 	spin_lock_irqsave(&rb->event_lock, flags);
+ 	list_for_each_entry_safe(event, n, &rb->event_list, rb_entry) {
+@@ -3598,6 +3598,7 @@ static void ring_buffer_put(struct ring_buffer *rb)
+ 	spin_unlock_irqrestore(&rb->event_lock, flags);
+ 
+ 	call_rcu(&rb->rcu_head, rb_free_rcu);
++	return true;
+ }
+ 
+ static void perf_mmap_open(struct vm_area_struct *vma)
+@@ -3612,18 +3613,20 @@ static void perf_mmap_close(struct vm_area_struct *vma)
+ 	struct perf_event *event = vma->vm_file->private_data;
+ 
+ 	if (atomic_dec_and_mutex_lock(&event->mmap_count, &event->mmap_mutex)) {
+-		unsigned long size = perf_data_size(event->rb);
+-		struct user_struct *user = event->mmap_user;
+ 		struct ring_buffer *rb = event->rb;
++		struct user_struct *mmap_user = rb->mmap_user;
++		int mmap_locked = rb->mmap_locked;
++		unsigned long size = perf_data_size(rb);
+ 
+-		atomic_long_sub((size >> PAGE_SHIFT) + 1, &user->locked_vm);
+-		vma->vm_mm->pinned_vm -= event->mmap_locked;
+ 		rcu_assign_pointer(event->rb, NULL);
+ 		ring_buffer_detach(event, rb);
+ 		mutex_unlock(&event->mmap_mutex);
+ 
+-		ring_buffer_put(rb);
+-		free_uid(user);
++		if (ring_buffer_put(rb)) {
++			atomic_long_sub((size >> PAGE_SHIFT) + 1, &mmap_user->locked_vm);
++			vma->vm_mm->pinned_vm -= mmap_locked;
++			free_uid(mmap_user);
++		}
+ 	}
+ }
+ 
+@@ -3676,9 +3679,7 @@ static int perf_mmap(struct file *file, struct vm_area_struct *vma)
+ 	WARN_ON_ONCE(event->ctx->parent_ctx);
+ 	mutex_lock(&event->mmap_mutex);
+ 	if (event->rb) {
+-		if (event->rb->nr_pages == nr_pages)
+-			atomic_inc(&event->rb->refcount);
+-		else
++		if (event->rb->nr_pages != nr_pages)
+ 			ret = -EINVAL;
+ 		goto unlock;
+ 	}
+@@ -3720,12 +3721,14 @@ static int perf_mmap(struct file *file, struct vm_area_struct *vma)
+ 		ret = -ENOMEM;
+ 		goto unlock;
+ 	}
+-	rcu_assign_pointer(event->rb, rb);
 +
-+	if (flags & MSG_CMSG_COMPAT)
-+		return -EINVAL;
++	rb->mmap_locked = extra;
++	rb->mmap_user = get_current_user();
  
-+	sock = sockfd_lookup_light(fd, &err, &fput_needed);
- 	if (!sock)
- 		goto out;
- 
-@@ -2397,6 +2407,9 @@ SYSCALL_DEFINE5(recvmmsg, int, fd, struct mmsghdr __user *, mmsg,
- 	int datagrams;
- 	struct timespec timeout_sys;
- 
-+	if (flags & MSG_CMSG_COMPAT)
-+		return -EINVAL;
+ 	atomic_long_add(user_extra, &user->locked_vm);
+-	event->mmap_locked = extra;
+-	event->mmap_user = get_current_user();
+-	vma->vm_mm->pinned_vm += event->mmap_locked;
++	vma->vm_mm->pinned_vm += extra;
 +
- 	if (!timeout)
- 		return __sys_recvmmsg(fd, mmsg, vlen, flags, NULL);
++	rcu_assign_pointer(event->rb, rb);
  
-@@ -2512,15 +2525,31 @@ SYSCALL_DEFINE2(socketcall, int, call, unsigned long __user *, args)
- 				   (int __user *)a[4]);
- 		break;
- 	case SYS_SENDMSG:
-+		if (a[2] & MSG_CMSG_COMPAT) {
-+			err = -EINVAL;
-+			break;
-+		}
- 		err = sys_sendmsg(a0, (struct msghdr __user *)a1, a[2]);
- 		break;
- 	case SYS_SENDMMSG:
-+		if (a[3] & MSG_CMSG_COMPAT) {
-+			err = -EINVAL;
-+			break;
-+		}
- 		err = sys_sendmmsg(a0, (struct mmsghdr __user *)a1, a[2], a[3]);
- 		break;
- 	case SYS_RECVMSG:
-+		if (a[2] & MSG_CMSG_COMPAT) {
-+			err = -EINVAL;
-+			break;
-+		}
- 		err = sys_recvmsg(a0, (struct msghdr __user *)a1, a[2]);
- 		break;
- 	case SYS_RECVMMSG:
-+		if (a[3] & MSG_CMSG_COMPAT) {
-+			err = -EINVAL;
-+			break;
-+		}
- 		err = sys_recvmmsg(a0, (struct mmsghdr __user *)a1, a[2], a[3],
- 				   (struct timespec __user *)a[4]);
- 		break;
--- 
-1.8.1.4
+ 	perf_event_update_userpage(event);
+ 
+@@ -3734,7 +3737,7 @@ unlock:
+ 		atomic_inc(&event->mmap_count);
+ 	mutex_unlock(&event->mmap_mutex);
+ 
+-	vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP;
++	vma->vm_flags |= VM_DONTCOPY | VM_DONTEXPAND | VM_DONTDUMP;
+ 	vma->vm_ops = &perf_mmap_vmops;
+ 
+ 	return ret;
+diff --git a/kernel/events/internal.h b/kernel/events/internal.h
+index eb675c4..5bc6c8e 100644
+--- a/kernel/events/internal.h
++++ b/kernel/events/internal.h
+@@ -31,6 +31,9 @@ struct ring_buffer {
+ 	spinlock_t			event_lock;
+ 	struct list_head		event_list;
+ 
++	int				mmap_locked;
++	struct user_struct		*mmap_user;
++
+ 	struct perf_event_mmap_page	*user_page;
+ 	void				*data_pages[0];
+ };
