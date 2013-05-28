@@ -1,34 +1,31 @@
-From: Vince Weaver <vincent.weaver@maine.edu>
-Subject: Re: OOPS in perf_mmap_close()
-Date: Tue, 28 May 2013 14:22:11 -0400 (EDT)
-Message-ID: <alpine.DEB.2.10.1305281418120.19080@vincent-weaver-1.um.maine.edu>
-References: <alpine.DEB.2.10.1305221523420.9944@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1305221953370.11450@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu> <20130523044803.GA25399@ZenIV.linux.org.uk>
- <20130523125218.GB23650@twins.programming.kicks-ass.net> <alpine.DEB.2.10.1305231006280.17701@vincent-weaver-1.um.maine.edu> <20130523152611.GE23650@twins.programming.kicks-ass.net> <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu>
- <20130528085548.GA12193@twins.programming.kicks-ass.net> <alpine.DEB.2.10.1305281217370.19080@vincent-weaver-1.um.maine.edu>
+From: Oleg Nesterov <oleg@redhat.com>
+Subject: Re: WARN_ONCE in arch/x86/kernel/hw_breakpoint.c
+Date: Tue, 28 May 2013 20:47:02 +0200
+Message-ID: <20130528184702.GA6455@redhat.com>
+References: <alpine.DEB.2.02.1305201206480.29892@vincent-weaver-1.um.maine.edu> <20130528170048.GA26906@redhat.com> <20130528172829.GA2810@redhat.com>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <alpine.DEB.2.10.1305281217370.19080@vincent-weaver-1.um.maine.edu>
+Content-Disposition: inline
+In-Reply-To: <20130528172829.GA2810@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: TEXT/PLAIN; charset="us-ascii"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: linux-kernel@vger.kernel.org, Peter Zijlstra <a.p.zijlstra@chello.nl>, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org, =?iso-8859-1?Q?Fr=E9d=E9ric?= Weisbecker <fweisbec@gmail.com>, Jiri Olsa <jolsa@redhat.com>
 
-On Tue, 28 May 2013, Vince Weaver wrote:
+On 05/28, Oleg Nesterov wrote:
+>
+> IIRC, I already tried to complain that perf could be smarter in this case
+> and install a single counter with event->cpu = -1, but this is offtopic.
 
-> It looks like this is already in tip, but I can confirm that this 
-> patch seems to fix things on my machine and holds up against longer 
-> fuzzing runs.
+Just in case, please see my old email
 
-OK, I take it back.  Even with the new patch applied, my fuzzer can still 
-make the kernel leak user->locked_vm
+	http://marc.info/?l=linux-kernel&m=136017983113299
 
-I assume that the locked_vm value should go back to 0 once a process that 
-has a bunch of mmap'd perf_events opened exits?
+I didn't check if perf was changed since then. And I forgot everything
+(not too much ;) I learned after I briefly looked into tools/perf/.
 
-I admit this is sort of an obscure corner case, but it does mean that a 
-user can leak user->locked_vm to the point that "perf record" no longer 
-works.
+But, again, this is off-topic.
 
-Vince
+Oleg.
