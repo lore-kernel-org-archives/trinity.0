@@ -1,52 +1,29 @@
-From: Ingo Molnar <mingo@kernel.org>
-Subject: Re: [PATCH/FIX] net: Block MSG_CMSG_COMPAT in send(m)msg and
- recv(m)msg
-Date: Wed, 29 May 2013 10:11:47 +0200
-Message-ID: <20130529081147.GC24933@gmail.com>
-References: <cover.1369177867.git.luto@amacapital.net>
- <aa015609319786835bcab445d507faa75c11f111.1369177867.git.luto@amacapital.net>
- <20130528085600.GD30172@gmail.com>
- <20130528.235628.1501314742626907861.davem@davemloft.net>
+From: Vince Weaver <vincent.weaver@maine.edu>
+Subject: Re: OOPS in perf_mmap_close()
+Date: Wed, 29 May 2013 09:17:13 -0400 (EDT)
+Message-ID: <alpine.DEB.2.10.1305290915400.2479@vincent-weaver-1.um.maine.edu>
+References: <alpine.DEB.2.10.1305221953370.11450@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu> <20130523044803.GA25399@ZenIV.linux.org.uk> <20130523125218.GB23650@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305231006280.17701@vincent-weaver-1.um.maine.edu> <20130523152611.GE23650@twins.programming.kicks-ass.net> <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu> <20130528085548.GA12193@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305281217370.19080@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1305281418120.19080@vincent-weaver-1.um.maine.edu> <20130529074433.GB12193@twins.programming.kicks-ass.net>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=sender:date:from:to:cc:subject:message-id:references:mime-version
-         :content-type:content-disposition:in-reply-to:user-agent;
-        bh=dvT4FecJ71HtCDlO36VlhCaYBhgsyREnabQIgxs6I/c=;
-        b=WS4w0BWwQkjqBNLyCzrM4Mz+8J7xT7oMoiC0PvB+/yZE2F87vpP3HUn/+r65POmfxr
-         Kn+WMmGodpyODlwsmqb0eWuLqmssNiNkoz9vIXruWbMx4qbU/JoNlwlXugJUF+SXuaa3
-         9esz4THOHcNyno46wDcnXTc7W2L/WmZt4I3oBTe4loyF8EdyvysNo5bR6amCvzUOE+ko
-         zoeKjC3cYqTe7mK1z0KuT2Lh+xc+BFd5Klm+JjDGR5kYgETsDYKSIFWCySO3dA1ovgKk
-         3zR5xZkCJ0vNnKlhaxJ37lhtPzzzEt3mBKMoSecYVjun8iG3Ii1rOleYii9v2k9vtXxO
-         lrUg==
-Content-Disposition: inline
-In-Reply-To: <20130528.235628.1501314742626907861.davem@davemloft.net>
+In-Reply-To: <20130529074433.GB12193@twins.programming.kicks-ass.net>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: David Miller <davem@davemloft.net>
-Cc: luto@amacapital.net, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, x86@kernel.org, trinity@vger.kernel.org
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Vince Weaver <vincent.weaver@maine.edu>, Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
+On Wed, 29 May 2013, Peter Zijlstra wrote:
 
-* David Miller <davem@davemloft.net> wrote:
+> Hurm.. I don't suppose you have an easy reproducer handy eh? I'll go
+> stare at it. At least the current state is better than before, but
+> clearly we're not quite there yet.
 
-> From: Ingo Molnar <mingo@kernel.org>
-> Date: Tue, 28 May 2013 10:56:00 +0200
-> 
-> > MSG_CMSG_COMPAT is (AFAIK) not intended to be part of the API --
-> > it's a hack that steals a bit to indicate to other networking code
-> > that a compat entry was used.  So don't allow it from a non-compat
-> > syscall.
-> > 
-> > This prevents an oops when running this code:
->  ...
-> > Cc: David S. Miller <davem@davemloft.net>
-> > Signed-off-by: Andy Lutomirski <luto@amacapital.net>
-> 
-> Applied and queued up for -stable.
+I've been working on a reproducible test case.  Simple modifications to 
+the existing testcase don't seem to trigger things.  I have a 100k-300k 
+syscall trace that triggers things, I'm working on trying to get that down 
+to something reasonable.
 
-Thanks David!
-
-	Ingo
+Vince
