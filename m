@@ -1,73 +1,57 @@
 From: Ingo Molnar <mingo@kernel.org>
-Subject: [regression] Re: [RFC][PATCH] mm: Fix RLIMIT_MEMLOCK
-Date: Wed, 29 May 2013 09:58:45 +0200
-Message-ID: <20130529075845.GA24506@gmail.com>
-References: <20130523104154.GA23650@twins.programming.kicks-ass.net>
- <0000013ed1b8d0cc-ad2bb878-51bd-430c-8159-629b23ed1b44-000000@email.amazonses.com>
- <20130523152458.GD23650@twins.programming.kicks-ass.net>
- <0000013ed2297ba8-467d474a-7068-45b3-9fa3-82641e6aa363-000000@email.amazonses.com>
- <20130523163901.GG23650@twins.programming.kicks-ass.net>
- <0000013ed28b638a-066d7dc7-b590-49f8-9423-badb9537b8b6-000000@email.amazonses.com>
- <20130524140114.GK23650@twins.programming.kicks-ass.net>
- <0000013ed732b615-748f574f-ccb8-4de7-bbe4-d85d1cbf0c9d-000000@email.amazonses.com>
- <20130527064834.GA2781@laptop>
- <0000013eec0006ee-0f8caf7b-cc94-4f54-ae38-0ca6623b7841-000000@email.amazonses.com>
+Subject: Re: OOPS in perf_mmap_close()
+Date: Wed, 29 May 2013 10:07:37 +0200
+Message-ID: <20130529080737.GB24933@gmail.com>
+References: <alpine.DEB.2.10.1305221523420.9944@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1305221953370.11450@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu>
+ <20130523044803.GA25399@ZenIV.linux.org.uk>
+ <20130523125218.GB23650@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305231006280.17701@vincent-weaver-1.um.maine.edu>
+ <20130523152611.GE23650@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu>
+ <20130528085548.GA12193@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305281217370.19080@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
-Return-path: <owner-linux-mm@kvack.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=sender:date:from:to:cc:subject:message-id:references:mime-version
          :content-type:content-disposition:in-reply-to:user-agent;
-        bh=Yl/ueB6TW76qRhQOPZsiR4Hdc3Q1WP7EzkYgvKDZoQw=;
-        b=kuAIJpQy3QNGJE9xUdDXia/h/p+5nMYHoFuefh66KV2SS+7lNXS98mn9oYVFeXsKsX
-         sWseJ8Zmp5SoobMFCVY3uPobpZ63Djz3HtcFijXgf7jJM8WWBBYMgEgdBvRLcdne3PPy
-         XF6Kb/FVPi73OogNiaLwMXHRHJMAAdqfC3pmfIUSEkbvvaboCkQ7/FxDWkdS7O+FEiaJ
-         msj/v6cctF0CGWUEB4UkYvLnNBBnI9EFPLKUPTeacrgNrxmN82dSXw0Vjr6QbVp8IsAr
-         ysYIwEMKCZVaxynQHuFtOAXd9u+LhE4VB1sh0L8L2YAnLMuyzWw7VvF9N2fXGnJ87AUC
-         fIOQ==
+        bh=6TJJCcW9vjjMJwinBBCRZjQ9lO1VKtRE7S1hDU2tZdg=;
+        b=hWo98O1eVHzmTyUX4p3PDL89WcVD++EKXYdlMSypWvsvZiitLSVBo8n7Mi8r/8Y54Z
+         v4RPN9UuZg1LR1AuWcFCrzBiAUPuvhDKT1brZtWUQs3Tij99qvkDu4AQCGZmM5Vqi2GL
+         CIk9dXPEFBnXtso8/b4vvape8Vv5d1DXiMg9/MZE+tQArzklO4fDccD+4XXQnrLMHTr1
+         UafmuaQ/b32+w/URoSIZtF7CcqrTBI5gORYNuESzdZ6DsSMkvEa+tdDywF/ptAWeVyzn
+         YvOKSYjc6qD4i6ceVvlXw5qa3MQAohlzUvCdk0s8k2GCswJ10UwU+aSpNbgW56wKCy1X
+         K+1g==
 Content-Disposition: inline
-In-Reply-To: <0000013eec0006ee-0f8caf7b-cc94-4f54-ae38-0ca6623b7841-000000@email.amazonses.com>
-Sender: owner-linux-mm@kvack.org
+In-Reply-To: <alpine.DEB.2.10.1305281217370.19080@vincent-weaver-1.um.maine.edu>
+Sender: linux-kernel-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Christoph Lameter <cl@linux.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, Al Viro <viro@ZenIV.linux.org.uk>, Vince Weaver <vincent.weaver@maine.edu>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org, akpm@linux-foundation.org, torvalds@linux-foundation.org, roland@kernel.org, infinipath@qlogic.com, linux-mm@kvack.org, linux-rdma@vger.kernel.org, Or Gerlitz <or.gerlitz@gmail.com>, Hugh Dickins <hughd@google.com>
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: Peter Zijlstra <peterz@infradead.org>, Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
 
-* Christoph Lameter <cl@linux.com> wrote:
+* Vince Weaver <vincent.weaver@maine.edu> wrote:
 
-> On Mon, 27 May 2013, Peter Zijlstra wrote:
+> On Tue, 28 May 2013, Peter Zijlstra wrote:
+>  
+> > Take 2.. :-)
+> > 
+> > Leaving the locked vs pinned debacle for another time. The below patch
+> > survives many non-priv execution of the problem prog.
 > 
-> > Before your patch pinned was included in locked and thus RLIMIT_MEMLOCK
-> > had a single resource counter. After your patch RLIMIT_MEMLOCK is
-> > applied separately to both -- more or less.
-> 
-> Before the patch the count was doubled since a single page was counted 
-> twice: Once because it was mlocked (marked with PG_mlock) and then again 
-> because it was also pinned (the refcount was increased). Two different 
-> things.
+> It looks like this is already in tip, [...]
 
-Christoph, why are you *STILL* arguing??
+Wanted to help out with testing it in parallel - even though it was not 
+yet clear whether it's the full fix.
 
-You caused a *regression* in a userspace ABI plain and simple, and a 
-security relevant one. Furtermore you modified kernel/events/core.c yet 
-you never even Cc:-ed the parties involved ...
-
-All your excuses, obfuscation and attempts to redefine the universe to 
-your liking won't change reality: it worked before, it does not now. Take 
-responsibility for your action for christ's sake and move forward towards 
-a resolution , okay?
-
-When can we expect a fix from you for the breakage you caused? Or at least 
-a word that acknowledges that you broke a user ABI carelessly?
+Since you are still seeing a leak I will hold on to it until it's fully 
+fixed.
 
 Thanks,
 
 	Ingo
-
---
-To unsubscribe, send a message with 'unsubscribe linux-mm' in
-the body to majordomo@kvack.org.  For more info on Linux MM,
-see: http://www.linux-mm.org/ .
-Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
