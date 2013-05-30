@@ -1,59 +1,47 @@
-From: Pekka Enberg <penberg@kernel.org>
+From: KOSAKI Motohiro <kosaki.motohiro@gmail.com>
 Subject: Re: [RFC][PATCH] mm: Fix RLIMIT_MEMLOCK
-Date: Thu, 30 May 2013 22:59:46 +0300
-Message-ID: <CAOJsxLEXgO3bMek8Mus9K6_vA5-H7wnoPyhVqCkm8uO9z526BQ@mail.gmail.com>
-References: <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu>
-	<20130523044803.GA25399@ZenIV.linux.org.uk>
-	<20130523104154.GA23650@twins.programming.kicks-ass.net>
-	<0000013ed1b8d0cc-ad2bb878-51bd-430c-8159-629b23ed1b44-000000@email.amazonses.com>
-	<20130523152458.GD23650@twins.programming.kicks-ass.net>
-	<0000013ed2297ba8-467d474a-7068-45b3-9fa3-82641e6aa363-000000@email.amazonses.com>
-	<20130523163901.GG23650@twins.programming.kicks-ass.net>
-	<0000013ed28b638a-066d7dc7-b590-49f8-9423-badb9537b8b6-000000@email.amazonses.com>
-	<20130524140114.GK23650@twins.programming.kicks-ass.net>
-	<0000013ed732b615-748f574f-ccb8-4de7-bbe4-d85d1cbf0c9d-000000@email.amazonses.com>
-	<20130527064834.GA2781@laptop>
-	<0000013eec0006ee-0f8caf7b-cc94-4f54-ae38-0ca6623b7841-000000@email.amazonses.com>
+Date: Thu, 30 May 2013 16:42:15 -0400
+Message-ID: <CAHGf_=qkJWEhwKRY4gu0wL4OLU1PhOW3=n6JNmAocSK-T0PhmA@mail.gmail.com>
+References: <20130523152458.GD23650@twins.programming.kicks-ass.net>
+ <0000013ed2297ba8-467d474a-7068-45b3-9fa3-82641e6aa363-000000@email.amazonses.com>
+ <20130523163901.GG23650@twins.programming.kicks-ass.net> <0000013ed28b638a-066d7dc7-b590-49f8-9423-badb9537b8b6-000000@email.amazonses.com>
+ <20130524140114.GK23650@twins.programming.kicks-ass.net> <0000013ed732b615-748f574f-ccb8-4de7-bbe4-d85d1cbf0c9d-000000@email.amazonses.com>
+ <20130527064834.GA2781@laptop> <0000013eec0006ee-0f8caf7b-cc94-4f54-ae38-0ca6623b7841-000000@email.amazonses.com>
+ <20130529075845.GA24506@gmail.com> <51A65CC0.3050800@gmail.com> <20130530063205.GA5310@gmail.com>
 Mime-Version: 1.0
-Return-path: <owner-linux-mm@kvack.org>
+Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
-        h=mime-version:sender:in-reply-to:references:date
-         :x-google-sender-auth:message-id:subject:from:to:cc:content-type;
-        bh=C9uo1faH5e8CNFoMVp752VMejLArnoeOUAcSUo8aB/s=;
-        b=RlJ0JRwjTWwRioHfNZpLFaZK5KDM5C0Z6SsMV70qF9aSeRp2hYGNL6umoJGG4jVneT
-         ksKhy94slQP2cVvVc55xHVZxM/bjbkxTZ9OGFz/Rmz0ydSCfqTRK1185hCIBWd/gWMMn
-         1TkG2IEqCpCDA93MsXRMXtn3Zvx3zx62GHvbbar7NZLsKnuTtzpgjJhugexL6Ins/iO1
-         yRoebPUYYdTGhaF+DHs7+w5MELYcGvlH6Z5OZjtzQ0ioIW5ZkA0D65q1LdNFvFv5UqBJ
-         jZ3CNxXgt34gqBYOcAg8LDUbgaiwYW0/qI9W0FJkmFSV4aQKXfD7DZ9hjKVz2VPCnrow
-         E+yw==
-In-Reply-To: <0000013eec0006ee-0f8caf7b-cc94-4f54-ae38-0ca6623b7841-000000@email.amazonses.com>
-Sender: owner-linux-mm@kvack.org
+        h=mime-version:in-reply-to:references:from:date:message-id:subject:to
+         :cc:content-type;
+        bh=imroOsZv0DLf/aQcJ8WcgbqBeBqzy202deAzlFGvfsQ=;
+        b=y5sfZp2bQDDIp4Z/XT8QNzYP3z5XXaDdZ7cxE2Tw0AhKJfVr4cN58Unurj1AFU81FL
+         R4VClANK6xCgEt8LTMe55r/9nQYpuv8pDeGDSlqxJarGnTzD3na6mmFV3S9H7N3OFhkP
+         JJ7P21hl2f6GMwZo11y1dwJMOZtUQstBVbpw2NRA5uzRYYjlNktU/Wi/0hWWvbAVZMKv
+         3FViwSlkf4T9ZOExKHXJtZLZVCG5Fd+KboJeed+vW45uWwA2bAGtMgQ5IXB2mv0TTODA
+         PEVyJsPIGwBxvvtpsPnkE/QESnQdAjY7Y4CGD22kC4/26leTPTxF2gpaTsLH76ISwQVD
+         6hFQ==
+In-Reply-To: <20130530063205.GA5310@gmail.com>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Christoph Lameter <cl@linux.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, Al Viro <viro@zeniv.linux.org.uk>, Vince Weaver <vincent.weaver@maine.edu>, LKML <linux-kernel@vger.kernel.org>, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, roland@kernel.org, infinipath@qlogic.com, "linux-mm@kvack.org" <linux-mm@kvack.org>, linux-rdma@vger.kernel.org, Or Gerlitz <or.gerlitz@gmail.com>, Hugh Dickins <hughd@google.com>
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Christoph Lameter <cl@linux.com>, Peter Zijlstra <peterz@infradead.org>, Al Viro <viro@zeniv.linux.org.uk>, Vince Weaver <vincent.weaver@maine.edu>, LKML <linux-kernel@vger.kernel.org>, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Roland Dreier <roland@kernel.org>, infinipath@qlogic.com, "linux-mm@kvack.org" <linux-mm@kvack.org>, linux-rdma@vger.kernel.org, Or Gerlitz <or.gerlitz@gmail.com>, Hugh Dickins <hughd@google.com>
 
-On Mon, 27 May 2013, Peter Zijlstra wrote:
->> Before your patch pinned was included in locked and thus RLIMIT_MEMLOCK
->> had a single resource counter. After your patch RLIMIT_MEMLOCK is
->> applied separately to both -- more or less.
+>> I'm unhappy you guys uses offensive word so much. Please cool down all
+>> you guys. :-/ In fact, _BOTH_ the behavior before and after Cristoph's
+>> patch doesn't have cleaner semantics.
+>
+> Erm, this feature _regressed_ after the patch. All other concerns are
+> secondary. What's so difficult to understand about that?
 
-On Tue, May 28, 2013 at 7:37 PM, Christoph Lameter <cl@linux.com> wrote:
-> Before the patch the count was doubled since a single page was counted
-> twice: Once because it was mlocked (marked with PG_mlock) and then again
-> because it was also pinned (the refcount was increased). Two different things.
+Because it is not new commit at all. Christoph's patch was introduced
+10 releases before.
 
-Pinned vs. mlocked counting isn't the problem here. You changed
-RLIMIT_MEMLOCK userspace ABI and that needs to be restored. So the
-question is how can we preserve the old RLIMIT_MEMLOCK semantics while
-avoiding the double accounting issue.
+$ git describe bc3e53f682
+v3.1-7235-gbc3e53f
 
-                        Pekka
-
---
-To unsubscribe, send a message with 'unsubscribe linux-mm' in
-the body to majordomo@kvack.org.  For more info on Linux MM,
-see: http://www.linux-mm.org/ .
-Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
+If we just revert it, we may get another and opposite regression
+report. I'm worried
+about it. Moreover, I don't think discussion better fix is too difficult for us.
