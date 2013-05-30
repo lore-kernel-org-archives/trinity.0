@@ -1,125 +1,56 @@
-From: Peter Zijlstra <peterz@infradead.org>
+From: Pekka Enberg <penberg@kernel.org>
 Subject: Re: [RFC][PATCH] mm: Fix RLIMIT_MEMLOCK
-Date: Thu, 30 May 2013 20:30:47 +0200
-Message-ID: <20130530183047.GC27176@twins.programming.kicks-ass.net>
-References: <20130523104154.GA23650@twins.programming.kicks-ass.net>
- <0000013ed1b8d0cc-ad2bb878-51bd-430c-8159-629b23ed1b44-000000@email.amazonses.com>
- <20130523152458.GD23650@twins.programming.kicks-ass.net>
- <0000013ed2297ba8-467d474a-7068-45b3-9fa3-82641e6aa363-000000@email.amazonses.com>
- <20130523163901.GG23650@twins.programming.kicks-ass.net>
- <0000013ed28b638a-066d7dc7-b590-49f8-9423-badb9537b8b6-000000@email.amazonses.com>
- <20130524140114.GK23650@twins.programming.kicks-ass.net>
- <0000013ed732b615-748f574f-ccb8-4de7-bbe4-d85d1cbf0c9d-000000@email.amazonses.com>
- <20130527064834.GA2781@laptop>
- <0000013eec0006ee-0f8caf7b-cc94-4f54-ae38-0ca6623b7841-000000@email.amazonses.com>
+Date: Thu, 30 May 2013 22:59:46 +0300
+Message-ID: <CAOJsxLEXgO3bMek8Mus9K6_vA5-H7wnoPyhVqCkm8uO9z526BQ@mail.gmail.com>
+References: <alpine.DEB.2.10.1305222344060.12929@vincent-weaver-1.um.maine.edu>
+	<20130523044803.GA25399@ZenIV.linux.org.uk>
+	<20130523104154.GA23650@twins.programming.kicks-ass.net>
+	<0000013ed1b8d0cc-ad2bb878-51bd-430c-8159-629b23ed1b44-000000@email.amazonses.com>
+	<20130523152458.GD23650@twins.programming.kicks-ass.net>
+	<0000013ed2297ba8-467d474a-7068-45b3-9fa3-82641e6aa363-000000@email.amazonses.com>
+	<20130523163901.GG23650@twins.programming.kicks-ass.net>
+	<0000013ed28b638a-066d7dc7-b590-49f8-9423-badb9537b8b6-000000@email.amazonses.com>
+	<20130524140114.GK23650@twins.programming.kicks-ass.net>
+	<0000013ed732b615-748f574f-ccb8-4de7-bbe4-d85d1cbf0c9d-000000@email.amazonses.com>
+	<20130527064834.GA2781@laptop>
+	<0000013eec0006ee-0f8caf7b-cc94-4f54-ae38-0ca6623b7841-000000@email.amazonses.com>
 Mime-Version: 1.0
 Return-path: <owner-linux-mm@kvack.org>
-Content-Disposition: inline
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=mime-version:sender:in-reply-to:references:date
+         :x-google-sender-auth:message-id:subject:from:to:cc:content-type;
+        bh=C9uo1faH5e8CNFoMVp752VMejLArnoeOUAcSUo8aB/s=;
+        b=RlJ0JRwjTWwRioHfNZpLFaZK5KDM5C0Z6SsMV70qF9aSeRp2hYGNL6umoJGG4jVneT
+         ksKhy94slQP2cVvVc55xHVZxM/bjbkxTZ9OGFz/Rmz0ydSCfqTRK1185hCIBWd/gWMMn
+         1TkG2IEqCpCDA93MsXRMXtn3Zvx3zx62GHvbbar7NZLsKnuTtzpgjJhugexL6Ins/iO1
+         yRoebPUYYdTGhaF+DHs7+w5MELYcGvlH6Z5OZjtzQ0ioIW5ZkA0D65q1LdNFvFv5UqBJ
+         jZ3CNxXgt34gqBYOcAg8LDUbgaiwYW0/qI9W0FJkmFSV4aQKXfD7DZ9hjKVz2VPCnrow
+         E+yw==
 In-Reply-To: <0000013eec0006ee-0f8caf7b-cc94-4f54-ae38-0ca6623b7841-000000@email.amazonses.com>
 Sender: owner-linux-mm@kvack.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: Christoph Lameter <cl@linux.com>
-Cc: Al Viro <viro@ZenIV.linux.org.uk>, Vince Weaver <vincent.weaver@maine.edu>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org, akpm@linux-foundation.org, torvalds@linux-foundation.org, roland@kernel.org, infinipath@qlogic.com, linux-mm@kvack.org, linux-rdma@vger.kernel.org, Or Gerlitz <or.gerlitz@gmail.com>, Hugh Dickins <hughd@google.com>
+Cc: Peter Zijlstra <peterz@infradead.org>, Al Viro <viro@zeniv.linux.org.uk>, Vince Weaver <vincent.weaver@maine.edu>, LKML <linux-kernel@vger.kernel.org>, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, roland@kernel.org, infinipath@qlogic.com, "linux-mm@kvack.org" <linux-mm@kvack.org>, linux-rdma@vger.kernel.org, Or Gerlitz <or.gerlitz@gmail.com>, Hugh Dickins <hughd@google.com>
 
-On Tue, May 28, 2013 at 04:37:06PM +0000, Christoph Lameter wrote:
-> On Mon, 27 May 2013, Peter Zijlstra wrote:
-> 
-> > Before your patch pinned was included in locked and thus RLIMIT_MEMLOCK
-> > had a single resource counter. After your patch RLIMIT_MEMLOCK is
-> > applied separately to both -- more or less.
-> 
+On Mon, 27 May 2013, Peter Zijlstra wrote:
+>> Before your patch pinned was included in locked and thus RLIMIT_MEMLOCK
+>> had a single resource counter. After your patch RLIMIT_MEMLOCK is
+>> applied separately to both -- more or less.
+
+On Tue, May 28, 2013 at 7:37 PM, Christoph Lameter <cl@linux.com> wrote:
 > Before the patch the count was doubled since a single page was counted
 > twice: Once because it was mlocked (marked with PG_mlock) and then again
 > because it was also pinned (the refcount was increased). Two different things.
 
-Before the patch RLIMIT_MEMLOCK was a limit on the sum of both, after it
-is no longer. This change was not described in the changelog.
+Pinned vs. mlocked counting isn't the problem here. You changed
+RLIMIT_MEMLOCK userspace ABI and that needs to be restored. So the
+question is how can we preserve the old RLIMIT_MEMLOCK semantics while
+avoiding the double accounting issue.
 
-This is a bug plain and simple and you refuse to acknowledge it.
-
-> We have agreed for a long time that mlocked pages are movable. That is not
-> true for pinned pages and therefore pinning pages therefore do not fall
-> into that category (Hugh? AFAICR you came up with that rule?)
-
-Into what category? RLIMIT_MEMLOCK should be a limit on the amount of
-pages that are constrained to memory (can not be paged). How does a
-pinned page not qualify for that?
-
-> > NO, mlocked pages are pages that do not leave core memory; IOW do not
-> > cause major faults. Pinning pages is a perfectly spec compliant mlock()
-> > implementation.
-> 
-> That is not the definition that we have used so far.
-
-There's two statements there; which one do you disagree with?
-
-On the first; that is exactly the mlock() definition you want; excluding
-major faults only means faults cannot be subject to IO, IOW pages must
-remain in memory. Not excluding minor faults allows you to unmap and
-migrate pages.
-
-On the second; excluding any faults; that is what the mlock() specs
-intended -- because that is the thing real-time people really want and
-mlock is part of the real-time POSIX spec.
-
-[ Hence the need to provide mpin() and munpin() syscalls before we make
-  mlock() pages migratable, otherwise RT people are screwed. ]
-
-Since excluding any fault per definition also excludes major faults,
-the second is a clear superset of the first. Both ensure pages stay in
-memory, thus both should count towards RLIMIT_MEMLOCK.
-
-> But then you refuse to acknowledge the difference and want to conflate
-> both.
-
-You're the one that is confused. You're just repeating yourself without
-providing argument or reason. 
-
-> > > Pages can be both pinned and mlocked.
-> >
-> > Right, but apart for mlockall() this is a highly unlikely situation to
-> > actually occur. And if you're using mlockall() you've effectively
-> > disabled RLIMIT_MEMLOCK and thus nobody cares if the resource counter
-> > goes funny.
-> 
-> mlockall() would never be used on all processes. You still need the
-> RLIMIT_MLOCK to ensure that the box does not lock up.
-
-You're so skilled at missing the point its not funny. 
-
-The resource counter (formerly mm_struct::locked_vm, currently broken)
-associated with RLIMIT_MEMLOCK is per process. Therefore when you use
-mlockall() you've already done away with the limit, and thus the
-resource counter value is irrelevant.
-
-> > > I think we need to be first clear on what we want to accomplish and what
-> > > these counters actually should count before changing things.
-> >
-> > Backward isn't it... _you_ changed it without consideration.
-> 
-> I applied the categorization that we had agreed on before during the
-> development of page migratiob. Pinning is not compatible.
-
-I've never agreed to any such thing, you changed my code without cc'ing
-me and without describing the actual change.
-
-Please explain how pinned pages are not stuck in memory and can be
-paged? Once you've convinced me of that, I'll concede they should not be
-counted towards RLIMIT_MEMLOCK.
-
-> > The IB code does a big get_user_pages(), which last time I checked
-> > pins a sequential range of pages. Therefore the VMA approach.
-> 
-> The IB code (and other code) can require the pinning of pages in various
-> ways.
-
-You can also mlock()/madvise()/mprotect() in various ways, this is a
-non-argument against using VMAs.
-
-Is there anything besides IB and perf that has user controlled page
-pinning? If so, it needs fixing.
+                        Pekka
 
 --
 To unsubscribe, send a message with 'unsubscribe linux-mm' in
