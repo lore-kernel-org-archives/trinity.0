@@ -1,7 +1,7 @@
 From: Michael Ellerman <michael@ellerman.id.au>
-Subject: [PATCH 3/4] Fix compile error in net/bpf.c for non x86
-Date: Sat,  1 Jun 2013 21:46:17 +1000
-Message-ID: <1370087178-23439-3-git-send-email-michael@ellerman.id.au>
+Subject: [PATCH 4/4] Sanity check the syscall number in print_syscall_name()
+Date: Sat,  1 Jun 2013 21:46:18 +1000
+Message-ID: <1370087178-23439-4-git-send-email-michael@ellerman.id.au>
 References: <1370087178-23439-1-git-send-email-michael@ellerman.id.au>
 Return-path: <trinity-owner@vger.kernel.org>
 In-Reply-To: <1370087178-23439-1-git-send-email-michael@ellerman.id.au>
@@ -12,28 +12,52 @@ Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
 
-In bpf.c there is an architecture check with cases for i386, x86-64 and
-"other". But the other case typos TRUE_ARCH, leading to a build error.
+In case it's out of bounds, causing us to segfault.
 
 ---
 
-Should this be in include/arch-foo.h ?
+My watchdog was crashing because of this a while back. I can't actually
+reproduce the crash with current trinity, but it's still possible
+AFAICS.
 ---
- net/bpf.c |    2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ tables.c |   23 +++++++++++++++++------
+ 1 file changed, 17 insertions(+), 6 deletions(-)
 
-diff --git a/net/bpf.c b/net/bpf.c
-index cc748de..1643077 100644
---- a/net/bpf.c
-+++ b/net/bpf.c
-@@ -150,7 +150,7 @@ static const uint32_t bpf_seccomp_jmp_arch_vars[] = {
- # define TRUE_ARCH		AUDIT_ARCH_X86_64
- #else
- # define TRUE_REG_SYSCALL	((uint32_t) rand()) /* TODO later */
--# define TRUE_ARCH_NR		((uint32_t) rand()) /* TODO later */
-+# define TRUE_ARCH		((uint32_t) rand()) /* TODO later */
- #endif
+diff --git a/tables.c b/tables.c
+index 3ba70c9..7be1ae9 100644
+--- a/tables.c
++++ b/tables.c
+@@ -574,14 +574,25 @@ try_64bit:
+ const char * print_syscall_name(unsigned int callno, bool is32bit)
+ {
+ 	const struct syscalltable *table;
++	unsigned int max;
  
- struct seccomp_data {
+-	if (biarch == FALSE)
+-		return syscalls[callno].entry->name;
++	if (biarch == FALSE) {
++		max = max_nr_syscalls;
++		table = syscalls;
++	} else {
++		if (is32bit == FALSE) {
++			max = max_nr_64bit_syscalls;
++			table = syscalls_64bit;
++		} else {
++			max = max_nr_32bit_syscalls;
++			table = syscalls_32bit;
++		}
++	}
+ 
+-	if (is32bit == FALSE)
+-		table = syscalls_64bit;
+-	else
+-		table = syscalls_32bit;
++	if (callno >= max) {
++		printf("Bogus syscall number in %s (%u)\n", __func__, callno);
++		return "invalid-syscall";
++	}
+ 
+ 	return table[callno].entry->name;
+ }
 -- 
 1.7.10.4
