@@ -1,115 +1,35 @@
-From: Michael Ellerman <michael@ellerman.id.au>
-Subject: [PATCH] Read pid_max from /proc
-Date: Mon,  3 Jun 2013 23:32:13 +1000
-Message-ID: <1370266333-13791-1-git-send-email-michael@ellerman.id.au>
+From: Peter Zijlstra <peterz@infradead.org>
+Subject: Re: OOPS in perf_mmap_close()
+Date: Mon, 3 Jun 2013 19:18:05 +0200
+Message-ID: <20130603171805.GF8923@twins.programming.kicks-ass.net>
+References: <20130523152611.GE23650@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu>
+ <20130528085548.GA12193@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305281217370.19080@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1305281418120.19080@vincent-weaver-1.um.maine.edu>
+ <20130529074433.GB12193@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1305291516310.2609@vincent-weaver-1.um.maine.edu>
+ <20130530072532.GF4341@laptop>
+ <alpine.DEB.2.10.1305300842040.11264@vincent-weaver-1.um.maine.edu>
+ <20130603132645.GC8923@twins.programming.kicks-ass.net>
+Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <20130603132645.GC8923@twins.programming.kicks-ass.net>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
-I was hitting this on my system, where it's 65536. So fix the todo and
-read it from /proc.
+On Mon, Jun 03, 2013 at 03:26:45PM +0200, Peter Zijlstra wrote:
+> On Thu, May 30, 2013 at 08:51:00AM -0400, Vince Weaver wrote:
+> > > I'll go prod, thanks again!
+> 
+> 
+> OK the below builds and seems to survive both test cases and about 10 minutes
+> of fuzzing -- fingers crossed.
 
-I left a fallback to the hardcoded values in case /proc is not mounted
-or something else goes wrong.
----
-
-v2: Close fp.
----
- include/pids.h |    1 +
- pids.c         |   45 ++++++++++++++++++++++++++++++++++++++++-----
- trinity.c      |    2 ++
- 3 files changed, 43 insertions(+), 5 deletions(-)
-
-diff --git a/include/pids.h b/include/pids.h
-index 6a19630..b93ec4c 100644
---- a/include/pids.h
-+++ b/include/pids.h
-@@ -14,6 +14,7 @@ int find_pid_slot(pid_t mypid);
- bool pidmap_empty(void);
- void dump_pid_slots(void);
- int pid_is_valid(pid_t);
-+void pids_init(void);
- 
- #define pid_alive(_pid) kill(_pid, 0)
- 
-diff --git a/pids.c b/pids.c
-index 7b8a73b..cf9a374 100644
---- a/pids.c
-+++ b/pids.c
-@@ -36,17 +36,52 @@ void dump_pid_slots(void)
- 		printf("## slot%d: %d\n", i, shm->pids[i]);
- }
- 
--int pid_is_valid(pid_t pid)
-+static pid_t pidmax;
-+
-+int read_pid_max(void)
- {
--	pid_t pidmax;
-+	unsigned long result;
-+	char *end, buf[32];
-+	FILE *fp;
-+	int rc;
-+
-+	fp = fopen("/proc/sys/kernel/pid_max", "r");
-+	if (!fp) {
-+		perror("fopen");
-+		return -1;
-+	}
-+
-+	rc = -1;
-+	if (!fgets(buf, sizeof(buf), fp))
-+		goto out;
-+
-+	result = strtoul(buf, &end, 10);
-+	if (end == buf)
-+		goto out;
-+
-+	pidmax = result;
-+	rc = 0;
-+out:
-+	fclose(fp);
-+	return rc;
-+}
- 
--// FIXME: Read this from /proc/sys/kernel/pid_max on startup
-+void pids_init(void)
-+{
-+	if (read_pid_max()) {
- #ifdef __x86_64__
--	pidmax = 4194304;
-+		pidmax = 4194304;
- #else
--	pidmax = 32768;
-+		pidmax = 32768;
- #endif
-+		printf("Couldn't read pid_max from proc\n");
-+	}
-+
-+	printf("Using pid_max = %d\n", pidmax);
-+}
- 
-+int pid_is_valid(pid_t pid)
-+{
- 	if ((pid > pidmax) || (pid < 1)) {
- 		output(0, "Sanity check failed! Found pid %d!\n", pid);
- 		return FALSE;
-diff --git a/trinity.c b/trinity.c
-index b95d287..0b88150 100644
---- a/trinity.c
-+++ b/trinity.c
-@@ -212,6 +212,8 @@ int main(int argc, char* argv[])
- 
- 	parse_devices();
- 
-+	pids_init();
-+
- 	setup_main_signals();
- 
- 	if (check_tainted() != 0) {
--- 
-1.7.10.4
+OK, looks like I still drop something somewhere. mmap()s still goes to
+0. Stupid thing!
