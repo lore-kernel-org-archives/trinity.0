@@ -1,8 +1,12 @@
 From: Daniel Borkmann <dborkman@redhat.com>
-Subject: [PATCH 0/4] Enable seccomp generator and use Boehm-Demers-Weiser GC
-Date: Mon,  3 Jun 2013 21:07:40 +0200
-Message-ID: <cover.1370285968.git.dborkman@redhat.com>
+Subject: [PATCH 2/4] minor: move offsetof into trinity.h
+Date: Mon,  3 Jun 2013 21:07:42 +0200
+Message-ID: <c70de10f036bb80373036794bcfee4d92db393a6.1370285968.git.dborkman@redhat.com>
+References: <cover.1370285968.git.dborkman@redhat.com>
 Return-path: <trinity-owner@vger.kernel.org>
+In-Reply-To: <cover.1370285968.git.dborkman@redhat.com>
+In-Reply-To: <cover.1370285968.git.dborkman@redhat.com>
+References: <cover.1370285968.git.dborkman@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -11,61 +15,42 @@ Content-Transfer-Encoding: 7bit
 To: tt.rantala@gmail.com
 Cc: trinity@vger.kernel.org, davej@redhat.com, dborkman@redhat.com
 
-Applied Tommi's feedback in patch 4 and rebased on top of current
-master, rest is unchanged.
+Move it there since it's of generic use somewhere in future
+else as well.
 
-Daniel Borkmann (4):
-  net: bpf: let clang shut up
-  minor: move offsetof into trinity.h
-  prctl: enable seccomp generator invocation
-  trinity: use Boehm-Demers-Weiser's garbage collecting memory allocator
+Signed-off-by: Daniel Borkmann <dborkman@redhat.com>
+---
+ include/trinity.h | 4 ++++
+ net/bpf.c         | 4 ----
+ 2 files changed, 4 insertions(+), 4 deletions(-)
 
- Makefile              |  4 +++-
- child.c               |  3 +++
- devices.c             | 21 +++++++++---------
- files.c               |  8 +++----
- include/sanitise.h    |  2 +-
- include/trinity.h     | 59 +++++++++++++++++++++++++++++++++++++++++++++++++++
- log.c                 |  6 ++++--
- main.c                |  2 ++
- maps.c                | 20 ++++++++---------
- net/alg.c             |  4 +++-
- net/appletalk.c       |  4 +++-
- net/atm.c             |  6 ++++--
- net/ax25.c            |  4 +++-
- net/bpf.c             | 20 ++++++++---------
- net/caif.c            |  4 +++-
- net/can.c             |  5 ++++-
- net/decnet.c          |  4 +++-
- net/econet.c          |  4 +++-
- net/ipv4.c            |  4 +++-
- net/ipv6.c            |  4 +++-
- net/ipx.c             |  4 +++-
- net/irda.c            |  4 +++-
- net/llc.c             |  4 +++-
- net/netlink.c         |  4 +++-
- net/nfc.c             |  4 +++-
- net/packet.c          |  4 +++-
- net/phonet.c          |  4 +++-
- net/pppox.c           | 12 ++++++-----
- net/rose.c            |  4 +++-
- net/tipc.c            |  5 ++++-
- net/unix.c            |  4 +++-
- net/x25.c             |  4 +++-
- params.c              |  2 +-
- random-address.c      |  6 +++---
- random-syscalls.c     |  7 +++++-
- syscalls/execve.c     |  5 +++--
- syscalls/modify_ldt.c |  6 +++---
- syscalls/move_pages.c | 16 ++++++--------
- syscalls/prctl.c      | 43 +++++++++++++++++++++++++++++++++++++
- syscalls/sendmsg.c    |  4 +++-
- syscalls/shmget.c     |  8 +++++--
- syscalls/socketcall.c |  6 +++++-
- tables.c              |  6 +++---
- trinity.c             |  2 ++
- unicode.c             |  2 +-
- 45 files changed, 266 insertions(+), 92 deletions(-)
-
+diff --git a/include/trinity.h b/include/trinity.h
+index 3c2e482..158b566 100644
+--- a/include/trinity.h
++++ b/include/trinity.h
+@@ -32,4 +32,8 @@ extern unsigned int user_specified_children;
+ #define max(x, y) ((x) >= (y) ? (x) : (y))
+ #define min(x, y) ((x) <= (y) ? (x) : (y))
+ 
++#ifndef offsetof
++# define offsetof(type, member)	((size_t) &((type *) 0)->member)
++#endif
++
+ #endif	/* _TRINITY_H */
+diff --git a/net/bpf.c b/net/bpf.c
+index bda72e1..2c0ed32 100644
+--- a/net/bpf.c
++++ b/net/bpf.c
+@@ -28,10 +28,6 @@
+ # define SKF_AD_MAX	56
+ #endif
+ 
+-#ifndef offsetof
+-# define offsetof(type, member)	((size_t) &((type *) 0)->member)
+-#endif
+-
+ #define syscall_nr	(offsetof(struct seccomp_data, nr))
+ #define arch_nr		(offsetof(struct seccomp_data, arch))
+ 
 -- 
 1.7.11.7
