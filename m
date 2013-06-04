@@ -1,65 +1,83 @@
-From: Peter Zijlstra <peterz@infradead.org>
-Subject: Re: OOPS in perf_mmap_close()
-Date: Mon, 3 Jun 2013 21:25:05 +0200
-Message-ID: <20130603192505.GH8923@twins.programming.kicks-ass.net>
-References: <20130523152611.GE23650@twins.programming.kicks-ass.net>
- <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu>
- <20130528085548.GA12193@twins.programming.kicks-ass.net>
- <alpine.DEB.2.10.1305281217370.19080@vincent-weaver-1.um.maine.edu>
- <alpine.DEB.2.10.1305281418120.19080@vincent-weaver-1.um.maine.edu>
- <20130529074433.GB12193@twins.programming.kicks-ass.net>
- <alpine.DEB.2.10.1305291516310.2609@vincent-weaver-1.um.maine.edu>
- <20130530072532.GF4341@laptop>
- <alpine.DEB.2.10.1305300842040.11264@vincent-weaver-1.um.maine.edu>
- <20130603132645.GC8923@twins.programming.kicks-ass.net>
+From: Jiri Slaby <jslaby@suse.cz>
+Subject: Re: [PATCH 1/3] use config.h in USE_* users
+Date: Tue, 04 Jun 2013 11:50:47 +0200
+Message-ID: <51ADB877.9050705@suse.cz>
+References: <1370339304-26492-1-git-send-email-jslaby@suse.cz>
 Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20130603132645.GC8923@twins.programming.kicks-ass.net>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=sender:message-id:date:from:user-agent:mime-version:to:cc:subject
+         :references:in-reply-to:x-enigmail-version:content-type
+         :content-transfer-encoding;
+        bh=jV7JnD8J1+FwyntqFK+bSJ3XxtYtYIeNY20BCiMBFZs=;
+        b=1KcX61m7JHAbAKkeiAfUpbkP1hXPNX3t5L5Qh1pnBRmXH0mlHvhdNWs7pHW9czpN2l
+         FD5FLwDrvb0mn6ji6BfQgpIhCKca1OnjPvnGu4E7T5ib17BR1yqwhvkq9WzmxQAiZkks
+         NyL8hbPnEF/cXFxXFmnxb1JGdCdvUACHnQycsndl/b83VPIhxmiVXJjU41Ii/uy/dPHJ
+         JmhH1WiBSJERMV2+AsUrQxUC2YQiBL26aGREcyN4mCPCa81u/u9x39JdwhCfk+rz77SU
+         TN18LxGqfYFbVECRBhu4oh+h+CLr6Ok0cleNcQgz/YR9DS17eVwh86UQlP4h+SA9D9Fe
+         XdDQ==
+In-Reply-To: <1370339304-26492-1-git-send-email-jslaby@suse.cz>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Vince Weaver <vincent.weaver@maine.edu>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
+To: davej@redhat.com
+Cc: trinity@vger.kernel.org
 
-On Mon, Jun 03, 2013 at 03:26:45PM +0200, Peter Zijlstra wrote:
-> On Thu, May 30, 2013 at 08:51:00AM -0400, Vince Weaver wrote:
-> > > I'll go prod, thanks again!
-> 
-> 
-> OK the below builds and seems to survive both test cases and about 10 minutes
-> of fuzzing -- fingers crossed.
-> 
-> ---
-> @@ -3779,12 +3834,21 @@ static int perf_mmap(struct file *file, struct vm_area_struct *vma)
->  		return -EINVAL;
->  
->  	WARN_ON_ONCE(event->ctx->parent_ctx);
-> +again:
->  	mutex_lock(&event->mmap_mutex);
->  	if (event->rb) {
-> -		if (event->rb->nr_pages == nr_pages)
-> -			atomic_inc(&event->rb->refcount);
-> -		else
-> +		if (event->rb->nr_pages != nr_pages)
-		{
->  			ret = -EINVAL;
-			goto unlock;
-		}
+Even if I apply those three, I still see:
+syscalls/perf_event_open.c: In function 'setup_breakpoints':
+syscalls/perf_event_open.c:237: error: 'struct perf_event_attr' has no
+member named 'bp_type'
+syscalls/perf_event_open.c:240: error: 'struct perf_event_attr' has no
+member named 'bp_type'
+syscalls/perf_event_open.c:243: error: 'struct perf_event_attr' has no
+member named 'bp_type'
+syscalls/perf_event_open.c:246: error: 'struct perf_event_attr' has no
+member named 'bp_type'
+syscalls/perf_event_open.c:249: error: 'struct perf_event_attr' has no
+member named 'bp_type'
+syscalls/perf_event_open.c:252: error: 'struct perf_event_attr' has no
+member named 'bp_type'
+syscalls/perf_event_open.c:259: error: 'struct perf_event_attr' has no
+member named 'bp_addr'
+syscalls/perf_event_open.c:263: error: 'struct perf_event_attr' has no
+member named 'bp_len'
+syscalls/perf_event_open.c:266: error: 'struct perf_event_attr' has no
+member named 'bp_len'
+syscalls/perf_event_open.c:269: error: 'struct perf_event_attr' has no
+member named 'bp_len'
+syscalls/perf_event_open.c:272: error: 'struct perf_event_attr' has no
+member named 'bp_len'
+syscalls/perf_event_open.c:275: error: 'struct perf_event_attr' has no
+member named 'bp_len'
+syscalls/perf_event_open.c: In function
+'create_mostly_valid_counting_event':
+syscalls/perf_event_open.c:377: error: 'struct perf_event_attr' has no
+member named 'precise_ip'
+syscalls/perf_event_open.c:378: error: 'struct perf_event_attr' has no
+member named 'mmap_data'
+syscalls/perf_event_open.c:379: error: 'struct perf_event_attr' has no
+member named 'sample_id_all'
+syscalls/perf_event_open.c:380: error: 'struct perf_event_attr' has no
+member named 'exclude_host'
+syscalls/perf_event_open.c:381: error: 'struct perf_event_attr' has no
+member named 'exclude_guest'
+syscalls/perf_event_open.c: In function
+'create_mostly_valid_sampling_event':
+syscalls/perf_event_open.c:428: error: 'struct perf_event_attr' has no
+member named 'precise_ip'
+syscalls/perf_event_open.c:429: error: 'struct perf_event_attr' has no
+member named 'mmap_data'
+syscalls/perf_event_open.c:430: error: 'struct perf_event_attr' has no
+member named 'sample_id_all'
+syscalls/perf_event_open.c:431: error: 'struct perf_event_attr' has no
+member named 'exclude_host'
+syscalls/perf_event_open.c:432: error: 'struct perf_event_attr' has no
+member named 'exclude_guest'
 
-Seems to cure it... I'm going to let it run over night.
+and I have no idea how to fix those cleanly...
 
-> +
-> +		if (!atomic_inc_not_zero(&event->rb->mmap_count)) {
-> +			/*
-> +			 * Raced against perf_mmap_close() through
-> +			 * perf_event_set_output(). Try again, hope for better
-> +			 * luck.
-> +			 */
-> +			mutex_unlock(&event->mmap_mutex);
-> +			goto again;
-> +		}
->  		goto unlock;
->  	}
->  
+-- 
+js
+suse labs
