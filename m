@@ -1,20 +1,18 @@
 From: Hangbin Liu <liuhangbin@gmail.com>
-Subject: [PATCH 2/2] gitignore: ignore patch files
-Date: Wed,  5 Jun 2013 17:41:24 +0800
-Message-ID: <1370425284-18808-2-git-send-email-liuhangbin@gmail.com>
-References: <1370425284-18808-1-git-send-email-liuhangbin@gmail.com>
+Subject: [PATCH] compat: define NETLINK_CRYPTO constant
+Date: Wed,  5 Jun 2013 17:51:25 +0800
+Message-ID: <1370425885-24383-1-git-send-email-liuhangbin@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
-        h=from:to:cc:subject:date:message-id:x-mailer:in-reply-to:references;
-        bh=hhdSoITJvOXZYhUZYLXS8vtZURxRk/LDOb+2Q+q30J8=;
-        b=A5VuysXyf7xbavaW4Yfd3EcPhFsYb3zWwLi8SKAUp+EeqTLoFuRZZVQ1jglivRpyNM
-         wTEGqXtIFJGKqct2qg0um2nxdD2fL3jYHJCm5bM2XcUIXRK2rYYtGIp92s7g6n+TP3vN
-         BD3ErKDEYMA0c1GfmPBkw0CTsw0MEJ80m7rzfRUuZcpIyMepoZMp1SWJrhHcUSDWkZ1B
-         2Hv/VNZeJ3zki5aC/8aT7y7XJu6Nx5eB6Ib6aBfkpmRVijX9oWzlgwmfkn1K9MwZixg7
-         HBvXK7IA3WASJVRncOo2QtAlU/FpF+jMhzbY2qw4BR3IMaz9eViuIURd40eQlQmMQbX2
-         AFuA==
-In-Reply-To: <1370425284-18808-1-git-send-email-liuhangbin@gmail.com>
+        h=from:to:cc:subject:date:message-id:x-mailer;
+        bh=99P1LX9xiyaGp2YQi1vdEWbaT/cuqy3/GC/xocyL0mQ=;
+        b=Ob/29wcjEBgv2lzSGsO3mLdPuYkgUmLXLQ409zY179zt+9yKvVst21I3CZ7sBpc71A
+         8tn8KoV3pe6tsksoCTiZF4WXM+/ohrxpBP8u/9EwPZ9kf5ThRU7y1jZ72ndSiNgihweN
+         fFFEJJ/M2e5HSK+9IlG9wrfIBNyNDQ3HRZKQRgZ8Voelqyq9ScEjr1ddoSd5TPDweAV/
+         tCzF2N9ht4oxsBX+/x4MQts3KQGAwtN48BZFkQkQqXHL44SiIKvEG5DnUHg3U0ih+ZDu
+         UvEyni+PW3yKPX6cHb0/XCwTUsWjFlAXObGAbOe55YU7LPR7rvHvGgV5PZn2uguiwO2D
+         kqhQ==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -25,17 +23,24 @@ Cc: Hangbin Liu <liuhangbin@gmail.com>
 
 Signed-off-by: Hangbin Liu <liuhangbin@gmail.com>
 ---
- .gitignore | 1 +
- 1 file changed, 1 insertion(+)
+ include/compat.h | 5 +++++
+ 1 file changed, 5 insertions(+)
 
-diff --git a/.gitignore b/.gitignore
-index 156f787..831e3a9 100644
---- a/.gitignore
-+++ b/.gitignore
-@@ -12,3 +12,4 @@ tags
- config.h
- cscope.*
- ncscope.*
-+*.patch
+diff --git a/include/compat.h b/include/compat.h
+index 20455f3..cef29f7 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -180,6 +180,11 @@ enum {
+ #define SYS_SENDMMSG 20
+ #endif
+ 
++/* linux/netlink.h */
++#ifndef NETLINK_CRYPTO
++#define NETLINK_CRYPTO 21
++#endif
++
+ /* linux/rds.h */
+ #ifndef RDS_CANCEL_SENT_TO
+ #define RDS_CANCEL_SENT_TO              1
 -- 
 1.8.1.4
