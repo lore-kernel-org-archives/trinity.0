@@ -1,42 +1,32 @@
-From: "Michael S. Tsirkin" <mst@redhat.com>
-Subject: Re: vhost && kernel BUG at /build/linux/mm/slub.c:3352!
-Date: Wed, 5 Jun 2013 15:08:50 +0300
-Message-ID: <20130605120850.GA3410@redhat.com>
-References: <CA+ydwtrtpA3jXojG3tKt_-ueJOWDSOL1trM9h6F5qLvdoonUOw@mail.gmail.com>
- <20130605115408.GA2643@redhat.com>
- <CA+ydwtq6FNSXhjGuqtQBUKVQJNOD_iKWpnUqj4rbfQJTkw+bog@mail.gmail.com>
+From: Vince Weaver <vincent.weaver@maine.edu>
+Subject: Re: OOPS in perf_mmap_close()
+Date: Wed, 5 Jun 2013 11:54:52 -0400 (EDT)
+Message-ID: <alpine.DEB.2.10.1306051151570.6484@vincent-weaver-1.um.maine.edu>
+References: <20130523152611.GE23650@twins.programming.kicks-ass.net> <alpine.DEB.2.10.1305231936210.2452@vincent-weaver-1.um.maine.edu> <20130528085548.GA12193@twins.programming.kicks-ass.net> <alpine.DEB.2.10.1305281217370.19080@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1305281418120.19080@vincent-weaver-1.um.maine.edu> <20130529074433.GB12193@twins.programming.kicks-ass.net> <alpine.DEB.2.10.1305291516310.2609@vincent-weaver-1.um.maine.edu> <20130530072532.GF4341@laptop>
+ <alpine.DEB.2.10.1305300842040.11264@vincent-weaver-1.um.maine.edu> <20130603132645.GC8923@twins.programming.kicks-ass.net> <20130603192505.GH8923@twins.programming.kicks-ass.net>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <CA+ydwtq6FNSXhjGuqtQBUKVQJNOD_iKWpnUqj4rbfQJTkw+bog@mail.gmail.com>
+In-Reply-To: <20130603192505.GH8923@twins.programming.kicks-ass.net>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Tommi Rantala <tt.rantala@gmail.com>
-Cc: kvm@vger.kernel.org, virtualization@lists.linux-foundation.org, trinity@vger.kernel.org, netdev@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, Dave Jones <davej@redhat.com>
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Vince Weaver <vincent.weaver@maine.edu>, Al Viro <viro@zeniv.linux.org.uk>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
-On Wed, Jun 05, 2013 at 03:06:33PM +0300, Tommi Rantala wrote:
-> 2013/6/5 Michael S. Tsirkin <mst@redhat.com>:
-> > On Tue, Jun 04, 2013 at 09:50:59PM +0300, Tommi Rantala wrote:
-> >> Hello,
-> >>
-> >> Hit this right after killing trinity with Ctrl-C. Was fuzzing
-> >> v3.10-rc4-0-gd683b96 in a qemu virtual machine as the root user.
-> >>
-> >> Tommi
-> >
-> > Thanks a lot for the report. If found some bugs when looking
-> > at this: I think they were introduced by
-> > 2839400f8fe28ce216eeeba3fb97bdf90977f7ad
-> > though I don't exactly see how ctrl-c can trigger this.
-> > I'll work on patches - is this reproducible at all?
-> 
-> Thanks, glad to hear that the report was useful.
-> 
-> Yes, I did reproduce this quite quickly yesterday with trinity, but
-> did not dig any deeper into what was going on.
-> 
-> Tommi
+On Mon, 3 Jun 2013, Peter Zijlstra wrote:
 
-Great, I'll post patches and we can see if it's fixed.
+> Seems to cure it... I'm going to let it run over night.
+
+[sorry for the delay in testing, was at the hospital waiting for
+ a new baby, and the free wi-fi had the ssh port blocked]
+
+I'm running 3.10-rc4 with your patch plus the 3-line fixup applied and my 
+various tests are solid so far.
+
+It would be nice to get this applied, without the patch it's trivial to 
+oops/lock any kernel going back to 3.2 and probably earlier (I haven't 
+tested older than 3.2 yet).
+
+Vince
