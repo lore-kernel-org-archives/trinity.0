@@ -1,19 +1,21 @@
-From: Michael Neuling <mikey@neuling.org>
+From: David Miller <davem@davemloft.net>
 Subject: Re: [PATCH] net: Unbreak compat_sys_{send,recv}msg
-Date: Thu, 06 Jun 2013 15:48:50 +1000
-Message-ID: <27619.1370497730@ale.ozlabs.ibm.com>
-References: <20130606132926.f4161ddff87dc9a55e33a8ca@canb.auug.org.au> <e3bf421e44c6d27817c15a8683612a49e093b419.1370496702.git.luto@amacapital.net>
-Return-path: <trinity-owner@vger.kernel.org>
-In-reply-to: <e3bf421e44c6d27817c15a8683612a49e093b419.1370496702.git.luto@amacapital.net>
-Sender: trinity-owner@vger.kernel.org
-List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Date: Thu, 06 Jun 2013 00:26:25 -0700 (PDT)
+Message-ID: <20130606.002625.223430401087826901.davem@davemloft.net>
+References: <20130606132926.f4161ddff87dc9a55e33a8ca@canb.auug.org.au>
+	<e3bf421e44c6d27817c15a8683612a49e093b419.1370496702.git.luto@amacapital.net>
+Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: x86@kernel.org, torvalds@linux-foundation.org, "David S. Miller" <davem@davemloft.net>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, Linux PPC dev <linuxppc-dev@ozlabs.org>, trinity@vger.kernel.org
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <e3bf421e44c6d27817c15a8683612a49e093b419.1370496702.git.luto@amacapital.net>
+Sender: linux-kernel-owner@vger.kernel.org
+List-ID: <trinity.vger.kernel.org>
+Content-Type: Text/Plain; charset="us-ascii"
+To: luto@amacapital.net
+Cc: x86@kernel.org, torvalds@linux-foundation.org, mikey@neuling.org, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, linuxppc-dev@ozlabs.org, trinity@vger.kernel.org, eric.dumazet@gmail.com
 
-Andy Lutomirski <luto@amacapital.net> wrote:
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Wed,  5 Jun 2013 22:38:26 -0700
 
 > I broke them in this commit:
 > 
@@ -28,14 +30,13 @@ Andy Lutomirski <luto@amacapital.net> wrote:
 > also reverts some unnecessary checks in sys_socketcall.
 > 
 > Apparently I was suffering from underscore blindness the first time around.
-
-FWIW This fixes the problem I was seeing with powerpc 32bit user on 64
-bit kernel.
-
-Mikey
-
 > 
 > Signed-off-by: Andy Lutomirski <luto@amacapital.net>
+
+Eric, can you test this patch too?
+
+Thanks.
+
 > ---
 > 
 > I've tested this a little, but I'm not sure I have a great test case.
@@ -288,4 +289,9 @@ Mikey
 >  		break;
 > -- 
 > 1.8.1.4
+> 
+> --
+> To unsubscribe from this list: send the line "unsubscribe trinity" in
+> the body of a message to majordomo@vger.kernel.org
+> More majordomo info at  http://vger.kernel.org/majordomo-info.html
 > 
