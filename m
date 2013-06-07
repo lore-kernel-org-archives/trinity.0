@@ -1,41 +1,46 @@
-From: Tommi Rantala <tt.rantala@gmail.com>
-Subject: Re: [PATCH v2] syscalls: use ARRAY_SIZE(x) instead of hard code define
-Date: Fri, 7 Jun 2013 08:58:03 +0300
-Message-ID: <CA+ydwtpcTdeTJiXYbM-5z55jM1Cj3i5FKo0-8W1ohZx=21nzpQ@mail.gmail.com>
-References: <1370536117-17806-1-git-send-email-liuhangbin@gmail.com>
+From: Michael Ellerman <michael@ellerman.id.au>
+Subject: Re: [PATCH 1/4] Add support for cross building using CROSS_COMPILE
+Date: Fri, 07 Jun 2013 16:44:49 +1000
+Message-ID: <1370587489.4996.1.camel@concordia>
+References: <1370087178-23439-1-git-send-email-michael@ellerman.id.au>
+	 <20130607050425.GA26425@concordia> <20130607053037.GB2888@redhat.com>
 Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
-         :cc:content-type;
-        bh=qO4FNXPeRIAoojtuXZiKQHDnJz29ra937DEmYt878pw=;
-        b=0/SmYdLGsbGQXYu/VEUyqbdpgBj/KFVQ2S7ddRqwezmTMxlelYSm7VLKDDERC0IB1m
-         pHo3/w40GeMyTYR2OgucnTRVHelrGMzL3iF8ySCMj27Itb6KflNzDmf8RdWAg/m8pJ6F
-         XsUm1LtjmYEBxc3yiCOxxBNScjjKgyHjKNl1mCXSydIsjXt4XaXBcUV8nP5MVnhp0cZG
-         iNxpyL16XU9TZunS6XMHJQDdQoR6cHoeiZ1FvUrYUIPJo5xZqN7ggXaa79oDoqBIRqMR
-         BgovWoAkgR/X8asHfl8SPKLURobvlE714YoDa/qDj1VDyFiYE6JslfVD/H0fELOC9nsa
-         O4BA==
-In-Reply-To: <1370536117-17806-1-git-send-email-liuhangbin@gmail.com>
+In-Reply-To: <20130607053037.GB2888@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Hangbin Liu <liuhangbin@gmail.com>
+To: Dave Jones <davej@redhat.com>
 Cc: trinity@vger.kernel.org
 
-2013/6/6 Hangbin Liu <liuhangbin@gmail.com>:
-> @@ -58,15 +59,15 @@
->  #define SOL_ALG         279
->  #define SOL_NFC                280
->
-> -#define NR_SOL_IP_OPTS 19
-> -static int ip_opts[NR_SOL_IP_OPTS] = { IP_TOS, IP_TTL, IP_HDRINCL, IP_OPTIONS,
-> +#define NR_SOL_IP_OPTS ARRAY_SIZE(ip_opts)
-> +static int ip_opts[] = { IP_TOS, IP_TTL, IP_HDRINCL, IP_OPTIONS,
+On Fri, 2013-06-07 at 01:30 -0400, Dave Jones wrote:
+> On Fri, Jun 07, 2013 at 03:04:26PM +1000, Michael Ellerman wrote:
+>  > On Sat, Jun 01, 2013 at 09:46:15PM +1000, Michael Ellerman wrote:
+>  > > Similarly to the kernel.  CROSS_COMPILE is optional, when specified it's
+>  > > a prefix, eg. myarch-linux-gnu-
+>  > > 
+>  > > We still allow overriding CC, separately, or in addition to setting
+>  > > CROSS_COMPILE.
+>  > > 
+>  > > There is also support for cross configuring, because at the moment all
+>  > > the configure tests only need to build, they're not run.
+>  > 
+>  > Did this series make it to the list? They were the first I sent just
+>  > after I subscribed. Or did you just not like them ? :)
+> 
+> Sorry, I just overlooked them.
 
-How about also adding 'const'... ?
+No stress.
 
-Dave already picked the patch, so this could be done separately.
+>  > Anyway the .gitignore patch conflicts now, I can rebase and resend if
+>  > you like.
+> 
+> All applied and pushed out.
+> 
+> (For small 1-2 liners I don't mind fixing up git merges. Bigger stuff I'd I've
+>  asked for a rebase.)
 
-Tommi
+Thanks.
+
+cheers
