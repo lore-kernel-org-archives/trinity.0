@@ -1,28 +1,41 @@
 From: Dave Jones <davej@redhat.com>
-Subject: Re: syscall.c:272:2: error: comparison is always false due
-Date: Tue, 11 Jun 2013 11:48:42 -0400
-Message-ID: <20130611154842.GA5051@redhat.com>
-References: <51B74199.8030501@gmx.de>
+Subject: Re: [patch] perf_event_open enable sysfs exported events
+Date: Tue, 11 Jun 2013 17:05:42 -0400
+Message-ID: <20130611210542.GA17585@redhat.com>
+References: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <51B74199.8030501@gmx.de>
+In-Reply-To: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: Vince Weaver <vincent.weaver@maine.edu>
 Cc: trinity@vger.kernel.org
 
-On Tue, Jun 11, 2013 at 05:26:17PM +0200, Toralf F=C3=B6rster wrote:
- > Latest git gives at a 32 bit Gentoo Linux:
- >=20
- >   CC    sockets.o
- > syscall.c: In function =E2=80=98mkcall=E2=80=99:
- > syscall.c:272:2: error: comparison is always false due to limited ra=
-nge of data type [-Werror=3Dtype-limits]
- > cc1: all warnings being treated as errors
+On Tue, Jun 11, 2013 at 12:33:23AM -0400, Vince Weaver wrote:
 
-dumb typo. fixed.
+ > @@ -80,7 +519,7 @@ static int random_event_type(void)
+ >  
+ >  	int type;
+ >  
+ > -	switch (rand() % 6) {
+ > +	switch (rand() % 8) {
+ >  	case 0:
+ >  		type = PERF_TYPE_HARDWARE;
+ >  		break;
+ > @@ -99,6 +538,9 @@ static int random_event_type(void)
+ >  	case 5:
+ >  		type = PERF_TYPE_BREAKPOINT;
+ >  		break;
+ > +	case 6:
+ > +		type = PERF_TYPE_READ_FROM_SYSFS;
+ > +		break;
+ >  	default:
+ >  		type = rand();
+ >  		break;
+
+is 8 correct here ? not 7 ?
 
 	Dave
