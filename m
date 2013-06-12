@@ -1,50 +1,41 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: [patch] perf_event_open enable sysfs exported events
-Date: Tue, 11 Jun 2013 18:25:14 -0400
-Message-ID: <20130611222514.GC17585@redhat.com>
-References: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu>
- <20130611210542.GA17585@redhat.com>
- <alpine.DEB.2.10.1306111720440.28238@vincent-weaver-1.um.maine.edu>
- <20130611213230.GB17585@redhat.com>
- <alpine.DEB.2.10.1306111815001.6833@vincent-weaver-1.um.maine.edu>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
+Subject: return string 1;2c1;2c1;2c1;2c1;2c1;2c1;2c1;2c1;2c
+Date: Wed, 12 Jun 2013 20:14:21 +0200
+Message-ID: <51B8BA7D.7010601@gmx.de>
 Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.10.1306111815001.6833@vincent-weaver-1.um.maine.edu>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Vince Weaver <vincent.weaver@maine.edu>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="iso-8859-1"
+To: trinity@vger.kernel.org
 
-On Tue, Jun 11, 2013 at 06:21:08PM -0400, Vince Weaver wrote:
- > On Tue, 11 Jun 2013, Dave Jones wrote:
- > 
- > > yeah, that's what I've done in a lot of other places (actually BUG() in those cases).
- > > For the most part they're present just to shut up -Wswitch-default, which
- > > has caught a few cases in the past where I've missed an option.
- > 
- > I'll go back through and check out all of the switch statements (there 
- > are a lot of them) and make sure they handle the default case 
- > consistently.
- >   
- > > ok, I'll apply what you sent so far. (and hold off on running it through Lindent for now,
- > > you really don't like whitespace huh? ;)
- > 
- > Not enough whitespace?  Or over-use of tabs?
+/me just wondering about the "return code" when I run trinity at a
+chroot image:
 
-Mostly stuff like this. ..
 
-	if((foo&bar)==0) i=rand();
+$ sudo ~/workspace/bin/chr_uml.sh -r ~/virtual/uml/trinity -t "cd
+/mnt/hostfs/; rm -rf t3; mkdir t3; cd t3; trinity -C 4 -m"
+=2E..
+[7283] [156] vmsplice(fd=3D385, iov=3D0x974daa0, nr_segs=3D183, flags=3D=
+2) =3D 5457
+child 7283 exiting
+=3D -1 (Interrupted system call)
+child 7237 exiting
+child 7275 exiting
+[5638] Bailing main loop. Exit reason: ctrl-c
+[5637] Watchdog exiting
 
-instead of
+Ran 1238429 syscalls. Successes: 275725  Failures: 960137
+$ 1;2c1;2c1;2c1;2c1;2c1;2c1;2c1;2c1;2c
 
-	if ((foo & bar) == 0)
-		i = rand();
 
-indent -kr gets it mostly right. I tried bending the kernels scripts/Lindent to fit,
-but I'm still not 100% happy.  It's good for a start point though.
+Happened all the time, the chr_uml.sh just creates a ramdisk which is
+mounted onto a directory known within the chroot (/mnt/hostfs)
 
-	Dave
- 
+Does anybody else experienced this ?
+
+--=20
+MfG/Sincerely
+Toralf F=C3=B6rster
+pgp finger print: 7B1A 07F4 EC82 0F90 D4C2 8936 872A E508 7DB6 9DA3
