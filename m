@@ -1,62 +1,47 @@
 From: Dave Jones <davej@redhat.com>
-Subject: Re: msgrcv (70) returned ENOSYS, marking as inactive.
-Date: Thu, 13 Jun 2013 16:33:57 -0400
-Message-ID: <20130613203357.GB32137@redhat.com>
-References: <CA+ydwtrxkFecyx5mK_ogvV+MP+iHmTFYySLXRjHOT0cZQmeidw@mail.gmail.com>
- <20130613201553.GA32137@redhat.com>
+Subject: Re: [patch] perf_event_open enable sysfs exported events
+Date: Thu, 13 Jun 2013 16:53:32 -0400
+Message-ID: <20130613205332.GA5440@redhat.com>
+References: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu>
+ <CA+ydwtr7eTOjtzWumr998TcxqhmX_M30aW99S=DF6mOwNURL=w@mail.gmail.com>
+ <alpine.DEB.2.10.1306131555210.24106@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20130613201553.GA32137@redhat.com>
+In-Reply-To: <alpine.DEB.2.10.1306131555210.24106@vincent-weaver-1.um.maine.edu>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Tommi Rantala <tt.rantala@gmail.com>
-Cc: trinity@vger.kernel.org
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: Tommi Rantala <tt.rantala@gmail.com>, trinity@vger.kernel.org
 
-On Thu, Jun 13, 2013 at 04:15:53PM -0400, Dave Jones wrote:
- > On Thu, Jun 13, 2013 at 10:41:30PM +0300, Tommi Rantala wrote:
- >  > Latest trinity from git is constantly complaining:
+On Thu, Jun 13, 2013 at 03:58:37PM -0400, Vince Weaver wrote:
+ > On Thu, 13 Jun 2013, Tommi Rantala wrote:
  > 
- > weird.
+ > > [221186.493638] traps: trinity-child30[375] trap divide error
+ > > ip:40dbae sp:7fff3c1d7ae0 error:0 in trinity[400000+28000]
  > 
- >  > [32492] Random reseed: 3901037224
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > [watchdog] 200253 iterations. [F:161784 S:38468]
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- >  > msgrcv (70) returned ENOSYS, marking as inactive.
- > 
- > puzzling.  this should (obviously) only occur once.
- > Maybe it's happening once per thread at the same time,
- > so they're all racing. (I should add some locking around
- > the modifications of the syscall table I suppose).
+ > diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
+ > index 32c11cf..11f49e8 100644
+ > --- a/syscalls/perf_event_open.c
+ > +++ b/syscalls/perf_event_open.c
+ > @@ -406,6 +406,14 @@ static long long random_sysfs_config(__u32 *type, __u64 *config1) {
+ >  	int i,j;
+ >  	long long c=0,c1=0;
+ >  
+ > +	if (num_pmus==0) {
+ > +		/* For some reason we didn't get initialized */
+ > +		/* Fake it so we don't divide by zero        */
+ > +		*type=rand32();
+ > +		*config1=rand64();
+ > +		return rand64();
+ > +	}
 
-Something that's even more puzzling about this..
-What are the odds all threads hit that at the same time
-(unless you did -C msgrcv, which it doesn't look like you
- did from the core dump)
+Probably safer ?
 
-I wonder if I've broken seeding again.
-Leave logging enabled, and compare a couple of the child logs,
-just to make sure they're doing different syscalls.
-
-Would be surprised though, the only thing remotely relevant
-that changed is yesterdays rand32 changes in 7d86b1ca5ddc1ac04468d6ee7a0a74e931b67dae
++               *type = rand32() | 1;
++               *config1 = rand64() | 1;
++               return rand64() | 1;
 
 	Dave
