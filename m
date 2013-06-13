@@ -1,53 +1,95 @@
-From: Frederic Weisbecker <fweisbec@gmail.com>
-Subject: Re: [PATCH 0/3] hw_breakpoint: cleanups
-Date: Thu, 13 Jun 2013 17:24:15 +0200
-Message-ID: <CAFTL4hxQ94mq16ZnF1g8h0ug1rMLmKia_wC4yt01Ra4KWkgsSA@mail.gmail.com>
-References: <alpine.DEB.2.02.1305201206480.29892@vincent-weaver-1.um.maine.edu>
-	<20130601194526.GA27149@redhat.com>
-	<20130613140112.GB16339@somewhere>
-	<20130613151546.GA30062@redhat.com>
+From: Tommi Rantala <tt.rantala@gmail.com>
+Subject: Re: [PATCH 4/4] trinity: use Boehm-Demers-Weiser's garbage collecting
+ memory allocator
+Date: Thu, 13 Jun 2013 21:57:36 +0300
+Message-ID: <CA+ydwtrfNCfcbqb2GjgwZOaacChYjbkGD-nZH_gSjM5HWtS9fg@mail.gmail.com>
+References: <cover.1370285968.git.dborkman@redhat.com>
+	<1bdeb13f75006abc2d8ef622c7bf56f7627ad082.1370285968.git.dborkman@redhat.com>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=mime-version:in-reply-to:references:date:message-id:subject:from:to
          :cc:content-type;
-        bh=ulQUHBpgA9DmVsiD6XkynOyOCHam3zIVMllaV6stz8M=;
-        b=F1Ke5MGYCtLjXqVjBLR3Otq5kLwQUbj6Fy9xHQNPSE+Wbor1R+f79imskv83+vCHjh
-         ySBLCTWDrkyTDNFUZd604REJyZm4GqbJ4Au+E9wCuLaEtfzCZPXm42b1Da2dAKF4PCKX
-         GBfbiRYF9fRo4g9bnPOD+S1/ntV8fZyqE20/ykaz/6aGlNHl1x3bn5tYo5bHSVS2a7rw
-         YlV1maBjiCF07gvtTjmBPXBLlow0/XZybxG6W2s1rc3aAYHf1pR7PXW3c4lmZ8OWw7sq
-         xgTBY+u2rQfqV2KbiPEHUkJnruvBRc2OKFC9TpZ9oDePhl98Bkf/yFiyXUjTulvv+VyU
-         X39w==
-In-Reply-To: <20130613151546.GA30062@redhat.com>
+        bh=NYMQmEi2ctTQeyoCxjLb6/EBZDqwDBpg1jgsXRENh54=;
+        b=WxZZd4yj2B9cWTvGbwAY5DNZgUKZGk6oGkoOLrxPkAp0B8Gy9eOKzNkLXyaxyCIz3L
+         nQ4LxaAeQpJutUak6Y1h3qOZxxwlhv04tJ73JxSDLjVm7bA/1cGFK6ZOsfH40cl/7qWt
+         +VV1AUlrEo85sw17oNJ41XUEX022KKJ5F065Ty4ZDORBA1W8nFzsfK8M/arO+9PDNbwp
+         jZZMuwpwlNC98pig6u6qthMbyQxQSwAcPyHQ+fEV4HuUUzmZTa6z6XhKqe32o/6BsU7j
+         /ImLM1VhIFo+9k00LBelH8cMbkjkpOF+gXoI2WD6tJMfAy7exofzCAXvzdnnkmrt2pVJ
+         RgqQ==
+In-Reply-To: <1bdeb13f75006abc2d8ef622c7bf56f7627ad082.1370285968.git.dborkman@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Oleg Nesterov <oleg@redhat.com>
-Cc: Ingo Molnar <mingo@elte.hu>, Vince Weaver <vincent.weaver@maine.edu>, linux-kernel@vger.kernel.org, Peter Zijlstra <a.p.zijlstra@chello.nl>, Paul Mackerras <paulus@samba.org>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org, Jiri Olsa <jolsa@redhat.com>
+To: Daniel Borkmann <dborkman@redhat.com>
+Cc: trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
 
-2013/6/13 Oleg Nesterov <oleg@redhat.com>:
-> On 06/13, Frederic Weisbecker wrote:
->>
->> On Sat, Jun 01, 2013 at 09:45:26PM +0200, Oleg Nesterov wrote:
->> > Hello.
->> >
->> > Cleanups, on top of
->> >
->> >     [PATCH 0/2]: WARN_ONCE in arch/x86/kernel/hw_breakpoint.c
->>
->> So this series doesn't have the fix for the warning?
+2013/6/3 Daniel Borkmann <dborkman@redhat.com>:
+> trinity currently quite often does not care about freeing memory on
+> its own that was fetched through malloc(). Therefore it can happen if
+> trinity runs for quite a long time, that oom-killer gets invoked. So
+> for now use the Boehm-Demers-Weiser's garbage collecting memory
+> allocator as a malloc replacement to avoid such situations.
 >
-> I don't understand the question ;)
+> In this patch, we wrap all BDW functions into bdw_* equivalents, so that
+> we could later on still #ifdef something if we want to and replace all
+> calls based on the build. Calling bdw_free() is still legimite although
+> not needed, but the memory is reclaimed automatically in the background
+> or forced via bdw_gcollect(), which would solve trinity's memory
+> management.
 >
-> The previous series
+> Dependency that we need when building (in case people don't want
+> additional libs, follow-up patches could still #ifdef bdw_* wrappers
+> to the glibc functions):
 >
->         [PATCH 1/2] hw_breakpoint: Fix cpu check in task_bp_pinned(cpu)
->         [PATCH 2/2] hw_breakpoint: Use cpu_possible_mask in {reserve,release}_bp_slot()
+>   Fedora: yum install gc-devel
 >
-> tried to fix the bugs which lead to this (correct) warning.
+>   Debian: apt-get install libgc-dev
 >
-> This and the next one try to cleanup the code.
+> More information on Boehm-Demers-Weiser allocator can be found here:
+>
+>   http://www.hpl.hp.com/personal/Hans_Boehm/gc/
+>
+> Note that it is said that the performance is competitive with malloc(3),
+> free(3) calls.
 
-Ah ok, there is two series (/me confused as usual :)
+Thanks, tried this a bit.
+
+Based on a quick test, the performance impact is not acceptable.
+
+Vanilla trinity:
+
+$ timeout --signal=SIGINT 60 ./trinity -q -l off -C20
+[...]
+Ran 109049 syscalls. Successes: 20726  Failures: 88323
+
+Patch applied:
+
+$ timeout --signal=SIGINT 60 ./trinity-gc -q -l off -C20
+[...]
+Ran 17385 syscalls. Successes: 3073  Failures: 14312
+
+I'm also seeing some warnings printed:
+
+Bad GET_MEM arg
+Bad GET_MEM arg
+[29301] Random reseed: 2845759031
+Bad GET_MEM arg
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+[29301] Random reseed: 382749635
+GC Warning: Out of Memory! Heap size: 2 MiB. Returning NULL!
+GC Warning: Out of Memory! Heap size: 2 MiB. Returning NULL!
+GC Warning: Out of Memory! Heap size: 2 MiB. Returning NULL!
+GC Warning: Out of Memory! Heap size: 2 MiB. Returning NULL!
+GC Warning: Out of Memory! Heap size: 2 MiB. Returning NULL!
+GC Warning: Out of Memory! Heap size: 2 MiB. Returning NULL!
+GC Warning: Out of Memory! Heap size: 2 MiB. Returning NULL!
+GC Warning: Out of Memory! Heap size: 2 MiB. Returning NULL!
+GC Warning: Out of Memory! Heap size: 2 MiB. Returning NULL!
+GC Warning: Out of Memory! Heap size: 2 MiB. Returning NULL!
+
+Tommi
