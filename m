@@ -1,40 +1,42 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: [patch] perf_event_open enable sysfs exported events
-Date: Thu, 13 Jun 2013 17:05:04 -0400
-Message-ID: <20130613210504.GB5440@redhat.com>
-References: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu>
- <CA+ydwtr7eTOjtzWumr998TcxqhmX_M30aW99S=DF6mOwNURL=w@mail.gmail.com>
- <alpine.DEB.2.10.1306131555210.24106@vincent-weaver-1.um.maine.edu>
- <20130613205332.GA5440@redhat.com>
- <alpine.DEB.2.10.1306131706250.4638@vincent-weaver-1.um.maine.edu>
+From: Andy Lutomirski <luto@amacapital.net>
+Subject: Re: [PATCH 0/5] x86: oops on uaccess faults outside of user addresses
+Date: Thu, 13 Jun 2013 15:00:37 -0700
+Message-ID: <CALCETrW5NVQYaU1Et=wkEeUx2HcQ5kDcgW2WDJ6TAk=LYNp2oQ@mail.gmail.com>
+References: <cover.1369177867.git.luto@amacapital.net>
 Mime-Version: 1.0
-Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.10.1306131706250.4638@vincent-weaver-1.um.maine.edu>
-Sender: trinity-owner@vger.kernel.org
+Return-path: <linux-kernel-owner@vger.kernel.org>
+In-Reply-To: <cover.1369177867.git.luto@amacapital.net>
+Sender: linux-kernel-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Vince Weaver <vincent.weaver@maine.edu>
-Cc: Tommi Rantala <tt.rantala@gmail.com>, trinity@vger.kernel.org
+To: linux-kernel@vger.kernel.org
+Cc: x86@kernel.org, trinity@vger.kernel.org, Andy Lutomirski <luto@amacapital.net>
 
-On Thu, Jun 13, 2013 at 05:07:59PM -0400, Vince Weaver wrote:
- > On Thu, 13 Jun 2013, Dave Jones wrote:
- > > 
- > > Probably safer ?
- > > 
- > > +               *type = rand32() | 1;
- > > +               *config1 = rand64() | 1;
- > > +               return rand64() | 1;
- > 
- > no, 0 is a perfectly valid value for all of those fields.
- > 
- > The error was coming in to play because if sysfs wasn't found, num_pmus
- > was set to 0, and we were doing a " rand() % num_pmus " to choose
- > a random value for the type field.
+On Wed, May 22, 2013 at 2:07 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+> Currently, __get_user can't trigger an OOPS -- any exception will be
+> caught and return -EFAULT.  This means that, if an access_ok check is
+> missing somewhere, then an attacker can freely use it to probe for valid
+> kernel mappings.
+>
+> This series annotates all of the exception fixups as "catch anything" or
+> "catch valid uaccess faults", and skips the fixup (and hence oopses) if
+> an instruction of the latter type faults for any reason other than a
+> page fault to a user address.
+>
+> I know of only one bug of this type; it's fixed in patch 5.
+>
+> Perhaps surprisingly, this seems to survive Trinity fairly well.
+>
+> Andy Lutomirski (5):
+>   x86: Split "utter crap" pnpbios fixup out of fixup_exception
+>   x86: Clean up extable entry format (and free up a bit)
+>   x86: Annotate _ASM_EXTABLE users to distinguish uaccess from
+>     everything else
+>   x86: Don't fixup uaccess faults to kernel or non-canonical addresses
+>   net: Block MSG_CMSG_COMPAT in send(m)msg and recv(m)msg
 
-ah, gotcha. I'll queue up your patch.
+Patch 5 is (for better or for worse) in -linus now.  What's the status
+of the other four?  (They're certainly not 3.10 material.)
 
-thanks,
-
-	Dave
+--Andy
