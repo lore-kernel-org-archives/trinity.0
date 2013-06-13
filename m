@@ -1,73 +1,71 @@
-From: Daniel Borkmann <dborkman@redhat.com>
-Subject: Re: [PATCH 4/4] trinity: use Boehm-Demers-Weiser's garbage collecting
- memory allocator
-Date: Thu, 13 Jun 2013 22:07:54 +0200
-Message-ID: <51BA269A.2040404@redhat.com>
-References: <cover.1370285968.git.dborkman@redhat.com> <1bdeb13f75006abc2d8ef622c7bf56f7627ad082.1370285968.git.dborkman@redhat.com> <CA+ydwtrfNCfcbqb2GjgwZOaacChYjbkGD-nZH_gSjM5HWtS9fg@mail.gmail.com>
+From: Dave Jones <davej@redhat.com>
+Subject: Re: msgrcv (70) returned ENOSYS, marking as inactive.
+Date: Thu, 13 Jun 2013 16:15:53 -0400
+Message-ID: <20130613201553.GA32137@redhat.com>
+References: <CA+ydwtrxkFecyx5mK_ogvV+MP+iHmTFYySLXRjHOT0cZQmeidw@mail.gmail.com>
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <CA+ydwtrfNCfcbqb2GjgwZOaacChYjbkGD-nZH_gSjM5HWtS9fg@mail.gmail.com>
+Content-Disposition: inline
+In-Reply-To: <CA+ydwtrxkFecyx5mK_ogvV+MP+iHmTFYySLXRjHOT0cZQmeidw@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"; format="flowed"
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 To: Tommi Rantala <tt.rantala@gmail.com>
-Cc: trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
+Cc: trinity@vger.kernel.org
 
-On 06/13/2013 08:57 PM, Tommi Rantala wrote:
-> 2013/6/3 Daniel Borkmann <dborkman@redhat.com>:
->> trinity currently quite often does not care about freeing memory on
->> its own that was fetched through malloc(). Therefore it can happen if
->> trinity runs for quite a long time, that oom-killer gets invoked. So
->> for now use the Boehm-Demers-Weiser's garbage collecting memory
->> allocator as a malloc replacement to avoid such situations.
->>
->> In this patch, we wrap all BDW functions into bdw_* equivalents, so that
->> we could later on still #ifdef something if we want to and replace all
->> calls based on the build. Calling bdw_free() is still legimite although
->> not needed, but the memory is reclaimed automatically in the background
->> or forced via bdw_gcollect(), which would solve trinity's memory
->> management.
->>
->> Dependency that we need when building (in case people don't want
->> additional libs, follow-up patches could still #ifdef bdw_* wrappers
->> to the glibc functions):
->>
->>    Fedora: yum install gc-devel
->>
->>    Debian: apt-get install libgc-dev
->>
->> More information on Boehm-Demers-Weiser allocator can be found here:
->>
->>    http://www.hpl.hp.com/personal/Hans_Boehm/gc/
->>
->> Note that it is said that the performance is competitive with malloc(3),
->> free(3) calls.
->
-> Thanks, tried this a bit.
->
-> Based on a quick test, the performance impact is not acceptable.
->
-> Vanilla trinity:
->
-> $ timeout --signal=SIGINT 60 ./trinity -q -l off -C20
-> [...]
-> Ran 109049 syscalls. Successes: 20726  Failures: 88323
->
-> Patch applied:
->
-> $ timeout --signal=SIGINT 60 ./trinity-gc -q -l off -C20
-> [...]
-> Ran 17385 syscalls. Successes: 3073  Failures: 14312
+On Thu, Jun 13, 2013 at 10:41:30PM +0300, Tommi Rantala wrote:
+ > Latest trinity from git is constantly complaining:
 
-Thanks for testing Tommi !
+weird.
 
-This does not look good and opposes the claim of the authors
-pretty much.
+ > [32492] Random reseed: 3901037224
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > [watchdog] 200253 iterations. [F:161784 S:38468]
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
+ > msgrcv (70) returned ENOSYS, marking as inactive.
 
-Then I agree that we should drop this, and solve it otherwise,
-e.g. via callback handlers that do some cleanup if necessary.
+puzzling.  this should (obviously) only occur once.
+Maybe it's happening once per thread at the same time,
+so they're all racing. (I should add some locking around
+the modifications of the syscall table I suppose).
 
-Cheers,
+ > trinity: malloc.c:3616: _int_malloc: Assertion `(unsigned long)(size)
+ > >= (unsigned long)(nb)' failed.
+ 
+This is trinity corrupting itself. Seen this occasionally for a while now,
+but haven't had time to track it down.  Need to spend some time
+with scripts/test-all-sequentially.sh to figure out a) which syscall
+is causing it, and b) what memory it's scribbling over.
 
-Daniel
+ > I collected bunch of cores with -D and see this a lot, related perhaps:
+ > 
+ > Core was generated by `./trinity -q -l off -C40 -D'.
+ > Program terminated with signal 11, Segmentation fault.
+ > #0  mkcall (childno=childno@entry=1) at syscall.c:292
+ > 292                             syscalls_32bit[call32].entry->flags &= ~ACTIVE;
+ > #0  mkcall (childno=childno@entry=1) at syscall.c:292
+ > #1  0x0000000000407e8c in do_random_syscalls (childno=childno@entry=1)
+ > at random-syscalls.c:125
+
+Can you see what syscalls_32bit, and call32 are at that point ?
+Also a backtrace might be useful.
+
+Is it always the 32bit path ?
+
+	Dave
