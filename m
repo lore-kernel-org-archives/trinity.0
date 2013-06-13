@@ -1,51 +1,73 @@
-From: Vince Weaver <vincent.weaver@maine.edu>
-Subject: Re: [patch] perf_event_open enable sysfs exported events
-Date: Thu, 13 Jun 2013 15:58:37 -0400 (EDT)
-Message-ID: <alpine.DEB.2.10.1306131555210.24106@vincent-weaver-1.um.maine.edu>
-References: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu> <CA+ydwtr7eTOjtzWumr998TcxqhmX_M30aW99S=DF6mOwNURL=w@mail.gmail.com>
+From: Daniel Borkmann <dborkman@redhat.com>
+Subject: Re: [PATCH 4/4] trinity: use Boehm-Demers-Weiser's garbage collecting
+ memory allocator
+Date: Thu, 13 Jun 2013 22:07:54 +0200
+Message-ID: <51BA269A.2040404@redhat.com>
+References: <cover.1370285968.git.dborkman@redhat.com> <1bdeb13f75006abc2d8ef622c7bf56f7627ad082.1370285968.git.dborkman@redhat.com> <CA+ydwtrfNCfcbqb2GjgwZOaacChYjbkGD-nZH_gSjM5HWtS9fg@mail.gmail.com>
 Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <CA+ydwtr7eTOjtzWumr998TcxqhmX_M30aW99S=DF6mOwNURL=w@mail.gmail.com>
+In-Reply-To: <CA+ydwtrfNCfcbqb2GjgwZOaacChYjbkGD-nZH_gSjM5HWtS9fg@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: TEXT/PLAIN; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="us-ascii"; format="flowed"
 To: Tommi Rantala <tt.rantala@gmail.com>
-Cc: Vince Weaver <vincent.weaver@maine.edu>, trinity@vger.kernel.org
+Cc: trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
 
-On Thu, 13 Jun 2013, Tommi Rantala wrote:
+On 06/13/2013 08:57 PM, Tommi Rantala wrote:
+> 2013/6/3 Daniel Borkmann <dborkman@redhat.com>:
+>> trinity currently quite often does not care about freeing memory on
+>> its own that was fetched through malloc(). Therefore it can happen if
+>> trinity runs for quite a long time, that oom-killer gets invoked. So
+>> for now use the Boehm-Demers-Weiser's garbage collecting memory
+>> allocator as a malloc replacement to avoid such situations.
+>>
+>> In this patch, we wrap all BDW functions into bdw_* equivalents, so that
+>> we could later on still #ifdef something if we want to and replace all
+>> calls based on the build. Calling bdw_free() is still legimite although
+>> not needed, but the memory is reclaimed automatically in the background
+>> or forced via bdw_gcollect(), which would solve trinity's memory
+>> management.
+>>
+>> Dependency that we need when building (in case people don't want
+>> additional libs, follow-up patches could still #ifdef bdw_* wrappers
+>> to the glibc functions):
+>>
+>>    Fedora: yum install gc-devel
+>>
+>>    Debian: apt-get install libgc-dev
+>>
+>> More information on Boehm-Demers-Weiser allocator can be found here:
+>>
+>>    http://www.hpl.hp.com/personal/Hans_Boehm/gc/
+>>
+>> Note that it is said that the performance is competitive with malloc(3),
+>> free(3) calls.
+>
+> Thanks, tried this a bit.
+>
+> Based on a quick test, the performance impact is not acceptable.
+>
+> Vanilla trinity:
+>
+> $ timeout --signal=SIGINT 60 ./trinity -q -l off -C20
+> [...]
+> Ran 109049 syscalls. Successes: 20726  Failures: 88323
+>
+> Patch applied:
+>
+> $ timeout --signal=SIGINT 60 ./trinity-gc -q -l off -C20
+> [...]
+> Ran 17385 syscalls. Successes: 3073  Failures: 14312
 
-> Unable to opendir /sys/bus/event_source/devices : Resource temporarily
-> unavailable
-> [221186.493638] traps: trinity-child30[375] trap divide error
-> ip:40dbae sp:7fff3c1d7ae0 error:0 in trinity[400000+28000]
+Thanks for testing Tommi !
 
-The below patch should fix this problem.
+This does not look good and opposes the claim of the authors
+pretty much.
 
-Though in the case where /sys/bus/event_source/devices isn't available
-trinity will try opening it again each time it tries to do a 
-PERF_TYPE_READ_FROM_SYSFS type (1 time in 7).  Not sure if it's
-worth rate-limiting that.
+Then I agree that we should drop this, and solve it otherwise,
+e.g. via callback handlers that do some cleanup if necessary.
 
-Signed-off-by: Vince Weaver <vincent.weaver@maine.edu>
+Cheers,
 
-
-diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
-index 32c11cf..11f49e8 100644
---- a/syscalls/perf_event_open.c
-+++ b/syscalls/perf_event_open.c
-@@ -406,6 +406,14 @@ static long long random_sysfs_config(__u32 *type, __u64 *config1) {
- 	int i,j;
- 	long long c=0,c1=0;
- 
-+	if (num_pmus==0) {
-+		/* For some reason we didn't get initialized */
-+		/* Fake it so we don't divide by zero        */
-+		*type=rand32();
-+		*config1=rand64();
-+		return rand64();
-+	}
-+
- 	i=rand()%num_pmus;
- 
- 	*type=pmus[i].type;
+Daniel
