@@ -1,77 +1,64 @@
 From: Tommi Rantala <tt.rantala@gmail.com>
-Subject: Re: [patch] perf_event_open enable sysfs exported events
-Date: Thu, 13 Jun 2013 22:38:13 +0300
-Message-ID: <CA+ydwtr7eTOjtzWumr998TcxqhmX_M30aW99S=DF6mOwNURL=w@mail.gmail.com>
-References: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu>
+Subject: msgrcv (70) returned ENOSYS, marking as inactive.
+Date: Thu, 13 Jun 2013 22:41:30 +0300
+Message-ID: <CA+ydwtrxkFecyx5mK_ogvV+MP+iHmTFYySLXRjHOT0cZQmeidw@mail.gmail.com>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
-        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
-         :cc:content-type;
-        bh=10hN/V9y+ps18jXr69SWVI445pWZsYhz9qjRzKlAta4=;
-        b=W7H1Z8Ubbp9+BIhH07kLW+V3+A0gEI2oSQTVUeCve09E4Wrjxa+zQ2ZLboqxxHNwio
-         Fww7/FzW43idxOmfvOFj9heBTdsQG79gOjD0v+Qx3FMgl+/kO7EiXB0UPyQ30YUgdpwO
-         ayWVYoCR3K5tUa9Qh+4LBdzNDlFwghFew3lI+sw3dd2KROAuy85Jqux6G1sNCxEqDet6
-         GBmkj/TLI1FcbBevG0Nti7quHGUT7DU0i/KWFP0dmjwx4GfOJwLd4DlOTpkO2LeTKbt3
-         H5AjvQ3syocLPy6ZW83q4K7vfugK4uKs7/AG2Pjr3pUhekYjUaA3Mzi1wH/rVWulT6mK
-         s1HA==
-In-Reply-To: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu>
+        h=mime-version:date:message-id:subject:from:to:content-type;
+        bh=vxT26rBiVo1y92VT8rjEqYdKFmhJlNyI6Q2kglcO7kk=;
+        b=u7TKuPMfzJQmz1zBRtolJnq+wH+kk6LhOhQyayUYYSexk2aZYLpqEe59zb0N0gvYLF
+         VK6Yt4FgTsLjpMiwEeSPSRZDk6zesNTlAZ4wRQdhkpF2j114qT6TguCbxYLWKMvhIjr4
+         HdPINYJ3W5YnJpjpI0tiw1f8NivhU+6hvxFolewRZioUuWXmFd3jeXIaVw2zgMDg/ErT
+         BKko02W6U/YY+zQWcwwBkui/hHZdeSDxXhwHgU83P2WE9v8WgR1e+QFL3UwuOM1mTeEZ
+         6+4BAZj9lCZq3NO1OCADTyXs5SoI/QvK2MDGh1j2WmZHIHt3X18vGf4kcHKMkqK2Xr7l
+         YwfA==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Vince Weaver <vincent.weaver@maine.edu>
-Cc: trinity@vger.kernel.org
+To: trinity@vger.kernel.org
 
-2013/6/11 Vince Weaver <vincent.weaver@maine.edu>:
->
-> perf_event exports a bunch of event info via /sys under
-> /sys/bus/event_source/devices
->
-> By parsing these files it's possible to generate more likely valid
-> (and almost-valid) events.  It also makes exercising expanded PMUs
-> (such as uncore events on recent Intel machines) possible.
->
-> The included somewhat ugly patch enables generating events based
-> on the sysfs files (1 time out of 9).  It sets up a table of all
-> possible event fields and generalized events for all detected event
-> types the first time such an event is requested, then uses this table
-> to generate events subsequent times.
->
-> The parser is possibly fragile.  The perf tool actually has a full
-> lexer to handle the parsing of these files.  I've tested on a core2
-> and sandybridge machine but it might possibly fail on more obscure
-> machines, especially if any have non-contiguous event fields.
->
-> Signed-off-by: Vince Weaver <vincent.weaver@maine.edu>
->
-> +static long long random_sysfs_config(__u32 *type, __u64 *config1) {
-> +
-> +       int i,j;
-> +       long long c=0,c1=0;
-> +
-> +       i=rand()%num_pmus;
+Latest trinity from git is constantly complaining:
 
-Hi, I'm occasionally seeing:
+[32492] Random reseed: 3901037224
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+[watchdog] 200253 iterations. [F:161784 S:38468]
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+trinity: malloc.c:3616: _int_malloc: Assertion `(unsigned long)(size)
+>= (unsigned long)(nb)' failed.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
+msgrcv (70) returned ENOSYS, marking as inactive.
 
-Unable to opendir /sys/bus/event_source/devices : Resource temporarily
-unavailable
-[221186.493638] traps: trinity-child30[375] trap divide error
-ip:40dbae sp:7fff3c1d7ae0 error:0 in trinity[400000+28000]
+Whats up?
 
-One of the cores collected with -D gives me:
+I collected bunch of cores with -D and see this a lot, related perhaps:
 
 Core was generated by `./trinity -q -l off -C40 -D'.
-Program terminated with signal 8, Arithmetic exception.
-#0  0x000000000040dbae in random_sysfs_config (config1=0x1676038,
-type=<optimized out>) at syscalls/perf_event_open.c:409
-409             i=rand()%num_pmus;
-#0  0x000000000040dbae in random_sysfs_config (config1=0x1676038,
-type=<optimized out>) at syscalls/perf_event_open.c:409
-#1  random_event_config (event_type=event_type@entry=0x1676000,
-config1=config1@entry=0x1676038) at syscalls/perf_event_open.c:652
-#2  0x000000000040e1e2 in create_mostly_valid_counting_event
-(attr=0x1676000) at syscalls/perf_event_open.c:779
+Program terminated with signal 11, Segmentation fault.
+#0  mkcall (childno=childno@entry=1) at syscall.c:292
+292                             syscalls_32bit[call32].entry->flags &= ~ACTIVE;
+#0  mkcall (childno=childno@entry=1) at syscall.c:292
+#1  0x0000000000407e8c in do_random_syscalls (childno=childno@entry=1)
+at random-syscalls.c:125
 
 Tommi
