@@ -1,95 +1,103 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: Complie issues with trinity-2013-06-17 on s390
-Date: Tue, 18 Jun 2013 11:39:13 -0400
-Message-ID: <20130618153913.GA20496@redhat.com>
-References: <1371539246.4585.698.camel@oc6144502753.ibm.com>
+From: Frederic Weisbecker <fweisbec@gmail.com>
+Subject: Re: [PATCH 2/2] hw_breakpoint: Introduce "struct bp_cpuinfo"
+Date: Tue, 18 Jun 2013 19:01:48 +0200
+Message-ID: <20130618170145.GI17619@somewhere.redhat.com>
+References: <alpine.DEB.2.02.1305201206480.29892@vincent-weaver-1.um.maine.edu>
+ <20130602194912.GA3277@redhat.com>
+ <20130602195057.GC3277@redhat.com>
+ <20130618123741.GC17619@somewhere.redhat.com>
+ <20130618144225.GA26920@redhat.com>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-type:content-disposition:in-reply-to:user-agent;
+        bh=5S5JGbA1BxhjbOY54BOsrG5A0697EdZqksWtU4/+Tss=;
+        b=aYl9b1Wwqq59S08kb6kXQu3zIckqHXKBYQC9W0hw98fPy4FnKAYbGMfD8QuscuuHzc
+         AZCpMR3HvWOyuAAgMohj5zcqL5q8TIzByDqzF9cnLBRWgbJYWH2c312vYBJHw+4O/9Ua
+         32dLqg0ZW5MT7GG77xZe7dvqLFcs8cI/PjAWgdMEBweqk1MrZ6eNu8CSvRUWMVTd71hQ
+         JUWQIu72MPT+V28bpoFZ4LhT1ZDF2O6uD70fTtDdISsskfhtT2kaSBhgN1CFd5Tae4DF
+         rVfYRBRPYfwE2dBLdgy4KvleB5F/bjO4Pfs4hrV5/n4HUzQoDPMooWn4LiPD29P1dHqs
+         nUXw==
 Content-Disposition: inline
-In-Reply-To: <1371539246.4585.698.camel@oc6144502753.ibm.com>
+In-Reply-To: <20130618144225.GA26920@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: Sravan V Dodla <sravan@linux.vnet.ibm.com>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: Oleg Nesterov <oleg@redhat.com>
+Cc: Ingo Molnar <mingo@elte.hu>, Vince Weaver <vincent.weaver@maine.edu>, linux-kernel@vger.kernel.org, Peter Zijlstra <a.p.zijlstra@chello.nl>, Paul Mackerras <paulus@samba.org>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org, Jiri Olsa <jolsa@redhat.com>
 
-On Tue, Jun 18, 2013 at 12:37:26PM +0530, Sravan V Dodla wrote:
- > Hello,
- >=20
- > I was trying to compile trinity-2013-06-17 build on s390x with kerne=
-l
- > 3.9.4 and have hit the following issue:
- >=20
- >   CC	syscalls/fcntl.o
- > syscalls/fcntl.c: In function =E2=80=98sanitise_fcntl=E2=80=99:
- > syscalls/fcntl.c:70:2: error: duplicate case value
- >   case F_GETLK64:
- >   ^
- > syscalls/fcntl.c:65:2: error: previously used here
- >   case F_GETLK:
- >   ^
- > syscalls/fcntl.c:72:2: error: duplicate case value
- >   case F_SETLK64:
- >   ^
- > syscalls/fcntl.c:66:2: error: previously used here
- >   case F_SETLK:
- >   ^
- > syscalls/fcntl.c:74:2: error: duplicate case value
- >   case F_SETLKW64:
- >   ^
- > syscalls/fcntl.c:67:2: error: previously used here
- >   case F_SETLKW:
- >   ^
- > make: *** [syscalls/fcntl.o] Error 1
- >=20
- > Was this a known issue and I was not able to find anything related t=
-o
- > this in archived mails.
+On Tue, Jun 18, 2013 at 04:42:25PM +0200, Oleg Nesterov wrote:
+> On 06/18, Frederic Weisbecker wrote:
+> >
+> > On Sun, Jun 02, 2013 at 09:50:57PM +0200, Oleg Nesterov wrote:
+> > > This patch simply moves all per-cpu variables into the new single
+> > > per-cpu "struct bp_cpuinfo".
+> > >
+> > > To me this looks more logical and clean, but this can also simplify
+> > > the further potential changes. In particular, I do not think this
+> > > memory should be per-cpu, it is never used "locally". After this
+> > > change it is trivial to turn it into, say, bootmem[nr_cpu_ids].
+> > >
+> > > Signed-off-by: Oleg Nesterov <oleg@redhat.com>
+> >
+> > I'm ok with the patch because it's indeed more logical and clean to pack the info
+> > to a single struct.
+> 
+> Great,
+> 
+> > But I'm not sure why you think using per-cpu is a problem. It's not only
+> > deemed for optimized local uses,
+> 
+> But it is.
+> 
+> Simplest example,
+> 
+> 	for_each_possible_cpu(cpu)
+> 		total_count = per_cpu(per_cpu_count, cpu);
+> 
+> Every per_cpu() likely means the cache miss. Not to mention we need the
+> additional math to calculate the address of the local counter.
+> 
+> 	for_each_possible_cpu(cpu)
+> 		total_count = bootmem_or_kmalloc_array[cpu];
+> 
+> is much better in this respect.
+> 
+> And note also that per_cpu_count above can share the cacheline with
+> another "hot" per-cpu variable.
 
-Does this help ?
+Ah I see, that's good to know.
 
-diff --git a/syscalls/fcntl.c b/syscalls/fcntl.c
-index 6eb2344..5d651af 100644
---- a/syscalls/fcntl.c
-+++ b/syscalls/fcntl.c
-@@ -23,6 +23,10 @@
- #include "shm.h"
- #include "compat.h"
-=20
-+#if F_GETLK64 !=3D F_GETLK
-+#define HAVE_LK64
-+#endif
-+
- void sanitise_fcntl(int childno)
- {
- 	switch (shm->a2[childno]) {
-@@ -66,7 +70,7 @@ void sanitise_fcntl(int childno)
- 	case F_SETLK:
- 	case F_SETLKW:
- 		break;
--#ifndef __x86_64__
-+#ifdef HAVE_LK64
- 	case F_GETLK64:
- 		break;
- 	case F_SETLK64:
-@@ -122,7 +126,7 @@ struct syscall syscall_fcntl =3D {
- 	.arg2name =3D "cmd",
- 	.arg2type =3D ARG_OP,
- 	.arg2list =3D {
--#ifdef __x86_64__
-+#ifndef HAVE_LK64
- 		.num =3D 20,
- #else
- 		.num =3D 23,
-@@ -130,7 +134,7 @@ struct syscall syscall_fcntl =3D {
- 		.values =3D { F_DUPFD, F_DUPFD_CLOEXEC, F_GETFD, F_SETFD, F_GETFL, F=
-_SETFL, F_GETLK, F_SETLK,
- 		  F_SETLKW, F_GETOWN, F_SETOWN, F_GETOWN_EX, F_SETOWN_EX, F_GETSIG, =
-=46_SETSIG, F_GETLEASE,
- 		  F_SETLEASE, F_NOTIFY, F_SETPIPE_SZ, F_GETPIPE_SZ,
--#ifndef __x86_64__
-+#ifdef HAVE_LK64
- 		  F_GETLK64, F_SETLK64, F_SETLKW64,
- #endif
- 		},
+But these variables are supposed to only be touched from slow path
+(perf events syscall, ptrace breakpoints creation, etc...), right?
+So this is probably not a problem?
+
+> 
+> > it's also convenient for allocations and
+> > de-allocation, or static definitions.
+> 
+> Yes, this is advantage. But afaics the only one.
+> 
+> > I'm not sure why bootmem would make
+> > more sense.
+> 
+> Or kcalloc(nr_cpu_ids), I didn't really mean that alloc_bootmem() is
+> necessarily the best option.
+
+Ok.
+
+Well if there are any real performance issue I don't mind using arrays
+of course.
+
+> 
+> > Other than this in the changelog, the patch is nice, thanks!
+> >
+> > Acked-by: Frederic Weisbecker <fweisbec@gmail.com>
+> 
+> Thanks ;)
+> 
+> Oleg.
+> 
