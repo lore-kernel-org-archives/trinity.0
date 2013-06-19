@@ -1,28 +1,38 @@
 From: Dave Jones <davej@redhat.com>
-Subject: Re: [PATCH] Sanitise F_SETSIG argument to avoid SIGINT
-Date: Wed, 19 Jun 2013 11:11:02 -0400
-Message-ID: <20130619151102.GA21770@redhat.com>
-References: <1371632578-24654-1-git-send-email-michael@ellerman.id.au>
+Subject: Re: [patch] perf_event_open enable sysfs exported events
+Date: Wed, 19 Jun 2013 11:27:22 -0400
+Message-ID: <20130619152722.GA22109@redhat.com>
+References: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu>
+ <CA+ydwtr7eTOjtzWumr998TcxqhmX_M30aW99S=DF6mOwNURL=w@mail.gmail.com>
+ <alpine.DEB.2.10.1306131555210.24106@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1371632578-24654-1-git-send-email-michael@ellerman.id.au>
+In-Reply-To: <alpine.DEB.2.10.1306131555210.24106@vincent-weaver-1.um.maine.edu>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Michael Ellerman <michael@ellerman.id.au>
-Cc: trinity@vger.kernel.org
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: Tommi Rantala <tt.rantala@gmail.com>, trinity@vger.kernel.org
 
-On Wed, Jun 19, 2013 at 07:02:58PM +1000, Michael Ellerman wrote:
- > It's possible to send ourselves a SIGINT using F_SETSIG. This is then
- > interpreted as a Ctrl-c from the user and trinity quits.
+On Thu, Jun 13, 2013 at 03:58:37PM -0400, Vince Weaver wrote:
+ > On Thu, 13 Jun 2013, Tommi Rantala wrote:
  > 
- > Avoid SIGINT, instead use 0, which switches back to the default
- > behaviour of sending SIGIO.
+ > > Unable to opendir /sys/bus/event_source/devices : Resource temporarily
+ > > unavailable
+ >
+ > Though in the case where /sys/bus/event_source/devices isn't available
+ > trinity will try opening it again each time it tries to do a 
+ > PERF_TYPE_READ_FROM_SYSFS type (1 time in 7).  Not sure if it's
+ > worth rate-limiting that.
 
-excellent, thanks for tracking that down. 
+I'm puzzled why I'm seeing opendir() fail with -ENOMEM when there's gigabytes
+of free memory available.  Likewise, getting -EAGAIN seems.. weird.
 
-this and the other two patches applied and pushed out.
+Is there actually a problem there ? Or can we just remove the output from
+the failure paths, and fail silently ?
+
+init_pmus might be simpler if it was converted to use nftw() too.
 
 	Dave
