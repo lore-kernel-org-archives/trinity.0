@@ -1,36 +1,28 @@
-From: Sravan V Dodla <sravan@linux.vnet.ibm.com>
-Subject: [PATCH] Removing arguments of KVM_S390_STORE_STATUS
-Date: Wed, 19 Jun 2013 18:45:14 +0530
-Message-ID: <1371647714.4704.9.camel@oc6144502753.ibm.com>
+From: Dave Jones <davej@redhat.com>
+Subject: Re: [PATCH] Sanitise F_SETSIG argument to avoid SIGINT
+Date: Wed, 19 Jun 2013 11:11:02 -0400
+Message-ID: <20130619151102.GA21770@redhat.com>
+References: <1371632578-24654-1-git-send-email-michael@ellerman.id.au>
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1371632578-24654-1-git-send-email-michael@ellerman.id.au>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
-To: trinity@vger.kernel.org
+Content-Transfer-Encoding: 7bit
+To: Michael Ellerman <michael@ellerman.id.au>
+Cc: trinity@vger.kernel.org
 
-Removing unused arguments of KVM_S390_STORE_STATUS.
+On Wed, Jun 19, 2013 at 07:02:58PM +1000, Michael Ellerman wrote:
+ > It's possible to send ourselves a SIGINT using F_SETSIG. This is then
+ > interpreted as a Ctrl-c from the user and trinity quits.
+ > 
+ > Avoid SIGINT, instead use 0, which switches back to the default
+ > behaviour of sending SIGIO.
 
----
- ioctls/kvm.c |    2 --
- 1 files changed, 0 insertions(+), 2 deletions(-)
+excellent, thanks for tracking that down. 
 
-diff --git a/ioctls/kvm.c b/ioctls/kvm.c
-index 4620ca8..48322d4 100644
---- a/ioctls/kvm.c
-+++ b/ioctls/kvm.c
-@@ -87,8 +87,6 @@ static const struct ioctl kvm_ioctls[] = {
- 	IOCTL(KVM_SET_VAPIC_ADDR),
- #if defined(__s390__)
- 	IOCTL(KVM_S390_INTERRUPT),
--	IOCTL(KVM_S390_STORE_STATUS_NOADDR),
--	IOCTL(KVM_S390_STORE_STATUS_PREFIXED),
- 	IOCTL(KVM_S390_STORE_STATUS),
- 	IOCTL(KVM_S390_SET_INITIAL_PSW),
- 	IOCTL(KVM_S390_INITIAL_RESET),
--- 
-1.7.1
+this and the other two patches applied and pushed out.
 
-Regards,
--Sravan.
+	Dave
