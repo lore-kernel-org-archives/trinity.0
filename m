@@ -1,44 +1,62 @@
 From: Michael Ellerman <michael@ellerman.id.au>
-Subject: [PATCH] Sanitise F_SETSIG argument to avoid SIGINT
-Date: Wed, 19 Jun 2013 19:02:58 +1000
-Message-ID: <1371632578-24654-1-git-send-email-michael@ellerman.id.au>
+Subject: Re: Complie issues with trinity-2013-06-17 on s390
+Date: Wed, 19 Jun 2013 19:06:38 +1000
+Message-ID: <1371632798.13340.7.camel@concordia>
+References: <1371539246.4585.698.camel@oc6144502753.ibm.com>
+	 <20130618153913.GA20496@redhat.com>
+	 <1371620459.4704.4.camel@oc6144502753.ibm.com>
+	 <1371623319.13340.3.camel@concordia>
+	 <1371631009.4704.6.camel@oc6144502753.ibm.com>
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
+In-Reply-To: <1371631009.4704.6.camel@oc6144502753.ibm.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
+To: Sravan V Dodla <sravan@linux.vnet.ibm.com>
+Cc: Dave Jones <davej@redhat.com>, trinity@vger.kernel.org
 
-It's possible to send ourselves a SIGINT using F_SETSIG. This is then
-interpreted as a Ctrl-c from the user and trinity quits.
+On Wed, 2013-06-19 at 14:06 +0530, Sravan V Dodla wrote:
+> On Wed, 2013-06-19 at 16:28 +1000, Michael Ellerman wrote:
+> > On Wed, 2013-06-19 at 11:10 +0530, Sravan V Dodla wrote:
+> > > On Tue, 2013-06-18 at 11:39 -0400, Dave Jones wrote:
+> > > > On Tue, Jun 18, 2013 at 12:37:26PM +0530, Sravan V Dodla wrote:
+> > > 
+> > > > Does this help ?
+> > > Thanks a lot Dave. That did help :)
+> > > Still compilation does not complete successfully. I'm seeing the
+> > > following issue on both ppc64 and s390x archs:
+> > 
+> > I have the following patch that I've been meaning to cleanup and send,
+> > it works for me on ppc64.
 
-Avoid SIGINT, instead use 0, which switches back to the default
-behaviour of sending SIGIO.
----
- syscalls/fcntl.c |    3 +++
- 1 file changed, 3 insertions(+)
+> Yes Michael, it worked for me on ppc64. Thank you.
 
-diff --git a/syscalls/fcntl.c b/syscalls/fcntl.c
-index 5d651af..e13735d 100644
---- a/syscalls/fcntl.c
-+++ b/syscalls/fcntl.c
-@@ -18,6 +18,7 @@
-  */
- 
- #include <fcntl.h>
-+#include <signal.h>
- #include "random.h"
- #include "sanitise.h"
- #include "shm.h"
-@@ -90,6 +91,8 @@ void sanitise_fcntl(int childno)
- 
- 	case F_SETSIG:
- 		shm->a3[childno] = (unsigned long) rand32();
-+		if (shm->a3[childno] == SIGINT)
-+			shm->a3[childno] = 0; /* restore default (SIGIO) */
- 		break;
- 
- 	case F_NOTIFY:
--- 
-1.7.10.4
+OK, see the two patches I sent to the list.
+
+
+> I have also made the following changes to make it work for s390x, not
+> sure of the impact though!
+
+>--- kvm.c.orig	2013-06-19 14:04:37.814590066 +0530
+> +++ kvm.c	2013-06-19 14:04:43.306415094 +0530
+> @@ -87,8 +87,6 @@ static const struct ioctl kvm_ioctls[] =
+>  	IOCTL(KVM_SET_VAPIC_ADDR),
+>  #if defined(__s390__)
+>  	IOCTL(KVM_S390_INTERRUPT),
+> -	IOCTL(KVM_S390_STORE_STATUS_NOADDR),
+> -	IOCTL(KVM_S390_STORE_STATUS_PREFIXED),
+>  	IOCTL(KVM_S390_STORE_STATUS),
+>  	IOCTL(KVM_S390_SET_INITIAL_PSW),
+>  	IOCTL(KVM_S390_INITIAL_RESET),
+> 
+
+That looks correct. They are not actually ioctls, they are meant to be
+used as arguments to the KVM_S390_STORE_STATUS ioctl. So I think that's
+just a cut-and-paste bug in kvm.c.
+
+You should send it as a proper patch.
+
+cheers
+
