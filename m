@@ -1,54 +1,76 @@
-From: Dave Jones <davej@redhat.com>
+From: Vince Weaver <vincent.weaver@maine.edu>
 Subject: Re: [patch] perf_event_open enable sysfs exported events
-Date: Wed, 19 Jun 2013 12:38:41 -0400
-Message-ID: <20130619163841.GA22483@redhat.com>
-References: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu>
- <CA+ydwtr7eTOjtzWumr998TcxqhmX_M30aW99S=DF6mOwNURL=w@mail.gmail.com>
- <alpine.DEB.2.10.1306131555210.24106@vincent-weaver-1.um.maine.edu>
- <20130619152722.GA22109@redhat.com>
- <alpine.DEB.2.10.1306191232170.27743@vincent-weaver-1.um.maine.edu>
+Date: Wed, 19 Jun 2013 15:29:42 -0400 (EDT)
+Message-ID: <alpine.DEB.2.10.1306191519560.28737@vincent-weaver-1.um.maine.edu>
+References: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu> <CA+ydwtr7eTOjtzWumr998TcxqhmX_M30aW99S=DF6mOwNURL=w@mail.gmail.com> <alpine.DEB.2.10.1306131555210.24106@vincent-weaver-1.um.maine.edu> <20130619152722.GA22109@redhat.com>
+ <alpine.DEB.2.10.1306191232170.27743@vincent-weaver-1.um.maine.edu> <20130619163841.GA22483@redhat.com>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.10.1306191232170.27743@vincent-weaver-1.um.maine.edu>
+In-Reply-To: <20130619163841.GA22483@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Vince Weaver <vincent.weaver@maine.edu>
+To: Dave Jones <davej@redhat.com>
 Cc: Tommi Rantala <tt.rantala@gmail.com>, trinity@vger.kernel.org
 
-On Wed, Jun 19, 2013 at 12:34:43PM -0400, Vince Weaver wrote:
- > On Wed, 19 Jun 2013, Dave Jones wrote:
- > 
- > > On Thu, Jun 13, 2013 at 03:58:37PM -0400, Vince Weaver wrote:
- > >  > On Thu, 13 Jun 2013, Tommi Rantala wrote:
- > >  > 
- > >  > > Unable to opendir /sys/bus/event_source/devices : Resource temporarily
- > >  > > unavailable
- > >  >
- > >  > Though in the case where /sys/bus/event_source/devices isn't available
- > >  > trinity will try opening it again each time it tries to do a 
- > >  > PERF_TYPE_READ_FROM_SYSFS type (1 time in 7).  Not sure if it's
- > >  > worth rate-limiting that.
- > > 
- > > I'm puzzled why I'm seeing opendir() fail with -ENOMEM when there's gigabytes
- > > of free memory available.  Likewise, getting -EAGAIN seems.. weird.
- > 
- > Is this easy to reproduce?  I haven't seen it locally but then again
- > I have only been running trinity with -c perf_event_open
- > I only left the debug message in because I thought it would be unusual
- > for a quick sysfs traversal to fail.
+On Wed, 19 Jun 2013, Dave Jones wrote:
 
-Hmm, that's weird. When I run with -c perf_event_open it doesn't happen.
-So it's an interaction with something else that's causing it. Fun.
- 
- > > init_pmus might be simpler if it was converted to use nftw() too.
- > 
- > I was unaware of the existence of nftw(), I'll work on updating the code
- > to use it.
+>  > > I'm puzzled why I'm seeing opendir() fail with -ENOMEM when there's gigabytes
+>  > > of free memory available.  Likewise, getting -EAGAIN seems.. weird.
 
-I only recently learned of it myself. the tree walking in files.c got
-a lot simpler. See b0d4df18a6785b0c3347f521bb2c09e88b0c0966.
+OK, I've been able to reproduce this but having trouble explaining what I 
+see.  
 
-	Dave
+(as a side-note, should gdb work with trinity?  I couldn't
+get breakpoints to work, in the end I had to add a long sleep in 
+init_pmus() and then attach by pid)
+
+So init_pmus() does this:
+
+  dir=opendir("/sys/bus/event_source/devices");
+
+Which glibc converts to something like this:
+
+  fd = openat_not_cancel_3 (dfd, name, flags);
+  DIR *dirp = (DIR *) malloc (sizeof (DIR) + allocation);
+
+Where "sizeof (DIR) + allocation" appears to be 32,808 bytes.
+
+When this works, you get an strace output like this:
+
+openat(AT_FDCWD, "/sys/bus/event_source/devices", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3
+getdents(3, /* 6 entries */, 32768)     = 168
+...
+
+
+But in the failure case you get this, where the malloc() starts trying to 
+allocate hundreds of megabytes or RAM and fails?
+
+openat(AT_FDCWD, "/sys/bus/event_source/devices", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 658
+brk(0x1a7c000)              = 0x1a54000
+mmap(NULL, 1048576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
+mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
+mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
+mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
+mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
+brk(0x1a76000)              = 0x1a54000
+mmap(NULL, 1048576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
+mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
+mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
+mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
+mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
+close(658)                  = 0
+write(2, "Unable to opendir /sys/bus/event"..., 83Unable to opendir /sys/bus/event_source/devices : Resource temporarily unavailable) = 83
+
+
+Weird.  Should I try to track this down more, or is this something 
+expected to happen when malloc() is involved?
+
+It's tricky to debug because the malloc() runs fine from inside of gdb.
+
+Also I'm noticing that I might need some locking around the init_pmus() 
+call as there's a chance the trinity children might try to call into it at 
+the same time.
+
+Vince
