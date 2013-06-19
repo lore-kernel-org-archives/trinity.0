@@ -1,7 +1,7 @@
 From: Michael Ellerman <michael@ellerman.id.au>
-Subject: [PATCH 1/2] Move x86 KVM ioctls under #ifdef X86
-Date: Wed, 19 Jun 2013 18:59:33 +1000
-Message-ID: <1371632374-16535-1-git-send-email-michael@ellerman.id.au>
+Subject: [PATCH] Sanitise F_SETSIG argument to avoid SIGINT
+Date: Wed, 19 Jun 2013 19:02:58 +1000
+Message-ID: <1371632578-24654-1-git-send-email-michael@ellerman.id.au>
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
@@ -10,113 +10,35 @@ Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
 
----
- ioctls/kvm.c |   48 +++++++++++++++++++++++++-----------------------
- 1 file changed, 25 insertions(+), 23 deletions(-)
+It's possible to send ourselves a SIGINT using F_SETSIG. This is then
+interpreted as a Ctrl-c from the user and trinity quits.
 
-diff --git a/ioctls/kvm.c b/ioctls/kvm.c
-index 4620ca8..ffddee4 100644
---- a/ioctls/kvm.c
-+++ b/ioctls/kvm.c
-@@ -12,7 +12,6 @@ static const struct ioctl kvm_ioctls[] = {
- 	IOCTL(KVM_SET_MEMORY_REGION),
- 	IOCTL(KVM_CREATE_VCPU),
- 	IOCTL(KVM_GET_DIRTY_LOG),
--	IOCTL(KVM_SET_MEMORY_ALIAS),
- 	IOCTL(KVM_SET_NR_MMU_PAGES),
- 	IOCTL(KVM_GET_NR_MMU_PAGES),
- 	IOCTL(KVM_SET_USER_MEMORY_REGION),
-@@ -26,13 +25,10 @@ static const struct ioctl kvm_ioctls[] = {
- 	IOCTL(KVM_GET_IRQCHIP),
- 	IOCTL(KVM_SET_IRQCHIP),
- 	IOCTL(KVM_CREATE_PIT),
--	IOCTL(KVM_GET_PIT),
--	IOCTL(KVM_SET_PIT),
- 	IOCTL(KVM_IRQ_LINE_STATUS),
- 	IOCTL(KVM_REGISTER_COALESCED_MMIO),
- 	IOCTL(KVM_UNREGISTER_COALESCED_MMIO),
- 	IOCTL(KVM_ASSIGN_PCI_DEVICE),
--	IOCTL(KVM_SET_GSI_ROUTING),
- 	IOCTL(KVM_ASSIGN_IRQ),
- 	IOCTL(KVM_ASSIGN_DEV_IRQ),
- 	IOCTL(KVM_REINJECT_CONTROL),
-@@ -44,16 +40,38 @@ static const struct ioctl kvm_ioctls[] = {
- 	IOCTL(KVM_CREATE_PIT2),
- 	IOCTL(KVM_SET_BOOT_CPU_ID),
- 	IOCTL(KVM_IOEVENTFD),
--	IOCTL(KVM_XEN_HVM_CONFIG),
- 	IOCTL(KVM_SET_CLOCK),
- 	IOCTL(KVM_GET_CLOCK),
--	IOCTL(KVM_GET_PIT2),
--	IOCTL(KVM_SET_PIT2),
- 	IOCTL(KVM_PPC_GET_PVINFO),
- 	IOCTL(KVM_SET_TSC_KHZ),
- 	IOCTL(KVM_GET_TSC_KHZ),
- 	IOCTL(KVM_ASSIGN_SET_INTX_MASK),
- 	IOCTL(KVM_SIGNAL_MSI),
-+#ifdef X86
-+	IOCTL(KVM_SET_MEMORY_ALIAS),
-+	IOCTL(KVM_GET_PIT),
-+	IOCTL(KVM_SET_PIT),
-+	IOCTL(KVM_GET_PIT2),
-+	IOCTL(KVM_SET_PIT2),
-+	IOCTL(KVM_SET_GSI_ROUTING),
-+	IOCTL(KVM_XEN_HVM_CONFIG),
-+	IOCTL(KVM_GET_MSRS),
-+	IOCTL(KVM_SET_MSRS),
-+	IOCTL(KVM_SET_CPUID),
-+	IOCTL(KVM_GET_LAPIC),
-+	IOCTL(KVM_SET_LAPIC),
-+	IOCTL(KVM_SET_CPUID2),
-+	IOCTL(KVM_GET_CPUID2),
-+	IOCTL(KVM_X86_SET_MCE),
-+	IOCTL(KVM_GET_VCPU_EVENTS),
-+	IOCTL(KVM_SET_VCPU_EVENTS),
-+	IOCTL(KVM_GET_DEBUGREGS),
-+	IOCTL(KVM_SET_DEBUGREGS),
-+	IOCTL(KVM_GET_XSAVE),
-+	IOCTL(KVM_SET_XSAVE),
-+	IOCTL(KVM_GET_XCRS),
-+	IOCTL(KVM_SET_XCRS),
-+#endif
- #if defined(__powerpc__)
- 	IOCTL(KVM_PPC_GET_SMMU_INFO),
- 	IOCTL(KVM_PPC_ALLOCATE_HTAB),
-@@ -73,16 +91,9 @@ static const struct ioctl kvm_ioctls[] = {
- 	IOCTL(KVM_TRANSLATE),
- 	IOCTL(KVM_INTERRUPT),
- 	IOCTL(KVM_DEBUG_GUEST),
--	IOCTL(KVM_GET_MSRS),
--	IOCTL(KVM_SET_MSRS),
--	IOCTL(KVM_SET_CPUID),
- 	IOCTL(KVM_SET_SIGNAL_MASK),
- 	IOCTL(KVM_GET_FPU),
- 	IOCTL(KVM_SET_FPU),
--	IOCTL(KVM_GET_LAPIC),
--	IOCTL(KVM_SET_LAPIC),
--	IOCTL(KVM_SET_CPUID2),
--	IOCTL(KVM_GET_CPUID2),
- 	IOCTL(KVM_TPR_ACCESS_REPORTING),
- 	IOCTL(KVM_SET_VAPIC_ADDR),
- #if defined(__s390__)
-@@ -99,18 +110,9 @@ static const struct ioctl kvm_ioctls[] = {
- 	IOCTL(KVM_SET_GUEST_DEBUG),
- 	IOCTL(KVM_X86_SETUP_MCE),
- 	IOCTL(KVM_X86_GET_MCE_CAP_SUPPORTED),
--	IOCTL(KVM_X86_SET_MCE),
- 	IOCTL(KVM_IA64_VCPU_GET_STACK),
- 	IOCTL(KVM_IA64_VCPU_SET_STACK),
--	IOCTL(KVM_GET_VCPU_EVENTS),
--	IOCTL(KVM_SET_VCPU_EVENTS),
--	IOCTL(KVM_GET_DEBUGREGS),
--	IOCTL(KVM_SET_DEBUGREGS),
- 	IOCTL(KVM_ENABLE_CAP),
--	IOCTL(KVM_GET_XSAVE),
--	IOCTL(KVM_SET_XSAVE),
--	IOCTL(KVM_GET_XCRS),
--	IOCTL(KVM_SET_XCRS),
- 	IOCTL(KVM_DIRTY_TLB),
- 	IOCTL(KVM_GET_ONE_REG),
- 	IOCTL(KVM_SET_ONE_REG),
+Avoid SIGINT, instead use 0, which switches back to the default
+behaviour of sending SIGIO.
+---
+ syscalls/fcntl.c |    3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/syscalls/fcntl.c b/syscalls/fcntl.c
+index 5d651af..e13735d 100644
+--- a/syscalls/fcntl.c
++++ b/syscalls/fcntl.c
+@@ -18,6 +18,7 @@
+  */
+ 
+ #include <fcntl.h>
++#include <signal.h>
+ #include "random.h"
+ #include "sanitise.h"
+ #include "shm.h"
+@@ -90,6 +91,8 @@ void sanitise_fcntl(int childno)
+ 
+ 	case F_SETSIG:
+ 		shm->a3[childno] = (unsigned long) rand32();
++		if (shm->a3[childno] == SIGINT)
++			shm->a3[childno] = 0; /* restore default (SIGIO) */
+ 		break;
+ 
+ 	case F_NOTIFY:
 -- 
 1.7.10.4
