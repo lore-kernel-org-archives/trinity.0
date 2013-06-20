@@ -1,76 +1,97 @@
 From: Vince Weaver <vincent.weaver@maine.edu>
-Subject: Re: [patch] perf_event_open enable sysfs exported events
-Date: Wed, 19 Jun 2013 15:29:42 -0400 (EDT)
-Message-ID: <alpine.DEB.2.10.1306191519560.28737@vincent-weaver-1.um.maine.edu>
-References: <alpine.DEB.2.10.1306110026180.26761@vincent-weaver-1.um.maine.edu> <CA+ydwtr7eTOjtzWumr998TcxqhmX_M30aW99S=DF6mOwNURL=w@mail.gmail.com> <alpine.DEB.2.10.1306131555210.24106@vincent-weaver-1.um.maine.edu> <20130619152722.GA22109@redhat.com>
- <alpine.DEB.2.10.1306191232170.27743@vincent-weaver-1.um.maine.edu> <20130619163841.GA22483@redhat.com>
+Subject: [patch 1/2] add init() function to struct syscall
+Date: Wed, 19 Jun 2013 22:09:09 -0400 (EDT)
+Message-ID: <alpine.DEB.2.10.1306192205300.5613@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20130619163841.GA22483@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: Dave Jones <davej@redhat.com>
-Cc: Tommi Rantala <tt.rantala@gmail.com>, trinity@vger.kernel.org
-
-On Wed, 19 Jun 2013, Dave Jones wrote:
-
->  > > I'm puzzled why I'm seeing opendir() fail with -ENOMEM when there's gigabytes
->  > > of free memory available.  Likewise, getting -EAGAIN seems.. weird.
-
-OK, I've been able to reproduce this but having trouble explaining what I 
-see.  
-
-(as a side-note, should gdb work with trinity?  I couldn't
-get breakpoints to work, in the end I had to add a long sleep in 
-init_pmus() and then attach by pid)
-
-So init_pmus() does this:
-
-  dir=opendir("/sys/bus/event_source/devices");
-
-Which glibc converts to something like this:
-
-  fd = openat_not_cancel_3 (dfd, name, flags);
-  DIR *dirp = (DIR *) malloc (sizeof (DIR) + allocation);
-
-Where "sizeof (DIR) + allocation" appears to be 32,808 bytes.
-
-When this works, you get an strace output like this:
-
-openat(AT_FDCWD, "/sys/bus/event_source/devices", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3
-getdents(3, /* 6 entries */, 32768)     = 168
-...
+Cc: trinity@vger.kernel.org
 
 
-But in the failure case you get this, where the malloc() starts trying to 
-allocate hundreds of megabytes or RAM and fails?
+While working on the perf_event_open() sysfs init problem, I was wondering
+if it might be easier if we added the possibility of an init() routine
+to each syscall structure.  That way trinity can support doing setup
+before fuzzing begins.
 
-openat(AT_FDCWD, "/sys/bus/event_source/devices", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 658
-brk(0x1a7c000)              = 0x1a54000
-mmap(NULL, 1048576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
-mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
-mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
-mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
-mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
-brk(0x1a76000)              = 0x1a54000
-mmap(NULL, 1048576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
-mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
-mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
-mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
-mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = -1 EAGAIN (Resource temporarily unavailable)
-close(658)                  = 0
-write(2, "Unable to opendir /sys/bus/event"..., 83Unable to opendir /sys/bus/event_source/devices : Resource temporarily unavailable) = 83
+Below is a quick patch implementing this, it seems to work but I still 
+don't have the best grasp of trinity internals.
 
+Signed-off-by: Vince Weaver <vincent.weaver@maine.edu>
 
-Weird.  Should I try to track this down more, or is this something 
-expected to happen when malloc() is involved?
-
-It's tricky to debug because the malloc() runs fine from inside of gdb.
-
-Also I'm noticing that I might need some locking around the init_pmus() 
-call as there's a chance the trinity children might try to call into it at 
-the same time.
-
-Vince
+diff --git a/include/syscall.h b/include/syscall.h
+index ccbe436..a58a506 100644
+--- a/include/syscall.h
++++ b/include/syscall.h
+@@ -32,6 +32,7 @@ struct arglist {
+ struct syscall {
+ 	void (*sanitise)(int childno);
+ 	void (*post)(int);
++	int (*init)(void);
+ 
+ 	unsigned int number;
+ 	const char name[80];
+@@ -132,6 +133,7 @@ void deactivate_disabled_syscalls(void);
+ void count_syscalls_enabled(void);
+ void display_enabled_syscalls(void);
+ void disable_non_net_syscalls(void);
++void init_syscalls(void);
+ 
+ #define for_each_32bit_syscall(i) \
+ 	for (i = 0; i < max_nr_32bit_syscalls; i++)
+diff --git a/tables.c b/tables.c
+index 7be1ae9..d12b541 100644
+--- a/tables.c
++++ b/tables.c
+@@ -106,6 +106,35 @@ void count_syscalls_enabled(void)
+ 	}
+ }
+ 
++void init_syscalls(void)
++{
++	unsigned int i;
++
++	if (biarch == TRUE) {
++		for_each_64bit_syscall(i) {
++			if (syscalls_64bit[i].entry->flags & ACTIVE)
++				if (syscalls_64bit[i].entry->init)
++					syscalls_64bit[i].entry->init();
++		}
++
++		for_each_32bit_syscall(i) {
++			if (syscalls_32bit[i].entry->flags & ACTIVE)
++				if (syscalls_32bit[i].entry->init)
++					syscalls_32bit[i].entry->init();
++		}
++
++	} else {
++
++		/* non-biarch */
++		for_each_syscall(i) {
++			if (syscalls[i].entry->flags & ACTIVE)
++				if (syscalls[i].entry->init)
++					syscalls[i].entry->init();
++		}
++	}
++}
++
++
+ bool no_syscalls_enabled(void)
+ {
+ 	unsigned int i;
+diff --git a/trinity.c b/trinity.c
+index 4b536c9..93e7819 100644
+--- a/trinity.c
++++ b/trinity.c
+@@ -183,6 +183,8 @@ int main(int argc, char* argv[])
+ 		goto out;
+ 	}
+ 
++	init_syscalls();
++
+ 	if (show_ioctl_list == TRUE) {
+ 		dump_ioctls();
+ 		goto out;
