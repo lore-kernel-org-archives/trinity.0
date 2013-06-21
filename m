@@ -1,54 +1,30 @@
-From: Vince Weaver <vincent.weaver@maine.edu>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
 Subject: Re: Unable to opendir /sys/bus/event_source/devices : No such file
  or directory
-Date: Fri, 21 Jun 2013 16:39:54 -0400 (EDT)
-Message-ID: <alpine.DEB.2.10.1306211636040.24830@vincent-weaver-1.um.maine.edu>
-References: <51C4B36D.70001@gmx.de>
+Date: Fri, 21 Jun 2013 23:00:35 +0200
+Message-ID: <51C4BEF3.6050801@gmx.de>
+References: <51C4B36D.70001@gmx.de> <alpine.DEB.2.10.1306211636040.24830@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
-Content-Type: MULTIPART/MIXED; BOUNDARY="8323329-1949573013-1371847200=:24830"
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <51C4B36D.70001@gmx.de>
+In-Reply-To: <alpine.DEB.2.10.1306211636040.24830@vincent-weaver-1.um.maine.edu>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-To: =?ISO-8859-15?Q?Toralf_F=F6rster?= <toralf.foerster@gmx.de>
+Content-Type: text/plain; charset="iso-8859-1"
+To: Vince Weaver <vincent.weaver@maine.edu>
 Cc: trinity@vger.kernel.org
 
-  This message is in MIME format.  The first part should be readable text,
-  while the remaining parts are likely unreadable without MIME-aware tools.
+On 06/21/2013 10:39 PM, Vince Weaver wrote:
+> I should probably remove the error message (or make it only show up a=
+t=20
+> high verbosity levels?).
 
---8323329-1949573013-1371847200=:24830
-Content-Type: TEXT/PLAIN; charset="utf-8"
-Content-Transfer-Encoding: 8bit
+less verbose at least, otherwise it is just irritating
 
-On Fri, 21 Jun 2013, Toralf Förster wrote:
+> A patch that removes the message is included below.
+thx
 
-> Wasn't aware of this message before - and got it now when running
-> trinity within a 32 bit user-mode-linux.
-> 
-> Is that directory helpful for trinity ?
-
-It is used when coming up with possible events for the perf_event_open() 
-syscall.
-
-It's not fatal if the directory doesn't exist.  
-
-I should probably remove the error message (or make it only show up at 
-high verbosity levels?).
-
-A patch that removes the message is included below.
-
-diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
-index cf10134..ef8cb4f 100644
---- a/syscalls/perf_event_open.c
-+++ b/syscalls/perf_event_open.c
-@@ -223,9 +223,6 @@ static int init_pmus(void) {
- 
- 	dir=opendir("/sys/bus/event_source/devices");
- 	if (dir==NULL) {
--		fprintf(stderr,"Unable to opendir "
--			"/sys/bus/event_source/devices : %s\n",
--			strerror(errno));
- 		return -1;
- 	}
- 
---8323329-1949573013-1371847200=:24830--
+--=20
+MfG/Sincerely
+Toralf F=C3=B6rster
+pgp finger print: 7B1A 07F4 EC82 0F90 D4C2 8936 872A E508 7DB6 9DA3
