@@ -1,54 +1,43 @@
-From: Li Zefan <lizefan-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
-Subject: Re: [PATCH cgroup/for-3.11] cgroup: fix cgroupfs_root early destruction
- path
-Date: Wed, 26 Jun 2013 17:14:03 +0800
-Message-ID: <51CAB0DB.5000706@huawei.com>
-References: <51C9D17B.5090208@oracle.com> <20130626010454.GD30407@mtj.dyndns.org>
+From: Tejun Heo <tj-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
+Subject: Re: [PATCH cgroup/for-3.11] cgroup: grab cgroup_mutex in
+ drop_parsed_module_refcounts()
+Date: Wed, 26 Jun 2013 10:50:08 -0700
+Message-ID: <20130626175008.GF4405@mtj.dyndns.org>
+References: <51C9D17B.5090208@oracle.com>
+ <20130626010454.GD30407@mtj.dyndns.org>
+ <20130626010521.GE30407@mtj.dyndns.org>
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
 Return-path: <cgroups-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
-In-Reply-To: <20130626010454.GD30407-9pTldWuhBndy/B6EtB590w@public.gmane.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=sender:date:from:to:cc:subject:message-id:references:mime-version
+         :content-type:content-disposition:in-reply-to:user-agent;
+        bh=D3R9qt858knNkrcbLlsDzUgKIGn6JenjN7+EjGO3YkU=;
+        b=BqK/DX8PMNJysMwFjXp+WqEzZOOdAHEvIllVJEnH0RdIMIgnHGPmSIpgII0xbeYdec
+         xVRJjiVXjXK9r/Ept3NlOfpzz7fRSZxsGNQM9dbth/yaAzA08V+GD8IVPSwykRQs4/9+
+         etzo7YVZYJzqN6W5MTC9d70q4LTrEIvn2WYUutH+0/K6eKRRjEZFjUee6qrkDpOQ1KBJ
+         FhfnUYk37uutPR+SKY3bSuJZyFqs+t4WoPCORSk7wonMvJYhExDccdKwj0ivWaglh9xT
+         CM0jFEt7YGTknrSM4Y7QIEUHGSh8p+o0h81KVWc5+ufCJ9lXBONtS42OP1g7QnJcnL1+
+         bgdw==
+Content-Disposition: inline
+In-Reply-To: <20130626010521.GE30407-9pTldWuhBndy/B6EtB590w@public.gmane.org>
 Sender: cgroups-owner-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
-To: Tejun Heo <tj-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
-Cc: Sasha Levin <sasha.levin-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>, LKML <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, cgroups-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, trinity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
+Content-Transfer-Encoding: 7bit
+To: Sasha Levin <sasha.levin-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>
+Cc: lizefan-hv44wF8Li93QT0dZR+AlfA@public.gmane.org, LKML <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, cgroups-u79uwXL29TY76Z2rM5mHXA@public.gmane.org, trinity-u79uwXL29TY76Z2rM5mHXA@public.gmane.org
 
-On 2013/6/26 9:04, Tejun Heo wrote:
-> cgroupfs_root used to have ->actual_subsys_mask in addition to
-> ->subsys_mask.  a8a648c4ac ("cgroup: remove
-> cgroup->actual_subsys_mask") removed it noting that the subsys_mask is
-> essentially temporary and doesn't belong in cgroupfs_root; however,
-> the patch made it impossible to tell whether a cgroupfs_root actually
-> has the subsystems bound or just have the bits set leading to the
-> following BUG when trying to mount with subsystems which are already
-> mounted elsewhere.
-> 
->  kernel BUG at kernel/cgroup.c:1038!
->  invalid opcode: 0000 [#1] PREEMPT SMP DEBUG_PAGEALLOC
->  ...
->  CPU: 1 PID: 7973 Comm: mount Tainted: G        W    3.10.0-rc7-next-20130625-sasha-00011-g1c1dc0e #1105
->  task: ffff880fc0ae8000 ti: ffff880fc0b9a000 task.ti: ffff880fc0b9a000
->  RIP: 0010:[<ffffffff81249b29>]  [<ffffffff81249b29>] rebind_subsystems+0x409/0x5f0
->  ...
->  Call Trace:
->   [<ffffffff8124bd4f>] cgroup_kill_sb+0xff/0x210
->   [<ffffffff813d21af>] deactivate_locked_super+0x4f/0x90
->   [<ffffffff8124f3b3>] cgroup_mount+0x673/0x6e0
->   [<ffffffff81257169>] cpuset_mount+0xd9/0x110
->   [<ffffffff813d2580>] mount_fs+0xb0/0x2d0
->   [<ffffffff81404afd>] vfs_kern_mount+0xbd/0x180
->   [<ffffffff814070b5>] do_new_mount+0x145/0x2c0
->   [<ffffffff814085d6>] do_mount+0x356/0x3c0
->   [<ffffffff8140873d>] SyS_mount+0xfd/0x140
->   [<ffffffff854eb600>] tracesys+0xdd/0xe2
-> 
-> We still want rebind_subsystems() to take added/removed masks, so
-> let's fix it by marking whether a cgroupfs_root has finished binding
-> or not.  Also, document what's going on around ->subsys_mask
-> initialization so that similar mistakes aren't repeated.
+On Tue, Jun 25, 2013 at 06:05:21PM -0700, Tejun Heo wrote:
+> This isn't strictly necessary as all subsystems specified in
+> @subsys_mask are guaranteed to be pinned; however, it does spuriously
+> trigger lockdep warning.  Let's grab cgroup_mutex around it.
 > 
 > Signed-off-by: Tejun Heo <tj-DgEjT+Ai2ygdnm+yROfE0A@public.gmane.org>
-> Reported-by: Sasha Levin <sasha.levin-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>
 
-Acked-by: Li Zefan <lizefan-hv44wF8Li93QT0dZR+AlfA@public.gmane.org>
+Applied both patches to cgroup/for-3.11.
+
+Thanks.
+
+-- 
+tejun
