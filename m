@@ -1,57 +1,75 @@
-From: Tejun Heo <tj@kernel.org>
-Subject: [PATCH cgroup/for-3.11] cgroup: grab cgroup_mutex in
- drop_parsed_module_refcounts()
-Date: Tue, 25 Jun 2013 18:05:21 -0700
-Message-ID: <20130626010521.GE30407@mtj.dyndns.org>
-References: <51C9D17B.5090208@oracle.com>
- <20130626010454.GD30407@mtj.dyndns.org>
+From: Li Zefan <lizefan@huawei.com>
+Subject: [PATCH 2/2] dlci: validate the net device in dlci_del()
+Date: Wed, 26 Jun 2013 15:31:58 +0800
+Message-ID: <51CA98EE.4050801@huawei.com>
+References: <51CA9872.5050700@huawei.com>
 Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=sender:date:from:to:cc:subject:message-id:references:mime-version
-         :content-type:content-disposition:in-reply-to:user-agent;
-        bh=+NAH1LbI6EiPkADj20UUt8Fz0aeReXKe8nccJPYa0DE=;
-        b=qSyYN84aLnDbjOINIcyAvf3i7l7966K88kHGS763JXj4DpI9DFXIxJIoz4xxRStU2p
-         01d/l8qW25iAolnko2XRwsavRd/ah1QX9mqCLh4ehCJYiUdympa9BSREoKYYmUgquN4r
-         T367Y7hkXRTa3uNnyTtemQuBt1WPrkCY+6iZbwAfG9xspTjViNLMHMCKnOvVMRSa0jL8
-         +HiJ+NLHObd6oe5h059ImGOe8vtNw/x1HP3eBTRkartj7WuXwTZfksXS9MmJdPQg4nUK
-         GSjKMilkTlgvLpOQkwN1Yj78x567nfIFXV4JD3tFECiPCvU2CAVUH7UncTRq7bu02KLw
-         0ZJg==
-Content-Disposition: inline
-In-Reply-To: <20130626010454.GD30407@mtj.dyndns.org>
+In-Reply-To: <51CA9872.5050700@huawei.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Sasha Levin <sasha.levin@oracle.com>
-Cc: lizefan@huawei.com, LKML <linux-kernel@vger.kernel.org>, cgroups@vger.kernel.org, trinity@vger.kernel.org
+To: David Miller <davem@davemloft.net>
+Cc: LKML <linux-kernel@vger.kernel.org>, netdev@vger.kernel.org, trinity@vger.kernel.org, Li Jinyue <lijinyue@huawei.com>
 
-This isn't strictly necessary as all subsystems specified in
-@subsys_mask are guaranteed to be pinned; however, it does spuriously
-trigger lockdep warning.  Let's grab cgroup_mutex around it.
+We triggered an oops while running trinity with 3.4 kernel:
 
-Signed-off-by: Tejun Heo <tj@kernel.org>
+BUG: unable to handle kernel paging request at 0000000100000d07
+IP: [<ffffffffa0109738>] dlci_ioctl+0xd8/0x2d4 [dlci]
+PGD 640c0d067 PUD 0
+Oops: 0000 [#1] PREEMPT SMP
+CPU 3
+...
+Pid: 7302, comm: trinity-child3 Not tainted 3.4.24.09+ 40 Huawei Technologies Co., Ltd. Tecal RH2285          /BC11BTSA
+RIP: 0010:[<ffffffffa0109738>]  [<ffffffffa0109738>] dlci_ioctl+0xd8/0x2d4 [dlci]
+...
+Call Trace:
+  [<ffffffff8137c5c3>] sock_ioctl+0x153/0x280
+  [<ffffffff81195494>] do_vfs_ioctl+0xa4/0x5e0
+  [<ffffffff8118354a>] ? fget_light+0x3ea/0x490
+  [<ffffffff81195a1f>] sys_ioctl+0x4f/0x80
+  [<ffffffff81478b69>] system_call_fastpath+0x16/0x1b
+...
+
+It's because the net device is not a dlci device.
+
+Reported-by: Li Jinyue <lijinyue@huawei.com>
+Signed-off-by: Li Zefan <lizefan@huawei.com>
+Cc: stable@vger.kernel.org
 ---
- kernel/cgroup.c |   10 +++++-----
- 1 file changed, 5 insertions(+), 5 deletions(-)
+ drivers/net/wan/dlci.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
---- a/kernel/cgroup.c
-+++ b/kernel/cgroup.c
-@@ -1325,11 +1325,11 @@ static void drop_parsed_module_refcounts
- 	struct cgroup_subsys *ss;
- 	int i;
+diff --git a/drivers/net/wan/dlci.c b/drivers/net/wan/dlci.c
+index 1f6e053..6a8a382 100644
+--- a/drivers/net/wan/dlci.c
++++ b/drivers/net/wan/dlci.c
+@@ -384,6 +384,7 @@ static int dlci_del(struct dlci_add *dlci)
+ 	struct frad_local	*flp;
+ 	struct net_device	*master, *slave;
+ 	int			err;
++	bool			found = false;
  
--	for_each_subsys(ss, i) {
--		if (!(subsys_mask & (1UL << i)))
--			continue;
--		module_put(cgroup_subsys[i]->module);
--	}
-+	mutex_lock(&cgroup_mutex);
-+	for_each_subsys(ss, i)
-+		if (subsys_mask & (1UL << i))
-+			module_put(cgroup_subsys[i]->module);
-+	mutex_unlock(&cgroup_mutex);
- }
+ 	rtnl_lock();
  
- static int cgroup_remount(struct super_block *sb, int *flags, char *data)
+@@ -394,6 +395,17 @@ static int dlci_del(struct dlci_add *dlci)
+ 		goto out;
+ 	}
+ 
++	list_for_each_entry(dlp, &dlci_devs, list) {
++		if (dlp->master == master) {
++			found = true;
++			break;
++		}
++	}
++	if (!found) {
++		err = -ENODEV;
++		goto out;
++	}
++
+ 	if (netif_running(master)) {
+ 		err = -EBUSY;
+ 		goto out;
+-- 
+1.8.0.2
