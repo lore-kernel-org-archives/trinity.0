@@ -1,36 +1,34 @@
-From: Vince Weaver <vincent.weaver@maine.edu>
-Subject: Re: [testcase] perf: yet another fuzzer triggered crash
-Date: Fri, 28 Jun 2013 17:07:38 -0400 (EDT)
-Message-ID: <alpine.DEB.2.10.1306281705340.10799@vincent-weaver-1.um.maine.edu>
-References: <alpine.DEB.2.10.1306121911500.12627@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1306140058520.8617@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1306281531070.10799@vincent-weaver-1.um.maine.edu>
+From: Dave Jones <davej@redhat.com>
+Subject: wtf bug of the day.
+Date: Fri, 28 Jun 2013 22:24:20 -0400
+Message-ID: <20130629022420.GA20808@redhat.com>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <alpine.DEB.2.10.1306281531070.10799@vincent-weaver-1.um.maine.edu>
+Content-Disposition: inline
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: TEXT/PLAIN; charset="us-ascii"
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Vince Weaver <vincent.weaver@maine.edu>
-Cc: linux-kernel@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
+To: trinity@vger.kernel.org
 
-On Fri, 28 Jun 2013, Vince Weaver wrote:
+I've beem holding off on cutting a new release of trinity until I've nailed
+this one last bug[1].
 
-> On Fri, 14 Jun 2013, Vince Weaver wrote:
->  
-> > OK, I haven't managed to get a small reproducible test case for the system 
-> > crash yet
-> 
-> I wasted the last 2 days bisecting a 10000 syscall trace, but below is a 
-> 20-syscall testcase that rapidly makes a core2 machine running 3.10-rc7 
-> unusable.
+When it happens, the watchdog process is in Z state, and the child processes
+are all blocked on sockets (and no progress is made because the watchdog died).
 
-and it turns out I might have bisected down too much, as though that 
-crashes my core2 system it doesn't crash newer machines.
+In the one case I've managed to catch a core from the watchdog, it makes no damn sense..
 
-I'm too lazy to re-bisect today, but the much longer program here:
-   http://web.eece.maine.edu/~vweaver/files/nmi_bug_snb.c
-reliably causes the same crash on a Sandybridge machine I have running 3.9
+Program terminated with signal 8, Arithmetic exception.
+#0  check_shm_sanity () at watchdog.c:47
+	if (shm->running_childs == 0)
 
-Vince Weaver
-vincent.weaver@maine.edu
-http://www.eece.maine.edu/~vweaver/
+what the hell does that even mean ?
+
+'shm' is valid, shm->running_childs is '4'.
+
+Any ideas ?
+
+	Dave
+
+[1] Until the next bug.
