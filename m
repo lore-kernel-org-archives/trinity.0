@@ -1,19 +1,19 @@
 From: Tommi Rantala <tt.rantala@gmail.com>
-Subject: [PATCH 2/8] Fix open() result check in check_tainted()
-Date: Sun, 30 Jun 2013 22:33:06 +0300
-Message-ID: <1372620792-16384-3-git-send-email-tt.rantala@gmail.com>
+Subject: [PATCH 4/8] Fix double rand() in generate_pathname()
+Date: Sun, 30 Jun 2013 22:33:08 +0300
+Message-ID: <1372620792-16384-5-git-send-email-tt.rantala@gmail.com>
 References: <1372620792-16384-1-git-send-email-tt.rantala@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id:x-mailer:in-reply-to:references;
-        bh=tVYVijceSvN/UlcEJitRpzh2KxiamxidrP5u6ICaWb4=;
-        b=knoZ6brNdlK4PSB1IqW/caOnT7UNPai17k1uy2hgj9quZj3iUwVQX1xDf2C6XOptYB
-         viBtJCv5XiwcABFZsO8xm9e2ZU6Y2niybYBlt2ArgVe6gTWEmLX+h/8hsEJrRBFG9uxN
-         36MjZNuc4BNOvTXQYvp+SZIuAMQdDrsdwCzV5YK0LXNSYPSGfAicF3UZ2XFWgkHRrqjY
-         I9l7Qo/i9LY+bEqpYOw0SaXZzJDAoHGElZUEFJOBK33As9JbaMKltAwdc0ExfabL38/w
-         BvYkbLgu6CFMz4oZ3n/Bqxe6XKFH+RrEQVHe19IY3zcGiV7IFuk8jjU7vvm42/eWYzU5
-         W3Eg==
+        bh=lBVw6/L63pGvNnB77y6KfDC56PlpiHj3vgoE53Z14e4=;
+        b=k37oxBlKqAAkNppeq4F4mAc81HjNL6fT/OW98Df+6W5NWI8g7CSm9HqutNYZG14iIZ
+         +SjEFJ1uWVkPiFU+KtZhUtK3NZLkMqSiJnqIn890qKYUKDQ9+vc6gtBMoz3qxPc2t9/q
+         B9ake8LJj34U9uicMeLpwHxDwhIqYJTrcIOZBjc9Y6hjKN8/5AEmSKe0Hyh4tc/YPTeD
+         nFFQxr7ukVXOolrQa/+isEGBOfc2akRSyM+gWLurZlGk574oH9xV1ZmVf14vtZG3ShyV
+         14fiwHXVY3IX1ZUMyZU5uEQbdn63zadV2wmIZkWI0jLm/pKZXfc0Fjbc4N7UCpDJxFsN
+         mFTg==
 In-Reply-To: <1372620792-16384-1-git-send-email-tt.rantala@gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
@@ -23,22 +23,25 @@ Content-Transfer-Encoding: 7bit
 To: davej@redhat.com
 Cc: trinity@vger.kernel.org, Tommi Rantala <tt.rantala@gmail.com>
 
+We take 90% chance two times in the "unmangled" path in
+generate_pathname(); looks accidental to me.
 ---
- main.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ files.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/main.c b/main.c
-index 648e56d..0e58433 100644
---- a/main.c
-+++ b/main.c
-@@ -57,7 +57,7 @@ int check_tainted(void)
- 	char buffer[4];
+diff --git a/files.c b/files.c
+index 3319eef..ef44ee2 100644
+--- a/files.c
++++ b/files.c
+@@ -362,8 +362,7 @@ char * generate_pathname(void)
  
- 	fd = open("/proc/sys/kernel/tainted", O_RDONLY);
--	if (!fd)
-+	if (fd < 0)
- 		return -1;
- 	ret = read(fd, buffer, 3);
- 	close(fd);
+ 	case 0 ... 90:
+ 		/* 90% chance of returning an unmangled filename */
+-		if ((rand() % 100) > 10)
+-			return pathname;
++		return pathname;
+ 
+ 	case 91 ... 99:
+ 		/* Create a bogus filename. */
 -- 
 1.8.1.4
