@@ -1,58 +1,47 @@
-From: Michael Ellerman <michael@ellerman.id.au>
-Subject: Re: wtf bug of the day.
-Date: Mon, 01 Jul 2013 18:18:51 +1000
-Message-ID: <1372666731.31133.2.camel@concordia>
-References: <20130629022420.GA20808@redhat.com>
+From: Peter Zijlstra <peterz@infradead.org>
+Subject: Re: [testcase] perf: yet another fuzzer triggered crash
+Date: Mon, 1 Jul 2013 11:07:13 +0200
+Message-ID: <20130701090713.GO6626@twins.programming.kicks-ass.net>
+References: <alpine.DEB.2.10.1306121911500.12627@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1306140058520.8617@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1306281531070.10799@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1306281705340.10799@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20130629022420.GA20808@redhat.com>
-Sender: trinity-owner@vger.kernel.org
+Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <alpine.DEB.2.10.1306281705340.10799@vincent-weaver-1.um.maine.edu>
+Sender: linux-kernel-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
-To: Dave Jones <davej@redhat.com>
-Cc: trinity@vger.kernel.org
+Content-Transfer-Encoding: 7bit
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
-On Fri, 2013-06-28 at 22:24 -0400, Dave Jones wrote:
-> I've beem holding off on cutting a new release of trinity until I've nailed
-> this one last bug[1].
+On Fri, Jun 28, 2013 at 05:07:38PM -0400, Vince Weaver wrote:
+> On Fri, 28 Jun 2013, Vince Weaver wrote:
 > 
-> When it happens, the watchdog process is in Z state, and the child processes
-> are all blocked on sockets (and no progress is made because the watchdog died).
+> > On Fri, 14 Jun 2013, Vince Weaver wrote:
+> >  
+> > > OK, I haven't managed to get a small reproducible test case for the system 
+> > > crash yet
+> > 
+> > I wasted the last 2 days bisecting a 10000 syscall trace, but below is a 
+> > 20-syscall testcase that rapidly makes a core2 machine running 3.10-rc7 
+> > unusable.
 > 
-> In the one case I've managed to catch a core from the watchdog, it makes no damn sense..
+> and it turns out I might have bisected down too much, as though that 
+> crashes my core2 system it doesn't crash newer machines.
 > 
-> Program terminated with signal 8, Arithmetic exception.
-> #0  check_shm_sanity () at watchdog.c:47
-> 	if (shm->running_childs == 0)
-> 
-> what the hell does that even mean ?
-> 
-> 'shm' is valid, shm->running_childs is '4'.
-> 
-> Any ideas ?
+> I'm too lazy to re-bisect today, but the much longer program here:
+>    http://web.eece.maine.edu/~vweaver/files/nmi_bug_snb.c
+> reliably causes the same crash on a Sandybridge machine I have running 3.9
 
-You could add a SIGFPE handler and check whether it's coming from
-another process or not.
+OK, so on my westmere it triggers that WARN in task_ctx_sched_out() a
+_lot_ (I removed the ONCE for easier debugging earlier -- still kinda
+stumped there).
 
-Something like:
+Then this thing causes an RCU stall and starts triggering NMI watchdog
+msgs.. so YAY! :-)
 
-void sighandler(int signal, siginfo_t *siginfo, void *ucontext)
-{
-	printf("Took signal %d\n", signal);
-	printf("Sent by process %d (uid %d)\n",
-		siginfo->si_pid, siginfo->si_uid);
-}
+I'll see what I can find.
 
-struct sigaction sigfpe_action = {
-	.sa_sigaction = sighandler,
-	.sa_flags = SA_SIGINFO,
-};
-
-if (sigaction(SIGFPE, &sigfpe_action, NULL)) {
-	perror("sigaction");
-	return 1;
-}
-
-
-cheers
