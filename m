@@ -1,39 +1,32 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: [PATCH 5/8] move perf_event.h to include/
-Date: Mon, 1 Jul 2013 10:43:31 -0400
-Message-ID: <20130701144331.GA4441@redhat.com>
-References: <1372620792-16384-1-git-send-email-tt.rantala@gmail.com>
- <1372620792-16384-6-git-send-email-tt.rantala@gmail.com>
- <20130630232915.GA4325@redhat.com>
- <CA+ydwtqCM0_TahM2y3AHG=tbwwyzp14jmMM0WspACic+QiVACw@mail.gmail.com>
+From: Vince Weaver <vincent.weaver@maine.edu>
+Subject: Re: [testcase] perf: yet another fuzzer triggered crash
+Date: Mon, 1 Jul 2013 11:13:01 -0400 (EDT)
+Message-ID: <alpine.DEB.2.10.1307011112090.8216@vincent-weaver-1.um.maine.edu>
+References: <alpine.DEB.2.10.1306121911500.12627@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1306140058520.8617@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1306281531070.10799@vincent-weaver-1.um.maine.edu> <alpine.DEB.2.10.1306281705340.10799@vincent-weaver-1.um.maine.edu>
+ <20130701090713.GO6626@twins.programming.kicks-ass.net>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <CA+ydwtqCM0_TahM2y3AHG=tbwwyzp14jmMM0WspACic+QiVACw@mail.gmail.com>
+In-Reply-To: <20130701090713.GO6626@twins.programming.kicks-ass.net>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Tommi Rantala <tt.rantala@gmail.com>
-Cc: trinity@vger.kernel.org
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Vince Weaver <vincent.weaver@maine.edu>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
-On Mon, Jul 01, 2013 at 05:35:05PM +0300, Tommi Rantala wrote:
- > 2013/7/1 Dave Jones <davej@redhat.com>:
- > > can you elaborate on this one ?
- > 
- > I'm working on some patches (that I hope to finish sometime soon) to
- > open more types of file descriptors at Trinity startup
+On Mon, 1 Jul 2013, Peter Zijlstra wrote:
 
-Ah, excellent. I was thinking of that after seeing your hack a while back
-for epoll descriptors. Looking forward to it. (And glad I don't have to
-do it now ;)
 
- > and this header will be useful for that purpose. (Might also be possible to use
- > something from syscalls/perf_event_open.c, and perhaps avoid requiring
- > the header, but did not look into that.)
- > 
- > I also want the ioctl definitions from the header (in code living in ioctls/).
+> OK, so on my westmere it triggers that WARN in task_ctx_sched_out() a
+> _lot_ (I removed the ONCE for easier debugging earlier -- still kinda
+> stumped there).
+> 
+> Then this thing causes an RCU stall and starts triggering NMI watchdog
+> msgs.. so YAY! :-)
 
-Sounds good, I'll merge it and the other patches in a while.
+I'm glad it's not just me.
 
-	Dave
+I'm in the process of kernel bisecting this, though all I can tell you so 
+far is 2.6.32 is unaffected by the bug but 3.2 and later are.
+
+Vince
