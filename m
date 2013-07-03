@@ -1,49 +1,48 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: Expected 0x
-Date: Wed, 3 Jul 2013 17:29:41 -0400
-Message-ID: <20130703212941.GA26512@redhat.com>
-References: <20130703182141.GA13149@redhat.com>
- <alpine.DEB.2.10.1307031701440.14644@vincent-weaver-1.um.maine.edu>
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] Add MRT_ADD_MFC_PROXY and MRT_DEL_MFC_PROXY for older kernels.
+Date: Wed,  3 Jul 2013 16:03:50 -0700
+Message-ID: <1372892630-23617-1-git-send-email-vlee@freedesktop.org>
 Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.10.1307031701440.14644@vincent-weaver-1.um.maine.edu>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Vince Weaver <vincent.weaver@maine.edu>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
-On Wed, Jul 03, 2013 at 05:07:38PM -0400, Vince Weaver wrote:
- > 
- > The following patch should properly handle decimal values in
- >    /sys/bus/event_source/devices/cpu/events/
- > files.
+=46rom: Vinson Lee <vlee@twitter.com>
 
-applied and pushed. thanks.
+This patch fixes these build errors on kernels 3.8 and older.
 
- > Feel free to run lindent on the whole perf_event_open.c sometime.
+  CC	net/ip_setsockopt.o
+net/ip_setsockopt.c:32:22: error: =E2=80=98MRT_ADD_MFC_PROXY=E2=80=99 u=
+ndeclared here (not in a function)
+net/ip_setsockopt.c:32:41: error: =E2=80=98MRT_DEL_MFC_PROXY=E2=80=99 u=
+ndeclared here (not in a function)
+make: *** [net/ip_setsockopt.o] Error 1
 
-maybe next week ;)
+Signed-off-by: Vinson Lee <vlee@twitter.com>
+---
+ include/compat.h | 8 ++++++++
+ 1 file changed, 8 insertions(+)
 
-btw, here's something curious that llvm finds when you build trinity with clang.
-I'm not sure if this is a real problem, or a bug in the compiler, but you
-might want to take a look anyway:
-
-syscalls/perf_event_open.c:66:19: warning: Assigned value is garbage or undefined
-                format_string[i]=string[i];
-                                ^~~~~~~~~~
-syscalls/perf_event_open.c:159:12: warning: Assigned value is garbage or undefined
-                        field[i]=value[ptr];
-                                ^~~~~~~~~~~
-
-In case you're not setup for llvm, I've put the decision trees it generated at
-http://codemonkey.org.uk/junk/1.html
-http://codemonkey.org.uk/junk/2.html
-
-It may be that some of those combinations it took will never happen, but
-I'd like to know for sure. (and if possible somehow silence the warnings
-as long as it doesn't ugly stuff up too much)
-
-	Dave
+diff --git a/include/compat.h b/include/compat.h
+index e1b9296..0ed2020 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -684,4 +684,12 @@ struct kvm_get_htab_fd {
+ #define EM_ARM                    40
+ #endif
+=20
++/* linux/mroute.h */
++#ifndef MRT_ADD_MFC_PROXY
++#define MRT_ADD_MFC_PROXY	(MRT_BASE+10)
++#endif
++#ifndef MRT_DEL_MFC_PROXY
++#define MRT_DEL_MFC_PROXY	(MRT_BASE+11)
++#endif
++
+ #endif	/* _TRINITY_COMPAT_H */
+--=20
+1.8.1.2
