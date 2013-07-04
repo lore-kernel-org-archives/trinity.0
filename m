@@ -1,7 +1,7 @@
 From: Mikko Rapeli <mikko.rapeli@iki.fi>
-Subject: [PATCH 5/6] sockets.c: don't leak cachefile on return paths
-Date: Thu,  4 Jul 2013 22:55:43 +0300
-Message-ID: <1372967744-29353-6-git-send-email-mikko.rapeli@iki.fi>
+Subject: [PATCH 4/6] perf_event_open.c: close dir's on exit paths
+Date: Thu,  4 Jul 2013 22:55:42 +0300
+Message-ID: <1372967744-29353-5-git-send-email-mikko.rapeli@iki.fi>
 References: <1372967744-29353-1-git-send-email-mikko.rapeli@iki.fi>
 Return-path: <trinity-owner@vger.kernel.org>
 In-Reply-To: <1372967744-29353-1-git-send-email-mikko.rapeli@iki.fi>
@@ -12,49 +12,34 @@ Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
 
-Fixes Coverity CID's 1042341 and 1042342.
+Don't leaky fd's so much. Fixes Coverity CID's 1042345, 1042346 and 1042347.
 
 Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
 ---
- sockets.c | 10 +++++++---
- 1 file changed, 7 insertions(+), 3 deletions(-)
+ syscalls/perf_event_open.c | 4 ++++
+ 1 file changed, 4 insertions(+)
 
-diff --git a/sockets.c b/sockets.c
-index 7eade96..75acc5b 100644
---- a/sockets.c
-+++ b/sockets.c
-@@ -99,8 +99,10 @@ void generate_sockets(void)
- 
- 	while (nr_to_create > 0) {
- 
--		if (shm->exit_reason != STILL_RUNNING)
-+		if (shm->exit_reason != STILL_RUNNING) {
-+			close(cachefile);
- 			return;
-+		}
- 
- 		/* Pretend we're child 0 and we've called sys_socket */
- 		sanitise_socket(0);
-@@ -213,6 +215,7 @@ void open_sockets(void)
- 			if (domain != specific_proto) {
- 				printf("ignoring socket cachefile due to specific protocol request, and stale data in cachefile.\n");
- 				generate_sockets();
-+				close(cachefile);
- 				return;
+diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
+index ba5c872..edc64eb 100644
+--- a/syscalls/perf_event_open.c
++++ b/syscalls/perf_event_open.c
+@@ -304,6 +304,8 @@ static int init_pmus(void) {
+ 							sizeof(struct format_type));
+ 			if (pmus[pmu_num].formats==NULL) {
+ 				pmus[pmu_num].num_formats=0;
++				closedir(dir);
++				closedir(format_dir);
+ 				return -1;
  			}
- 		}
-@@ -231,9 +234,10 @@ regenerate:
- 		}
  
- 		/* check for ctrl-c */
--		if (shm->exit_reason != STILL_RUNNING)
-+		if (shm->exit_reason != STILL_RUNNING) {
-+			close(cachefile);
- 			return;
--
-+		}
- 	}
+@@ -368,6 +370,8 @@ static int init_pmus(void) {
+ 				sizeof(struct generic_event_type));
+ 			if (pmus[pmu_num].generic_events==NULL) {
+ 				pmus[pmu_num].num_generic_events=0;
++				closedir(dir);
++				closedir(event_dir);
+ 				return -1;
+ 			}
  
- 	if (nr_sockets < NR_SOCKET_FDS) {
 -- 
 1.8.3.1
