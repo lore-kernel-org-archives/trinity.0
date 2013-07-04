@@ -1,48 +1,53 @@
-From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] Add MRT_ADD_MFC_PROXY and MRT_DEL_MFC_PROXY for older kernels.
-Date: Wed,  3 Jul 2013 16:03:50 -0700
-Message-ID: <1372892630-23617-1-git-send-email-vlee@freedesktop.org>
+From: Michael Ellerman <michael@ellerman.id.au>
+Subject: Re: Expected 0x
+Date: Thu, 04 Jul 2013 12:42:39 +1000
+Message-ID: <1372905759.12381.3.camel@concordia>
+References: <20130703182141.GA13149@redhat.com>
+	 <alpine.DEB.2.10.1307031435440.12584@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
+In-Reply-To: <alpine.DEB.2.10.1307031435440.12584@vincent-weaver-1.um.maine.edu>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
+Content-Type: text/plain; charset="us-ascii"
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: Dave Jones <davej@redhat.com>, trinity@vger.kernel.org, ak@linux.intel.com
 
-=46rom: Vinson Lee <vlee@twitter.com>
+On Wed, 2013-07-03 at 14:43 -0400, Vince Weaver wrote:
+> On Wed, 3 Jul 2013, Dave Jones wrote:
+> 
+> > Linus' current tree seems to trigger this in perf_event_open on startup:
+> > 
+> >                         if (value[ptr]!='0') fprintf(stderr,"Expected 0x\n");
+> >                         ptr++;
+> >                         if (value[ptr]!='x') fprintf(stderr,"Expected 0x\n");
+> >                         ptr++;
+> > 
+> > I think it's from this..
+> > 
+> > /sys/bus/event_source/devices/cpu/events/mem-loads
+> > event=0xcd,umask=0x1,ldlat=3
+> > 
+> > Looks like that field isn't always hex.
+> 
+> Ugh, I would have thought they were using sprintf() or something
+> to generate these, but they just hard-code the string in the kernel.
+> 
+>   EVENT_ATTR_STR(mem-loads, mem_ld_snb, "event=0xcd,umask=0x1,ldlat=3");
+> 
+> The only documentation for what to expect are the lex/yacc files in
+> tools/perf/util/parse-events.*
 
-This patch fixes these build errors on kernels 3.8 and older.
+It's sort of documented here:
 
-  CC	net/ip_setsockopt.o
-net/ip_setsockopt.c:32:22: error: =E2=80=98MRT_ADD_MFC_PROXY=E2=80=99 u=
-ndeclared here (not in a function)
-net/ip_setsockopt.c:32:41: error: =E2=80=98MRT_DEL_MFC_PROXY=E2=80=99 u=
-ndeclared here (not in a function)
-make: *** [net/ip_setsockopt.o] Error 1
+Documentation/ABI/testing/sysfs-bus-event_source-devices-events
 
-Signed-off-by: Vinson Lee <vlee@twitter.com>
----
- include/compat.h | 8 ++++++++
- 1 file changed, 8 insertions(+)
 
-diff --git a/include/compat.h b/include/compat.h
-index e1b9296..0ed2020 100644
---- a/include/compat.h
-+++ b/include/compat.h
-@@ -684,4 +684,12 @@ struct kvm_get_htab_fd {
- #define EM_ARM                    40
- #endif
-=20
-+/* linux/mroute.h */
-+#ifndef MRT_ADD_MFC_PROXY
-+#define MRT_ADD_MFC_PROXY	(MRT_BASE+10)
-+#endif
-+#ifndef MRT_DEL_MFC_PROXY
-+#define MRT_DEL_MFC_PROXY	(MRT_BASE+11)
-+#endif
-+
- #endif	/* _TRINITY_COMPAT_H */
---=20
-1.8.1.2
+Though strictly speaking that only applies to the events listed in that
+file, which doesn't include mem-loads.
+
+And it says it should be hex.
+
+cheers
+
