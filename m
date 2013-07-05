@@ -1,33 +1,39 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: net/ip_setsockopt.c:29:20: =?utf-8?Q?e?=
- =?utf-8?B?cnJvcjog4oCYSVBfVU5JQ0FTVF9JRg==?= =?utf-8?B?4oCZ?= undeclared
- here (not in a function)
-Date: Fri, 5 Jul 2013 10:51:19 -0400
-Message-ID: <20130705145119.GC325@redhat.com>
-References: <51D5A7F7.9030102@gmx.de>
-Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+From: Mikko Rapeli <mikko.rapeli@iki.fi>
+Subject: [PATCHv2 1/2] trinity.c: fix uninitialized variable
+Date: Fri,  5 Jul 2013 19:15:53 +0300
+Message-ID: <1373040954-18797-1-git-send-email-mikko.rapeli@iki.fi>
+References: <20130705144449.GA31027@redhat.com>
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <51D5A7F7.9030102@gmx.de>
+In-Reply-To: <20130705144449.GA31027@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
-Cc: trinity@vger.kernel.org
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: trinity@vger.kernel.org
 
-On Thu, Jul 04, 2013 at 06:51:03PM +0200, Toralf F=C3=B6rster wrote:
- > Latest git gives :
- >=20
- >   CC    net/llc.o
- > net/ip_setsockopt.c:29:20: error: =E2=80=98IP_UNICAST_IF=E2=80=99 un=
-declared here (not
- > in a function)
- > make: *** [net/ip_setsockopt.o] Error 1
- > make: *** Waiting for unfinished jobs....
- >  * ERROR: dev-util/trinity-9999 failed (compile phase):
- >=20
+Coverity says:
 
-Should be fixed now.
+CID 1042350 (#1 of 1): Uninitialized scalar variable (UNINIT)
+23. uninit_use_in_call: Using uninitialized value "ling": field "ling"."l_linger" is uninitialized when calling "setsockopt(int, int, int, void const *, socklen_t)".
 
-	Dave
+Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
+---
+ trinity.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/trinity.c b/trinity.c
+index 93e7819..32717c0 100644
+--- a/trinity.c
++++ b/trinity.c
+@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
+ cleanup_fds:
+ 
+ 	for (i = 0; i < nr_sockets; i++) {
+-		struct linger ling;
++		struct linger ling = { .l_onoff = FALSE, };
+ 
+ 		ling.l_onoff = FALSE;	/* linger active */
+ 		setsockopt(shm->socket_fds[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(struct linger));
+-- 
+1.8.3.1
