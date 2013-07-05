@@ -1,45 +1,51 @@
-From: Mikko Rapeli <mikko.rapeli@iki.fi>
-Subject: [PATCH 4/6] perf_event_open.c: close dir's on exit paths
-Date: Thu,  4 Jul 2013 22:55:42 +0300
-Message-ID: <1372967744-29353-5-git-send-email-mikko.rapeli@iki.fi>
+From: Dave Jones <davej@redhat.com>
+Subject: Re: [PATCH 1/6] trinity.c: fix uninitialized variable
+Date: Fri, 5 Jul 2013 10:44:49 -0400
+Message-ID: <20130705144449.GA31027@redhat.com>
 References: <1372967744-29353-1-git-send-email-mikko.rapeli@iki.fi>
+ <1372967744-29353-2-git-send-email-mikko.rapeli@iki.fi>
+Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <1372967744-29353-1-git-send-email-mikko.rapeli@iki.fi>
+Content-Disposition: inline
+In-Reply-To: <1372967744-29353-2-git-send-email-mikko.rapeli@iki.fi>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
+To: Mikko Rapeli <mikko.rapeli@iki.fi>
+Cc: trinity@vger.kernel.org
 
-Don't leaky fd's so much. Fixes Coverity CID's 1042345, 1042346 and 1042347.
+On Thu, Jul 04, 2013 at 10:55:39PM +0300, Mikko Rapeli wrote:
+ > Coverity says:
+ > 
+ > CID 1042350 (#1 of 1): Uninitialized scalar variable (UNINIT)
+ > 23. uninit_use_in_call: Using uninitialized value "ling": field "ling"."l_linger" is uninitialized when calling "setsockopt(int, int, int, void const *, socklen_t)".
+ > 
+ > Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
+ > ---
+ >  trinity.c | 1 +
+ >  1 file changed, 1 insertion(+)
+ > 
+ > diff --git a/trinity.c b/trinity.c
+ > index 93e7819..3f80020 100644
+ > --- a/trinity.c
+ > +++ b/trinity.c
+ > @@ -250,6 +250,7 @@ cleanup_fds:
+ >  
+ >  	for (i = 0; i < nr_sockets; i++) {
+ >  		struct linger ling;
+ > +		memset(&ling, 0, sizeof(ling));
+ >  
+ >  		ling.l_onoff = FALSE;	/* linger active */
+ >  		setsockopt(shm->socket_fds[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(struct linger));
 
-Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
----
- syscalls/perf_event_open.c | 4 ++++
- 1 file changed, 4 insertions(+)
+Let's just do this as 
 
-diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
-index ba5c872..edc64eb 100644
---- a/syscalls/perf_event_open.c
-+++ b/syscalls/perf_event_open.c
-@@ -304,6 +304,8 @@ static int init_pmus(void) {
- 							sizeof(struct format_type));
- 			if (pmus[pmu_num].formats==NULL) {
- 				pmus[pmu_num].num_formats=0;
-+				closedir(dir);
-+				closedir(format_dir);
- 				return -1;
- 			}
- 
-@@ -368,6 +370,8 @@ static int init_pmus(void) {
- 				sizeof(struct generic_event_type));
- 			if (pmus[pmu_num].generic_events==NULL) {
- 				pmus[pmu_num].num_generic_events=0;
-+				closedir(dir);
-+				closedir(event_dir);
- 				return -1;
- 			}
- 
--- 
-1.8.3.1
+	struct linger ling = { .l_onoff = FALSE, };
+
+That should have the same effect.
+
+This should be a harmless bug anyway, because l_linger only matters when we're turning
+linger on afaik.
+
+	Dave
