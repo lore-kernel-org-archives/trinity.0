@@ -1,49 +1,73 @@
-From: Mikko Rapeli <mikko.rapeli@iki.fi>
-Subject: [PATCHv2 2/2] trinity.c: log errors if socket calls fail
-Date: Fri,  5 Jul 2013 19:15:54 +0300
-Message-ID: <1373040954-18797-2-git-send-email-mikko.rapeli@iki.fi>
-References: <20130705144449.GA31027@redhat.com>
+From: Jiri Olsa <jolsa@redhat.com>
+Subject: Re: [bisected] perf: yet another fuzzer triggered crash
+Date: Mon, 8 Jul 2013 15:50:48 +0200
+Message-ID: <20130708135048.GA1069@krava.brq.redhat.com>
+References: <alpine.DEB.2.10.1306121911500.12627@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1306140058520.8617@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1306281531070.10799@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1306281705340.10799@vincent-weaver-1.um.maine.edu>
+ <20130701090713.GO6626@twins.programming.kicks-ass.net>
+ <alpine.DEB.2.10.1307011112090.8216@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1307021628510.8353@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1307022314450.11385@vincent-weaver-1.um.maine.edu>
+ <20130703074929.GE23916@twins.programming.kicks-ass.net>
+Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20130705144449.GA31027@redhat.com>
+Content-Disposition: inline
+In-Reply-To: <20130703074929.GE23916@twins.programming.kicks-ass.net>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Vince Weaver <vincent.weaver@maine.edu>, linux-kernel@vger.kernel.org, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, trinity@vger.kernel.org
 
-Maybe that's all that needs to be done at this point.
+On Wed, Jul 03, 2013 at 09:49:29AM +0200, Peter Zijlstra wrote:
+> On Tue, Jul 02, 2013 at 11:15:59PM -0400, Vince Weaver wrote:
+> > 
+> > OK, I have bisected this problem to the following change:
+> > 
+> > commit 8dc85d547285668e509f86c177bcd4ea055bcaaf
+> > Author: Peter Zijlstra <a.p.zijlstra@chello.nl>
+> > Date:   Thu Sep 2 16:50:03 2010 +0200
+> > 
+> >     perf: Multiple task contexts
+> >     
+> >     Provide the infrastructure for multiple task contexts.
+> > 
+> 
+> Thanks, that narrows down the scope a bit. As it happens I was also
+> narrowing down on that particular area so that's good.
+> 
 
-Coverity CID 1042335 (#1 of 1): Unchecked return value from library
-(CHECKED_RETURN)
+hi,
+patch below gets rid of the warning, and probably the
+crash as well
 
-Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
+the reason seems to be when HW context is cloned based
+on SW event that happened to get there because of the
+HW leader, which got closed just before (fd[15] event
+in the reproducer)
+
+and the consequence is that in HW context we access
+SW's cpuctx -> and thus overwriting its task_ctx variable
+any time there's *sched_in routine
+
+need to check if that does not break anything else ;-)
+
+jirka
+
 ---
- trinity.c | 9 +++++++--
- 1 file changed, 7 insertions(+), 2 deletions(-)
-
-diff --git a/trinity.c b/trinity.c
-index 32717c0..b3829fe 100644
---- a/trinity.c
-+++ b/trinity.c
-@@ -249,11 +249,16 @@ int main(int argc, char* argv[])
- cleanup_fds:
+diff --git a/kernel/events/core.c b/kernel/events/core.c
+index 1833bc5..1d1f030 100644
+--- a/kernel/events/core.c
++++ b/kernel/events/core.c
+@@ -7465,7 +7465,7 @@ inherit_task_group(struct perf_event *event, struct task_struct *parent,
+ 		 * child.
+ 		 */
  
- 	for (i = 0; i < nr_sockets; i++) {
-+		int r = 0;
- 		struct linger ling = { .l_onoff = FALSE, };
+-		child_ctx = alloc_perf_context(event->pmu, child);
++		child_ctx = alloc_perf_context(parent_ctx->pmu, child);
+ 		if (!child_ctx)
+ 			return -ENOMEM;
  
- 		ling.l_onoff = FALSE;	/* linger active */
--		setsockopt(shm->socket_fds[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(struct linger));
--		shutdown(shm->socket_fds[i], SHUT_RDWR);
-+		r = setsockopt(shm->socket_fds[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(struct linger));
-+		if (r)
-+			perror("setsockopt");
-+		r = shutdown(shm->socket_fds[i], SHUT_RDWR);
-+		if (r)
-+			perror("shutdown");
- 		close(shm->socket_fds[i]);
- 	}
- 
--- 
-1.8.3.1
