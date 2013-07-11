@@ -1,57 +1,61 @@
 From: Peter Zijlstra <peterz@infradead.org>
 Subject: Re: timer: lockup in run_timer_softirq()
-Date: Thu, 11 Jul 2013 12:02:39 +0200
-Message-ID: <20130711100239.GB25631@dyad.programming.kicks-ass.net>
+Date: Thu, 11 Jul 2013 18:42:04 +0200
+Message-ID: <20130711164204.GK25631@dyad.programming.kicks-ass.net>
 References: <51DC902F.3070403@oracle.com>
- <20130710095459.GE17211@twins.programming.kicks-ass.net>
- <51DD740C.5090000@oracle.com>
+ <20130709224706.GA13855@redhat.com>
+ <51DC9379.9050408@oracle.com>
+ <20130709230316.GB13855@redhat.com>
+ <51DC983F.2010409@oracle.com>
+ <20130710095210.GD17211@twins.programming.kicks-ass.net>
+ <1373459254.7458.49.camel@gandalf.local.home>
+ <20130710124245.GT25631@dyad.programming.kicks-ass.net>
+ <1373461091.7458.55.camel@gandalf.local.home>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <51DD740C.5090000@oracle.com>
+In-Reply-To: <1373461091.7458.55.camel@gandalf.local.home>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Sasha Levin <sasha.levin@oracle.com>
-Cc: Tejun Heo <tj@kernel.org>, tglx@linutronix.de, LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org
+To: Steven Rostedt <rostedt@goodmis.org>
+Cc: Sasha Levin <sasha.levin@oracle.com>, Dave Jones <davej@redhat.com>, Tejun Heo <tj@kernel.org>, tglx@linutronix.de, LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org
 
-On Wed, Jul 10, 2013 at 10:47:40AM -0400, Sasha Levin wrote:
-> On 07/10/2013 05:54 AM, Peter Zijlstra wrote:
-> >On Tue, Jul 09, 2013 at 06:35:27PM -0400, Sasha Levin wrote:
-> >>While going through the NMI dump, I noticed that it's very incomplete, and full of:
-> >>
-> >>[ 2536.500130] INFO: NMI handler (arch_trigger_all_cpu_backtrace_handler)
-> >>took too long to run: 697182.008 msecs
-> >
-> >Now I would actually expect arch_trigger_all_cpu_backtrace_handler() to
-> >issue this warning, that said, ~700 seconds is a bit long, I'm fairly
-> >sure it didn't actually take that long, you'd have noticed your vm being
-> >'away' for 10+ minutes I'd think, no?
-> >
-> >
-> >There's something entirely fishy with that stuff, let me to stare at it.
+On Wed, Jul 10, 2013 at 08:58:11AM -0400, Steven Rostedt wrote:
+> On Wed, 2013-07-10 at 14:42 +0200, Peter Zijlstra wrote:
 > 
-> Yeah, it didn't actually hang that long - that number is bogus.
+> > but but but preempt_disable_notrace() isn't an rcu_read_lock().. You can only
+> > do that for rcu_sched.
+> 
+> Right. And not even rcu_sched is safe, as function tracing can trace
+> functions out of rcu scope. That's why I had to add that code to do a
+> schedule_on_each_cpu() in ftrace.
+> 
+> > 
+> > Anyway, I don't see a nice way out of this mess :/ the entire perf core uses
+> > regular RCU and converting all that is going to me a nasty big patch.
+> 
+> There is an easier way. We can add a way to have perf not trace specific
+> functions. Now there's already infrastructure there to pick and choose
+> what to trace and what not to for individual function tracing users like
+> perf. The trick will be how to annotate them.
+> 
+> If there's a way to mark a function without moving it to a section, this
+> would be possible. Perhaps similar to EXPORT_SYMBOL(). We could add a
+> PERF_NOTRACE().
+> 
+> static void __local_bh_enable()
+> {
+> 	[...]
+> }
+> PERF_NOTRACE(__local_bh_enable);
+> 
+> And add these to a black list of functions that perf should not trace.
+> 
+> How's that sound?
 
-This might help..
+I'm afraid this is going to be hard to create and hard to keep correct :/
 
----
- arch/x86/kernel/nmi.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/arch/x86/kernel/nmi.c b/arch/x86/kernel/nmi.c
-index 0920212..4e54911 100644
---- a/arch/x86/kernel/nmi.c
-+++ b/arch/x86/kernel/nmi.c
-@@ -123,8 +123,8 @@ static int __kprobes nmi_handle(unsigned int type, struct pt_regs *regs, bool b2
- 			continue;
- 
- 		nmi_longest_ns = delta;
--		whole_msecs = do_div(delta, (1000 * 1000));
--		decimal_msecs = do_div(delta, 1000) % 1000;
-+		whole_msecs = div_u64(delta, (1000 * 1000));
-+		decimal_msecs = div_u64(delta, 1000) % 1000;
- 		printk_ratelimited(KERN_INFO
- 			"INFO: NMI handler (%ps) took too long to run: "
- 			"%lld.%03d msecs\n", a->handler, whole_msecs,
+Other than that, a function tracer environment that is safer to use might be
+useful for other people as well.
