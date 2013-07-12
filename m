@@ -1,54 +1,30 @@
-From: Peter Zijlstra <peterz@infradead.org>
-Subject: Re: timer: lockup in run_timer_softirq()
-Date: Thu, 11 Jul 2013 19:11:57 +0200
-Message-ID: <20130711171157.GL25631@dyad.programming.kicks-ass.net>
-References: <51DC9379.9050408@oracle.com>
- <20130709230316.GB13855@redhat.com>
- <51DC983F.2010409@oracle.com>
- <20130710095210.GD17211@twins.programming.kicks-ass.net>
- <1373459254.7458.49.camel@gandalf.local.home>
- <20130710124245.GT25631@dyad.programming.kicks-ass.net>
- <1373461091.7458.55.camel@gandalf.local.home>
- <20130711164204.GK25631@dyad.programming.kicks-ass.net>
- <1373561726.17876.48.camel@gandalf.local.home>
- <1373561972.17876.51.camel@gandalf.local.home>
+From: Vince Weaver <vincent.weaver@maine.edu>
+Subject: rand64 change
+Date: Fri, 12 Jul 2013 17:48:37 -0400 (EDT)
+Message-ID: <alpine.DEB.2.10.1307121746060.28314@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1373561972.17876.51.camel@gandalf.local.home>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Steven Rostedt <rostedt@goodmis.org>
-Cc: Sasha Levin <sasha.levin@oracle.com>, Dave Jones <davej@redhat.com>, Tejun Heo <tj@kernel.org>, tglx@linutronix.de, LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org
+To: Dave Jones <davej@redhat.com>
+Cc: trinity@vger.kernel.org
 
-On Thu, Jul 11, 2013 at 12:59:32PM -0400, Steven Rostedt wrote:
-> On Thu, 2013-07-11 at 12:55 -0400, Steven Rostedt wrote:
-> 
-> > > 
-> > > Other than that, a function tracer environment that is safer to use might be
-> > > useful for other people as well.
-> > 
-> > Not sure how to make the environment safe, as the main purpose of the
-> > function trace is to debug those hard to debug locations, like NMIs,
-> > RCU, dynamic ticks, etc. To ensure a "safe" environment, it would
-> > cripple the tracer.
-> > 
-> > Hmm, what would you state as a safe environment? How can we detect if
-> > the environment is safe to trace or not?
-> 
-> Maybe I misunderstood you. You mean to have this environment be
-> something for not just perf, and have the macro be:
-> 
-> NONSAFE_TRACE(__local_bh_enable);
-> 
-> ?
-> 
-> Then, any ftrace user could set a flag in the registering of its ops to
-> 'safe_only_functions'. And it will ignore all of these locations.
-> There's really not many of them, so it may not be too hard to weed out.
 
-Yah, like that. But that doesn't invalidate your question as to what 'safe'
-would encompass. I think RCU/lockdep would be the big thing for perf, not
-sure it should be wider than that.
+I noticed the following change.  The perf_event_open() syscall has various 
+64-bit fields (that are 64-bit even on 32-bit machines) that I set with 
+rand64().  Do I need to change something to get that to work?
+
+Vince
+
+commit c5bcbb108fe920851b853180849153ebcacb300a
+Author: Dave Jones <davej@redhat.com>
+Date:   Fri Jul 12 16:09:54 2013 -0400
+
+    limit rand64 to 32bits when building on 32bit.
+    
+    I might later change this to make this function return u64 if necessary,
+    but for now, the rand64() consumers on 32bit don't care because
+    they work on ulongs.
+
