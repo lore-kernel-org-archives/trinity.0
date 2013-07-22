@@ -1,26 +1,39 @@
 From: Dave Jones <davej@redhat.com>
-Subject: Re: [PATCH] improve randomness in rand64()
-Date: Fri, 19 Jul 2013 20:30:02 -0400
-Message-ID: <20130720003002.GA31116@redhat.com>
-References: <alpine.DEB.2.02.1307191432480.14274@exit8.kir.corp.google.com>
+Subject: Trinity v1.2
+Date: Mon, 22 Jul 2013 19:55:14 -0400
+Message-ID: <20130722235514.GA28463@redhat.com>
 Mime-Version: 1.0
-Return-path: <trinity-owner@vger.kernel.org>
+Return-path: <linux-kernel-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.02.1307191432480.14274@exit8.kir.corp.google.com>
-Sender: trinity-owner@vger.kernel.org
+Sender: linux-kernel-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Andy Honig <ahonig@google.com>
-Cc: trinity@vger.kernel.org
+To: trinity@vger.kernel.org
+Cc: Linux Kernel <linux-kernel@vger.kernel.org>
 
-On Fri, Jul 19, 2013 at 02:39:15PM -0700, Andy Honig wrote:
- > Commit 6112813df53ce6762f5c8de1d4382d67f9f2f769 introduced
- > code to occasionally invert the valuerand64().  However the code 
- > mistakenly zeroed the value instead by xoring it with itself.
+It's been six months since I last did a point release of trinity.
+In that time, a lot has changed[*], supporting new syscalls, new options,
+and fixing countless dumb bugs.
 
-Well that's just embaressing.
+All that time of course, trinity has continued to find new kernel bugs.
+It actually got to be too much work to track at one point.
 
-thanks, applied.
+There's a bunch of new features since 1.1, including preliminary
+support for fuzzing ioctl() thanks to Tommi Rantala, and the beginning
+of some interesting BPF fuzzing from Dan Borkmann, along with many
+improvements to existing syscall fuzzers. (Special props to Vince Weaver
+for his work on perf_event_open).
+
+You can find the tarball and/or git instructions at
+http://codemonkey.org.uk/projects/trinity/
+
+My thanks to everyone else who contributed since the last release.
+Being a sucker for stats, it's been fun to watch the graphs at
+https://www.ohloh.net/p/7245 steadily increasing. Hope to see these
+trends continue.
 
 	Dave
+
+[*]  581 files changed, 17782 insertions(+), 10253 deletions(-)
+     Practically a rewrite given there are only 21k LOC in the project :)
