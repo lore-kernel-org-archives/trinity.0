@@ -1,45 +1,63 @@
-From: Andi Shyti <andi@etezian.org>
-Subject: [PATCH] ioctls: videodev2: check if defines are obsolete
-Date: Wed, 24 Jul 2013 00:42:07 +0200
-Message-ID: <1374619327-13259-1-git-send-email-andi@etezian.org>
+From: Andi Kleen <andi@firstfloor.org>
+Subject: Re: [PATCH 1/2] tools, perf: Add a precise event qualifier v2
+Date: Wed, 24 Jul 2013 00:51:50 +0200
+Message-ID: <20130723225150.GT6123@two.firstfloor.org>
+References: <1374501138-13496-1-git-send-email-andi@firstfloor.org>
+ <alpine.DEB.2.02.1307230137160.18617@pianoman.cluster.toy>
+ <20130723060108.GA18396@tassilo.jf.intel.com>
+ <alpine.DEB.2.02.1307231717580.27628@pianoman.cluster.toy>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <alpine.DEB.2.02.1307231717580.27628@pianoman.cluster.toy>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: tt.rantala@gmail.com
-Cc: trinity@vger.kernel.org, mikko.rapeli@iki.fi, andi@etezian.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: Vince Weaver <vince@deater.net>
+Cc: Andi Kleen <ak@linux.intel.com>, Andi Kleen <andi@firstfloor.org>, acme@infradead.org, mingo@kernel.org, linux-kernel@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, Stephane Eranian <eranian@google.com>, torvalds@linux-foundation.org, trinity@vger.kernel.org
 
-In kernel headers 3.11 the VIDIOC_DBG_G_CHIP_IDENT define is
-considered obsolete, therefore removed, generating the following
-compiling error:
+On Tue, Jul 23, 2013 at 05:27:43PM -0400, Vince Weaver wrote:
+> 
+> I hate having to justify why breaking the ABI is unacceptable.
 
-ioctls/videodev2.c:72:15: error: =E2=80=98VIDIOC_DBG_G_CHIP_IDENT=E2=80=
-=99 undeclared here (not in a function)
-  IOCTL(VIDIOC_DBG_G_CHIP_IDENT),
-               ^
+Well it's a testing ABI, so we can do changes to it.
 
-Check the definition of it before using it
+I hope you're not suggesting that perf cannot be extended anymore.
+As you know, hardware PMUs are constantly evolving, and perf has evolve
+along with them to stay useful.
 
-Signed-off-by: Andi Shyti <andi@etezian.org>
----
- ioctls/videodev2.c | 2 ++
- 1 file changed, 2 insertions(+)
+> It breaks the ABI.  The events/* sysfs files are documented as only 
+> holding values for the bitfields described in format/*.
 
-diff --git a/ioctls/videodev2.c b/ioctls/videodev2.c
-index 0d1473e..03a5ae5 100644
---- a/ioctls/videodev2.c
-+++ b/ioctls/videodev2.c
-@@ -69,7 +69,9 @@ static const struct ioctl videodev2_ioctls[] =3D {
- 	IOCTL(VIDIOC_TRY_ENCODER_CMD),
- 	IOCTL(VIDIOC_DBG_S_REGISTER),
- 	IOCTL(VIDIOC_DBG_G_REGISTER),
-+#ifdef VIDIOC_DBG_G_CHIP_IDENT
- 	IOCTL(VIDIOC_DBG_G_CHIP_IDENT),
-+#endif
- 	IOCTL(VIDIOC_S_HW_FREQ_SEEK),
- #ifdef VIDIOC_ENUM_DV_PRESETS
- 	IOCTL(VIDIOC_ENUM_DV_PRESETS),
---=20
-1.8.3.2
+Ok. Need to fix the documentation then for precise=1.  I'll send patches.
+
+Also can add it to format/*, but since it's not in config* it will
+be an extension. Since it would be awkward to teach every parser
+about all the flags, we could add a "flags" field that is handled 
+like config, and contains all the flags.
+
+So format/precise would be 
+
+flags:15-16
+
+on little endian. Looks good?
+
+> I'm a bit grumpy about this because I just finished fixing the fallout 
+> from your last time breaking the ABI a few weeks ago when your broken code 
+> started dumping non-hex fields into the sysfs event strings.  I've learned 
+
+Not sure what you're talking about?
+
+iirc the only recent sysfs change of mine merged recently was adding
+intx/intx_cp, and format files never have had hex numbers in it.
+
+> now that I have to go over your patches with a fine-tooth code because you 
+> have no regard for the ABI.
+
+Any useful code review is appreciated.
+
+-Andi
+
+-- 
+ak@linux.intel.com -- Speaking for myself only.
