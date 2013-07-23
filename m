@@ -1,39 +1,52 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Trinity v1.2
-Date: Mon, 22 Jul 2013 19:55:14 -0400
-Message-ID: <20130722235514.GA28463@redhat.com>
+From: Andi Shyti <andi@etezian.org>
+Subject: [PATCH] ioctls: btrfs-control: fix header inclusion order
+Date: Tue, 23 Jul 2013 21:35:28 +0200
+Message-ID: <1374608128-29846-1-git-send-email-andi@etezian.org>
 Mime-Version: 1.0
-Return-path: <linux-kernel-owner@vger.kernel.org>
-Content-Disposition: inline
-Sender: linux-kernel-owner@vger.kernel.org
+Content-Transfer-Encoding: QUOTED-PRINTABLE
+Return-path: <trinity-owner@vger.kernel.org>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
-Cc: Linux Kernel <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="utf-8"
+To: tt.rantala@gmail.com
+Cc: trinity@vger.kernel.org, mikko.rapeli@iki.fi, andi@etezian.org
 
-It's been six months since I last did a point release of trinity.
-In that time, a lot has changed[*], supporting new syscalls, new options,
-and fixing countless dumb bugs.
+This patch enables older linux/btrfs.h where NULL is not
+recognized as a define. It gets rid of the following compiling
+error:
 
-All that time of course, trinity has continued to find new kernel bugs.
-It actually got to be too much work to track at one point.
+In file included from ioctls/btrfs-control.c:5:0:
+/usr/include/linux/btrfs.h: In function =E2=80=98btrfs_err_str=E2=80=99=
+:
+/usr/include/linux/btrfs.h:486:11: error: =E2=80=98NULL=E2=80=99 undecl=
+ared (first use in this function)
+    return NULL;
+           ^
 
-There's a bunch of new features since 1.1, including preliminary
-support for fuzzing ioctl() thanks to Tommi Rantala, and the beginning
-of some interesting BPF fuzzing from Dan Borkmann, along with many
-improvements to existing syscall fuzzers. (Special props to Vince Weaver
-for his work on perf_event_open).
+This is done by postponing the inclusion of btrf.h
 
-You can find the tarball and/or git instructions at
-http://codemonkey.org.uk/projects/trinity/
+Signed-off-by: Andi Shyti <andi@etezian.org>
+---
+ ioctls/btrfs-control.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-My thanks to everyone else who contributed since the last release.
-Being a sucker for stats, it's been fun to watch the graphs at
-https://www.ohloh.net/p/7245 steadily increasing. Hope to see these
-trends continue.
-
-	Dave
-
-[*]  581 files changed, 17782 insertions(+), 10253 deletions(-)
-     Practically a rewrite given there are only 21k LOC in the project :)
+diff --git a/ioctls/btrfs-control.c b/ioctls/btrfs-control.c
+index 35e5389..8d1e2d9 100644
+--- a/ioctls/btrfs-control.c
++++ b/ioctls/btrfs-control.c
+@@ -2,11 +2,11 @@
+=20
+ #ifdef USE_BTRFS
+=20
+-#include <linux/btrfs.h>
+-
+ #include "trinity.h"
+ #include "ioctls.h"
+=20
++#include <linux/btrfs.h>
++
+ static const struct ioctl btrfs_control_ioctls[] =3D {
+ 	IOCTL(BTRFS_IOC_SCAN_DEV),
+ 	IOCTL(BTRFS_IOC_DEVICES_READY),
+--=20
+1.8.3.2
