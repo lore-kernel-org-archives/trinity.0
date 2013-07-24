@@ -1,8 +1,9 @@
 From: Tommi Rantala <tt.rantala@gmail.com>
-Subject: Re: [PATCH] ioctls: videodev2: check if defines are obsolete
-Date: Wed, 24 Jul 2013 09:44:57 +0300
-Message-ID: <CA+ydwtrqHHNXMvrz+tHewGcXT=kujJ8h4TrVJ=CX=rdOsOqqjA@mail.gmail.com>
-References: <1374619327-13259-1-git-send-email-andi@etezian.org>
+Subject: Re: [PATCH v2] ioctls: btrfs-control: fix header inclusion order
+Date: Wed, 24 Jul 2013 09:56:47 +0300
+Message-ID: <CA+ydwtobNJMxn5r+jLQM3Pc8kY_swh1=pNw7dwEDhkGneC9r8g@mail.gmail.com>
+References: <20130723233014.GB4249@jack.whiskey>
+	<1374622742-11219-1-git-send-email-andi@etezian.org>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
@@ -10,14 +11,14 @@ DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=mime-version:in-reply-to:references:date:message-id:subject:from:to
          :cc:content-type:content-transfer-encoding;
-        bh=cGj9juFuySNq5Ox/bUDwn+0sxMR4eSrDUCOwXdC0KW8=;
-        b=MeqqveHns/Xebq/aM9YZ5xRCb4NdI4OVGlERbZJzoxCrJwo3LESqp0abHVOfBXQjAt
-         Cqnci1E/F5a9x3HXjDL6ACg8eNfcTCyhsGtIMSmgWvSF9kqiBhWujOfDzYm11J9edXbo
-         wXlhvD+YU225EeWikihtb2FSKkFxuWe9VE6NeIjj/LOgc3J6ZsnMmt5VVi3KwY2HdwIL
-         Yu5AQJvrelSZAtPVF90F5TgKK7t8iNHZg1+DMmfDkKK75XpNu+KQZtA1nAz+q0AXZDRh
-         Gv9LnWiZCSItDhnJNCLwzTOd8ibJg7eHbNhPr4/D+3SLWle1e4+qHEBvet8/zvL6lr2I
-         q+Lw==
-In-Reply-To: <1374619327-13259-1-git-send-email-andi@etezian.org>
+        bh=AsvetkrXO/2HC+GikP4dBhufz6ttV2XDRmcjFEieJzU=;
+        b=bis1cRNbqZEj/G4Kl1dNpwcOGG0EOINaYoZBw41Pz8ei2fBW1YDSW0DBDim2K6WjFa
+         7Od0mu52ehI/ERZt+Wt+6N5jGssWUe20vsdIu4Vl5wp6zSNvXfRZYQyqEk/0KzjTcjG5
+         yTLVBRex5KOHzn7/qFFK6PmoPiholllrXjO6zJugwCwV4cQVDNYSgdt92yRF3k0pLR/b
+         nOB7pGg1usjUOaITlU1KPGr6QfHDsa2KcSV+2x3tTX8zM1IdLd/wAHBKE4+oXkKNS6X+
+         g/y1kjD7T2wvtN2vSXFg4Chr6x9g+Glm97uF/WRfXuGxVDuuLaUXBvEB7hbXofztmHQs
+         UjSQ==
+In-Reply-To: <1374622742-11219-1-git-send-email-andi@etezian.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="windows-1252"
@@ -25,39 +26,50 @@ To: Andi Shyti <andi@etezian.org>
 Cc: trinity@vger.kernel.org, mikko.rapeli@iki.fi
 
 2013/7/24 Andi Shyti <andi@etezian.org>:
-> In kernel headers 3.11 the VIDIOC_DBG_G_CHIP_IDENT define is
-> considered obsolete, therefore removed, generating the following
-> compiling error:
+> This patch enables newer linux/btrfs.h in Kernel headers 3.11,
+> where NULL is not recognized as a define. It gets rid of the
+> following compiling error:
 >
-> ioctls/videodev2.c:72:15: error: =91VIDIOC_DBG_G_CHIP_IDENT=92 undecl=
-ared here (not in a function)
->   IOCTL(VIDIOC_DBG_G_CHIP_IDENT),
->                ^
+> In file included from ioctls/btrfs-control.c:5:0:
+> /usr/include/linux/btrfs.h: In function =91btrfs_err_str=92:
+> /usr/include/linux/btrfs.h:486:11: error: =91NULL=92 undeclared (firs=
+t use in this function)
+>     return NULL;
+>            ^
 >
-> Check the definition of it before using it
+> This is done by postponing the inclusion of btrf.h
 >
 > Signed-off-by: Andi Shyti <andi@etezian.org>
-
-Thanks, looks good!
-
 > ---
->  ioctls/videodev2.c | 2 ++
->  1 file changed, 2 insertions(+)
+>  ioctls/btrfs-control.c | 4 ++--
+>  1 file changed, 2 insertions(+), 2 deletions(-)
 >
-> diff --git a/ioctls/videodev2.c b/ioctls/videodev2.c
-> index 0d1473e..03a5ae5 100644
-> --- a/ioctls/videodev2.c
-> +++ b/ioctls/videodev2.c
-> @@ -69,7 +69,9 @@ static const struct ioctl videodev2_ioctls[] =3D {
->         IOCTL(VIDIOC_TRY_ENCODER_CMD),
->         IOCTL(VIDIOC_DBG_S_REGISTER),
->         IOCTL(VIDIOC_DBG_G_REGISTER),
-> +#ifdef VIDIOC_DBG_G_CHIP_IDENT
->         IOCTL(VIDIOC_DBG_G_CHIP_IDENT),
-> +#endif
->         IOCTL(VIDIOC_S_HW_FREQ_SEEK),
->  #ifdef VIDIOC_ENUM_DV_PRESETS
->         IOCTL(VIDIOC_ENUM_DV_PRESETS),
+> diff --git a/ioctls/btrfs-control.c b/ioctls/btrfs-control.c
+> index 35e5389..8d1e2d9 100644
+> --- a/ioctls/btrfs-control.c
+> +++ b/ioctls/btrfs-control.c
+> @@ -2,11 +2,11 @@
+>
+>  #ifdef USE_BTRFS
+>
+> -#include <linux/btrfs.h>
+> -
+>  #include "trinity.h"
+>  #include "ioctls.h"
+>
+> +#include <linux/btrfs.h>
+> +
+
+Thanks for the patch!
+
+I have one comment: if you look at other files in ioctl/, we're
+including the system headers before the trinity headers, so how about
+including something like <stdlib.h> before btrfs.h? That should also
+fix this, right?
+
+>  static const struct ioctl btrfs_control_ioctls[] =3D {
+>         IOCTL(BTRFS_IOC_SCAN_DEV),
+>         IOCTL(BTRFS_IOC_DEVICES_READY),
 > --
 > 1.8.3.2
 >
