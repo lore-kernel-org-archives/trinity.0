@@ -1,55 +1,63 @@
-From: Andi Kleen <andi@firstfloor.org>
-Subject: Re: [PATCH 1/2] tools, perf: Add a precise event qualifier v2
-Date: Wed, 24 Jul 2013 03:33:15 +0200
-Message-ID: <20130724013315.GU6123@two.firstfloor.org>
-References: <1374501138-13496-1-git-send-email-andi@firstfloor.org>
- <alpine.DEB.2.02.1307230137160.18617@pianoman.cluster.toy>
- <20130723060108.GA18396@tassilo.jf.intel.com>
- <alpine.DEB.2.02.1307231717580.27628@pianoman.cluster.toy>
- <20130723225150.GT6123@two.firstfloor.org>
- <51EF222D.9070909@oracle.com>
+From: Tommi Rantala <tt.rantala@gmail.com>
+Subject: Re: [PATCH] ioctls: videodev2: check if defines are obsolete
+Date: Wed, 24 Jul 2013 09:44:57 +0300
+Message-ID: <CA+ydwtrqHHNXMvrz+tHewGcXT=kujJ8h4TrVJ=CX=rdOsOqqjA@mail.gmail.com>
+References: <1374619327-13259-1-git-send-email-andi@etezian.org>
 Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <51EF222D.9070909@oracle.com>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
+         :cc:content-type:content-transfer-encoding;
+        bh=cGj9juFuySNq5Ox/bUDwn+0sxMR4eSrDUCOwXdC0KW8=;
+        b=MeqqveHns/Xebq/aM9YZ5xRCb4NdI4OVGlERbZJzoxCrJwo3LESqp0abHVOfBXQjAt
+         Cqnci1E/F5a9x3HXjDL6ACg8eNfcTCyhsGtIMSmgWvSF9kqiBhWujOfDzYm11J9edXbo
+         wXlhvD+YU225EeWikihtb2FSKkFxuWe9VE6NeIjj/LOgc3J6ZsnMmt5VVi3KwY2HdwIL
+         Yu5AQJvrelSZAtPVF90F5TgKK7t8iNHZg1+DMmfDkKK75XpNu+KQZtA1nAz+q0AXZDRh
+         Gv9LnWiZCSItDhnJNCLwzTOd8ibJg7eHbNhPr4/D+3SLWle1e4+qHEBvet8/zvL6lr2I
+         q+Lw==
+In-Reply-To: <1374619327-13259-1-git-send-email-andi@etezian.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Sasha Levin <sasha.levin@oracle.com>
-Cc: Andi Kleen <andi@firstfloor.org>, Vince Weaver <vince@deater.net>, Andi Kleen <ak@linux.intel.com>, acme@infradead.org, mingo@kernel.org, linux-kernel@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, Stephane Eranian <eranian@google.com>, torvalds@linux-foundation.org, trinity@vger.kernel.org
+Content-Type: text/plain; charset="windows-1252"
+To: Andi Shyti <andi@etezian.org>
+Cc: trinity@vger.kernel.org, mikko.rapeli@iki.fi
 
-On Tue, Jul 23, 2013 at 08:39:09PM -0400, Sasha Levin wrote:
-> On 07/23/2013 06:51 PM, Andi Kleen wrote:
-> >On Tue, Jul 23, 2013 at 05:27:43PM -0400, Vince Weaver wrote:
-> >>>
-> >>>I hate having to justify why breaking the ABI is unacceptable.
-> >Well it's a testing ABI, so we can do changes to it.
-> 
-> The testing ABI has a simple policy about changes:
-> 
-> 	The interface can be changed to add new features, but the
-> 	current interface will not break by doing this, unless grave
-> 	errors or security problems are found in them.
-> 
-> It's probably fine to change a testing ABI once in a while, but when things
-> like trinity start breaking that often due to ABI changes in the same exact
-> place, that's too much IMO.
+2013/7/24 Andi Shyti <andi@etezian.org>:
+> In kernel headers 3.11 the VIDIOC_DBG_G_CHIP_IDENT define is
+> considered obsolete, therefore removed, generating the following
+> compiling error:
+>
+> ioctls/videodev2.c:72:15: error: =91VIDIOC_DBG_G_CHIP_IDENT=92 undecl=
+ared here (not in a function)
+>   IOCTL(VIDIOC_DBG_G_CHIP_IDENT),
+>                ^
+>
+> Check the definition of it before using it
+>
+> Signed-off-by: Andi Shyti <andi@etezian.org>
 
-It sounds like trinity is breaking (well printing a message, not really
-breaking) on any addition. So if we follow that the perf sysfs interface
-would be completely frozen and can never be extended over today.
+Thanks, looks good!
 
-I don't think it's a big problem that a test tool needs to be extended
-when the software it's testing changes.
-
-If there are enough other widely used programs that actually break from
-additions probably would need a v2 of the sysfs interface for extensions
-(with new file or directory names), and keep v1 frozen for
-compatibility. 
-
-But I don't think that's the case today?
-
--Andi
--- 
-ak@linux.intel.com -- Speaking for myself only.
+> ---
+>  ioctls/videodev2.c | 2 ++
+>  1 file changed, 2 insertions(+)
+>
+> diff --git a/ioctls/videodev2.c b/ioctls/videodev2.c
+> index 0d1473e..03a5ae5 100644
+> --- a/ioctls/videodev2.c
+> +++ b/ioctls/videodev2.c
+> @@ -69,7 +69,9 @@ static const struct ioctl videodev2_ioctls[] =3D {
+>         IOCTL(VIDIOC_TRY_ENCODER_CMD),
+>         IOCTL(VIDIOC_DBG_S_REGISTER),
+>         IOCTL(VIDIOC_DBG_G_REGISTER),
+> +#ifdef VIDIOC_DBG_G_CHIP_IDENT
+>         IOCTL(VIDIOC_DBG_G_CHIP_IDENT),
+> +#endif
+>         IOCTL(VIDIOC_S_HW_FREQ_SEEK),
+>  #ifdef VIDIOC_ENUM_DV_PRESETS
+>         IOCTL(VIDIOC_ENUM_DV_PRESETS),
+> --
+> 1.8.3.2
+>
