@@ -1,54 +1,34 @@
-From: Andi Shyti <andi@etezian.org>
-Subject: [PATCH v2] ioctls: btrfs-control: fix header inclusion order
-Date: Wed, 24 Jul 2013 01:39:02 +0200
-Message-ID: <1374622742-11219-1-git-send-email-andi@etezian.org>
-References: <20130723233014.GB4249@jack.whiskey>
+From: Sasha Levin <sasha.levin@oracle.com>
+Subject: Re: [PATCH 1/2] tools, perf: Add a precise event qualifier v2
+Date: Tue, 23 Jul 2013 20:39:09 -0400
+Message-ID: <51EF222D.9070909@oracle.com>
+References: <1374501138-13496-1-git-send-email-andi@firstfloor.org> <alpine.DEB.2.02.1307230137160.18617@pianoman.cluster.toy> <20130723060108.GA18396@tassilo.jf.intel.com> <alpine.DEB.2.02.1307231717580.27628@pianoman.cluster.toy> <20130723225150.GT6123@two.firstfloor.org>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20130723233014.GB4249@jack.whiskey>
+In-Reply-To: <20130723225150.GT6123@two.firstfloor.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: tt.rantala@gmail.com
-Cc: trinity@vger.kernel.org, andi@etezian.org, mikko.rapeli@iki.fi
+Content-Type: text/plain; charset="us-ascii"; format="flowed"
+To: Andi Kleen <andi@firstfloor.org>
+Cc: Vince Weaver <vince@deater.net>, Andi Kleen <ak@linux.intel.com>, acme@infradead.org, mingo@kernel.org, linux-kernel@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, Stephane Eranian <eranian@google.com>, torvalds@linux-foundation.org, trinity@vger.kernel.org
 
-This patch enables newer linux/btrfs.h in Kernel headers 3.11,
-where NULL is not recognized as a define. It gets rid of the
-following compiling error:
+On 07/23/2013 06:51 PM, Andi Kleen wrote:
+> On Tue, Jul 23, 2013 at 05:27:43PM -0400, Vince Weaver wrote:
+>> >
+>> >I hate having to justify why breaking the ABI is unacceptable.
+> Well it's a testing ABI, so we can do changes to it.
 
-In file included from ioctls/btrfs-control.c:5:0:
-/usr/include/linux/btrfs.h: In function =E2=80=98btrfs_err_str=E2=80=99=
-:
-/usr/include/linux/btrfs.h:486:11: error: =E2=80=98NULL=E2=80=99 undecl=
-ared (first use in this function)
-    return NULL;
-           ^
+The testing ABI has a simple policy about changes:
 
-This is done by postponing the inclusion of btrf.h
+	The interface can be changed to add new features, but the
+	current interface will not break by doing this, unless grave
+	errors or security problems are found in them.
 
-Signed-off-by: Andi Shyti <andi@etezian.org>
----
- ioctls/btrfs-control.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+It's probably fine to change a testing ABI once in a while, but when things
+like trinity start breaking that often due to ABI changes in the same exact
+place, that's too much IMO.
 
-diff --git a/ioctls/btrfs-control.c b/ioctls/btrfs-control.c
-index 35e5389..8d1e2d9 100644
---- a/ioctls/btrfs-control.c
-+++ b/ioctls/btrfs-control.c
-@@ -2,11 +2,11 @@
-=20
- #ifdef USE_BTRFS
-=20
--#include <linux/btrfs.h>
--
- #include "trinity.h"
- #include "ioctls.h"
-=20
-+#include <linux/btrfs.h>
-+
- static const struct ioctl btrfs_control_ioctls[] =3D {
- 	IOCTL(BTRFS_IOC_SCAN_DEV),
- 	IOCTL(BTRFS_IOC_DEVICES_READY),
---=20
-1.8.3.2
+
+Thanks,
+Sasha
