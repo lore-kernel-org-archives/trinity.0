@@ -1,45 +1,35 @@
-From: Vince Weaver <vince@deater.net>
-Subject: Re: [PATCH 1/2] tools, perf: Add a precise event qualifier v2
-Date: Thu, 25 Jul 2013 23:58:09 -0400 (EDT)
-Message-ID: <alpine.DEB.2.02.1307252351010.26524@pianoman.cluster.toy>
-References: <1374501138-13496-1-git-send-email-andi@firstfloor.org> <alpine.DEB.2.02.1307230137160.18617@pianoman.cluster.toy> <20130723060108.GA18396@tassilo.jf.intel.com> <alpine.DEB.2.02.1307231717580.27628@pianoman.cluster.toy> <20130723225150.GT6123@two.firstfloor.org>
- <alpine.DEB.2.02.1307241433380.8230@pianoman.cluster.toy> <20130724190537.GW6123@two.firstfloor.org>
-Mime-Version: 1.0
+From: Tommi Rantala <tt.rantala@gmail.com>
+Subject: [PATCH 0/2] misc fixes
+Date: Sat, 27 Jul 2013 17:35:14 +0300
+Message-ID: <1374935716-26961-1-git-send-email-tt.rantala@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20130724190537.GW6123@two.firstfloor.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=from:to:cc:subject:date:message-id:x-mailer;
+        bh=Iox0ySq2MnXZjnK1h05tG5S824SlUybrtftcyJM7GR8=;
+        b=M8GAuqYiyh+RiNZbHc1uziFXF1b4bwEomJxRO/wJl6V7DTky+I9JAPd2UO6nlioqEL
+         rbx+CrxFnovPzoS2FdCeGCenVN12WuH2aUmqe6zNwM8innUhTIQj1GEDx4Oq3iYXZtdF
+         7nzXyqrVSilhEuZonpuR461cOtA0/U5OfjXlVhGhfpBJYcjqHOyZYlCHjAmX8eHCw/qP
+         Bq94VcMR+rwOGdZ7p8yo1+h5fruSdmjZpy/PEwQPqYWwbFloLfurbI8gqGMccyGt7WOg
+         RPqP5qkmIChVlgo4nWAk1gqZNkoFKt29vA9cl9X86mdwxQpTFf0pI/DqGXy2CE8ez7uU
+         5CVA==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: TEXT/PLAIN; charset="us-ascii"
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Andi Kleen <andi@firstfloor.org>
-Cc: Andi Kleen <ak@linux.intel.com>, acme@infradead.org, mingo@kernel.org, linux-kernel@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, Stephane Eranian <eranian@google.com>, torvalds@linux-foundation.org, trinity@vger.kernel.org
+To: davej@redhat.com
+Cc: trinity@vger.kernel.org, Tommi Rantala <tt.rantala@gmail.com>
 
-On Wed, 24 Jul 2013, Andi Kleen wrote:
+Greetings, two small trinity fixes this time.
 
-> Sorry I meant flags as an alias of "the 64bits currently occupied by the
-> bitfield". Perhaps the name choice was not very good.
-> 
-> "flags_bitfield" ?
-> 
-> So the tool would only need to know that, not every bit.
-> 
-> In theory it could be also generalized as a byte offset to perf_event,
-> but that may be overengineered.
+Tommi Rantala (2):
+  Fix child crash when disabling some syscalls on biarch
+  Do not busy loop child processes on startup
 
-I somehow doubt this would be acceptable.  If it were, we could have had a 
-somewhat better interface by just having the event fields be a list of 
-values without involving format/* at all, something like
+ main.c    |  3 ++-
+ syscall.c | 10 ++++++----
+ 2 files changed, 8 insertions(+), 5 deletions(-)
 
-   config=0x58034;config1=0x20;precise_ip=0x4
-
-For whatever reason things have to be human readable, and I don't think
-just having an opaque 64-bit "flags" value will be accepted.  
-
-I'm likely wrong though, I have a very low accuracy rate for predicting 
-future perf_event design decisions.
-
-This is all complicated by the intertwined nature of the perf_event ABI 
-and the perf tool, and the way that there's at least three or four 
-different ways to specify the same event from the perf tool command line.
-
-Vince
+-- 
+1.8.1.2
