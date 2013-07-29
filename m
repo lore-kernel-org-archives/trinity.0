@@ -1,33 +1,30 @@
-From: Tommi Rantala <tt.rantala@gmail.com>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
 Subject: Re: why does git describe shows 1.1-639-g4f6418b
-Date: Mon, 29 Jul 2013 10:02:09 +0300
-Message-ID: <CA+ydwtrqzWfyOCufCJCP7ebhKCi4G_wQqsNVwHDuJGRAsmAxBw@mail.gmail.com>
-References: <51F3EC8E.5010308@gmx.de>
+Date: Mon, 29 Jul 2013 19:25:13 +0200
+Message-ID: <51F6A579.1040208@gmx.de>
+References: <51F3EC8E.5010308@gmx.de> <CA+ydwtrqzWfyOCufCJCP7ebhKCi4G_wQqsNVwHDuJGRAsmAxBw@mail.gmail.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
-         :cc:content-type:content-transfer-encoding;
-        bh=MZZv4mvPlQiCxb4rrIGRCghPfO82SDFppAtv6RMyLng=;
-        b=T6JtvBkDHgf/WIgov004nmbp++kbupZ8emRP6iQtg/LSiohRqiPUYRuxYFm7BP4CNP
-         /SSDadGdp1T5ptMek5c18T8g44PSit1YInZRuKPrX1trUkdVaYmKFtW3RRhVBr/ceZ+M
-         Cyen8tyNZHDwPwpc6c9uanU5mck7/ab9SGxMNeo3VXH69WiiSb2klA/CO9VbuQzuQpwg
-         sI9r+3oz5C7ixIqiNwW8jgWk2GjM/8Ve1QJoUktTAQLU+b3d/P6Xk16Fy/R88GyWLnjj
-         bek5yIA7HFj4SyJcvvhNVORFbr1FUwQV3PWXggHuPBzxD37W5Hk1Jvy8JR1c6zMJJOIj
-         oXew==
-In-Reply-To: <51F3EC8E.5010308@gmx.de>
+In-Reply-To: <CA+ydwtrqzWfyOCufCJCP7ebhKCi4G_wQqsNVwHDuJGRAsmAxBw@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: =?ISO-8859-1?Q?Toralf_F=F6rster?= <toralf.foerster@gmx.de>
+Content-Type: text/plain; charset="utf-8"
+To: Tommi Rantala <tt.rantala@gmail.com>
 Cc: trinity@vger.kernel.org
 
-2013/7/27 Toralf F=F6rster <toralf.foerster@gmx.de>:
-> and not something like v1.2-... ?
+On 07/29/2013 09:02 AM, Tommi Rantala wrote:
+> 2013/7/27 Toralf F=C3=B6rster <toralf.foerster@gmx.de>:
+>> and not something like v1.2-... ?
+>=20
+> It's because "v1.2" is a lightweight tag. Try:
+>=20
+> $ git describe --tags
+> v1.2-7-g4f6418b
+>=20
+ah - thx
 
-It's because "v1.2" is a lightweight tag. Try:
-
-$ git describe --tags
-v1.2-7-g4f6418b
+--=20
+MfG/Sincerely
+Toralf F=C3=B6rster
+pgp finger print: 7B1A 07F4 EC82 0F90 D4C2 8936 872A E508 7DB6 9DA3
