@@ -1,70 +1,119 @@
-From: Sasha Levin <sasha.levin@oracle.com>
-Subject: perf, percpu: panic in account_event
-Date: Mon, 05 Aug 2013 17:19:18 -0400
-Message-ID: <520016D6.8010603@oracle.com>
+From: Mark Rutland <mark.rutland@arm.com>
+Subject: Re: perf,arm -- oops in validate_event
+Date: Tue, 6 Aug 2013 12:19:32 +0100
+Message-ID: <20130806111932.GA25383@e106331-lin.cambridge.arm.com>
+References: <alpine.DEB.2.10.1308051622270.28589@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1308051711080.31327@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Return-path: <owner-linux-mm@kvack.org>
-Sender: owner-linux-mm@kvack.org
+Return-path: <trinity-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <alpine.DEB.2.10.1308051711080.31327@vincent-weaver-1.um.maine.edu>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"; format="flowed"
-To: Peter Zijlstra <peterz@infradead.org>, paulus@samba.org, Ingo Molnar <mingo@kernel.org>, acme@ghostprotocols.net, Tejun Heo <tj@kernel.org>, cl@linux-foundation.org
-Cc: LKML <linux-kernel@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, trinity@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Will Deacon <Will.Deacon@arm.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Ingo Molnar <mingo@redhat.com>, Paul Mackerras <paulus@samba.org>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, "trinity@vger.kernel.org" <trinity@vger.kernel.org>
 
-Hi all,
+Hi Vince,
 
-While fuzzing with trinity inside a KVM tools guest running latest -next kernel,
-I've stumbled on the following spew.
+Thanks for the report.
 
-It seems to happen on the following line in account_event():
+On Mon, Aug 05, 2013 at 10:17:37PM +0100, Vince Weaver wrote:
+> On Mon, 5 Aug 2013, Vince Weaver wrote:
+> 
+> > My perf_fuzzer quickly triggers this oops on my ARM Cortex A9 pandaboard
+> > running Linux 3.11-rc4.
+> > 
+> > Below is the oops, I've attached a simple C test case that triggers the 
+> > bug.
+> 
+> Also, if it helps, the disassembled code in question.
+> 
+> It looks like in validate_event() we do
+> 
+>         struct arm_pmu *armpmu = to_arm_pmu(event->pmu);
+>         ...
+>         return armpmu->get_event_idx(hw_events, event) >= 0;
+> 
+> armpmu is read into r3, and somehow the value at the offset of
+> armpmu->get_event_idx is either -1 or 0, so when it does a "blx" 
+> branch to the address at this offset we get the ooops.
+> 
+>   c001bf8c:       e3120010        tst     r2, #16
+>   c001bf90:       0a000004        beq     c001bfa8 <validate_event+0x48>
+>   c001bf94:       e5933070        ldr     r3, [r3, #112]  ; 0x70
+> * c001bf98:       e12fff33        blx     r3
+>   c001bf9c:       e1e00000        mvn     r0, r0
+> 
+> I'm having trouble tracing the code back past that, and I don't have time
+> to start adding printk's and recompiling right now.
+> 
+> Vince
 
-	if (event->attr.freq)
-		atomic_inc(&per_cpu(perf_freq_events, cpu));  <--- here
+I think I can save you the effort :)
 
-Which was recently introduced in commit ("perf: Account freq events per cpu"). Although
-the commit is new, it's very simple and straightforward - I can't see anything wrong with
-it so maybe the fault is in percpu?
+From the looks of the test case and the kernel code in question, it
+looks like the following happens:
 
-[ 4299.619701] BUG: unable to handle kernel paging request at 0000000f001d1ed6
-[ 4299.620150] IP: [<ffffffff8120afb4>] account_event+0xe4/0x100
-[ 4299.620150] PGD 5f30f067 PUD 0
-[ 4299.620150] Oops: 0002 [#1] PREEMPT SMP DEBUG_PAGEALLOC
-[ 4299.620150] Modules linked in:
-[ 4299.620150] CPU: 14 PID: 15329 Comm: trinity-child56 Tainted: G        W 
-3.11.0-rc4-next-20130805-sasha-00003-g07015f7 #3976
-[ 4299.620150] task: ffff880176510000 ti: ffff8800c624a000 task.ti: ffff8800c624a000
-[ 4299.620150] RIP: 0010:[<ffffffff8120afb4>]  [<ffffffff8120afb4>] account_event+0xe4/0x100
-[ 4299.620150] RSP: 0018:ffff8800c624be68  EFLAGS: 00010212
-[ 4299.620150] RAX: ffffffffffffffff RBX: 0000000000000000 RCX: 0000000000000000
-[ 4299.627928] RDX: 0000000f001d1ed6 RSI: 00000000001dbbf8 RDI: ffff880179a437b0
-[ 4299.627928] RBP: ffff8800c624be68 R08: 00000000e26ec8c5 R09: 0000000000000001
-[ 4299.627928] R10: 0000000000000001 R11: 0000000000000000 R12: ffff880176510000
-[ 4299.627928] R13: ffff880179a437b0 R14: 0000000000000000 R15: 0000000000000000
-[ 4299.627928] FS:  00007fe6a0bbb700(0000) GS:ffff880226200000(0000) knlGS:0000000000000000
-[ 4299.627928] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
-[ 4299.627928] CR2: 0000000f001d1ed6 CR3: 0000000059995000 CR4: 00000000000006e0
-[ 4299.627928] Stack:
-[ 4299.627928]  ffff8800c624bf68 ffffffff81215fe8 0000000000000000 ffff880176510610
-[ 4299.627928]  0000000000000001 ffffffff81a37a00 ffff880176510610 0000000000000000
-[ 4299.627928]  0000000000000000 0000014584098985 0000004000000001 0000000000000004
-[ 4299.627928] Call Trace:
-[ 4299.627928]  [<ffffffff81215fe8>] SYSC_perf_event_open+0x4e8/0x910
-[ 4299.627928]  [<ffffffff81a37a00>] ? do_raw_spin_unlock+0xd0/0xe0
-[ 4299.627928]  [<ffffffff81216419>] SyS_perf_event_open+0x9/0x10
-[ 4299.627928]  [<ffffffff840a14ec>] tracesys+0xdd/0xe2
-[ 4299.627928] Code: c7 c2 c0 1e 1d 00 48 03 14 cd 80 7b 60 86 f0 ff 02 f6 87 c9 00 00 00 04 74 1d 
-48 98 48 c7 c2 c8 1e 1d 00 48 03 14 c5 80 7b 60 86 <f0> ff 02 66 0f 1f 84 00 00 00 00 00 c9 c3 66 66 
-66 66 66 2e 0f
-[ 4299.627928] RIP  [<ffffffff8120afb4>] account_event+0xe4/0x100
-[ 4299.627928]  RSP <ffff8800c624be68>
-[ 4299.627928] CR2: 0000000f001d1ed6
+* We create a software event, which becomes its own group leader.
+* We create a hardware event, with the software event as its group
+  leader.
+* When we try to schedule the hardware event, we try to validate all
+  events in its event group (the leader + siblings), but in doing so we
+  treat the software event as a hardware event, and erroneously try to
+  get its (non-existent) arm_pmu container, and call some garbage value
+  as get_event_idx(...).
 
+This could also happen if we tried to add events from different hardware
+PMUs to the same groups. I'm not sure if that's valid, but I couldn't
+see any code preventing that, and it seems the x86 validation logic is
+wired to allow this. If it's not valid, we could skip validation of
+software events by checking with is_software_event.
+
+Either way, I believe the patch below should solve the issue.
 
 Thanks,
-Sasha
+Mark.
 
---
-To unsubscribe, send a message with 'unsubscribe linux-mm' in
-the body to majordomo@kvack.org.  For more info on Linux MM,
-see: http://www.linux-mm.org/ .
-Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
+---->8----
+
+diff --git a/arch/arm/kernel/perf_event.c b/arch/arm/kernel/perf_event.c
+index d9f5cd4..a7609a0 100644
+--- a/arch/arm/kernel/perf_event.c
++++ b/arch/arm/kernel/perf_event.c
+@@ -262,9 +262,15 @@ validate_event(struct pmu_hw_events *hw_events,
+ 	return armpmu->get_event_idx(hw_events, event) >= 0;
+ }
+ 
++static bool is_pmu_event(struct pmu *pmu, struct perf_event *event)
++{
++	return pmu == event->pmu;
++}
++
+ static int
+ validate_group(struct perf_event *event)
+ {
++	struct pmu *pmu = event->pmu;
+ 	struct perf_event *sibling, *leader = event->group_leader;
+ 	struct pmu_hw_events fake_pmu;
+ 	DECLARE_BITMAP(fake_used_mask, ARMPMU_MAX_HWEVENTS);
+@@ -276,10 +282,17 @@ validate_group(struct perf_event *event)
+ 	memset(fake_used_mask, 0, sizeof(fake_used_mask));
+ 	fake_pmu.used_mask = fake_used_mask;
+ 
+-	if (!validate_event(&fake_pmu, leader))
++	if (is_pmu_event(pmu, leader) && !validate_event(&fake_pmu, leader))
+ 		return -EINVAL;
+ 
+ 	list_for_each_entry(sibling, &leader->sibling_list, group_entry) {
++		/*
++		 * We do not validate events for other PMUs (e.g. software
++		 * events). Software events are always schedulable, and other
++		 * PMU events must be validated elsewhere.
++		 */
++		if (!is_pmu_event(pmu, sibling))
++			continue;
+ 		if (!validate_event(&fake_pmu, sibling))
+ 			return -EINVAL;
+ 	}
