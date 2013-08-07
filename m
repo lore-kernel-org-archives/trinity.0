@@ -1,78 +1,66 @@
 From: Will Deacon <will.deacon@arm.com>
-Subject: Re: perf,arm -- another (different) fuzzer oops
-Date: Wed, 7 Aug 2013 23:31:29 +0100
-Message-ID: <20130807223129.GA17118@mudshark.cambridge.arm.com>
-References: <alpine.DEB.2.10.1308071611290.14098@vincent-weaver-1.um.maine.edu>
+Subject: Re: perf,arm -- oops in validate_event
+Date: Wed, 7 Aug 2013 23:35:50 +0100
+Message-ID: <20130807223550.GB17118@mudshark.cambridge.arm.com>
+References: <alpine.DEB.2.10.1308051622270.28589@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1308051711080.31327@vincent-weaver-1.um.maine.edu>
+ <20130806111932.GA25383@e106331-lin.cambridge.arm.com>
+ <20130806115921.GA14798@mudshark.cambridge.arm.com>
+ <20130806130815.GC25383@e106331-lin.cambridge.arm.com>
+ <20130807130027.GA16474@mudshark.cambridge.arm.com>
+ <alpine.DEB.2.10.1308071122470.8139@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1308071129000.8139@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.10.1308071611290.14098@vincent-weaver-1.um.maine.edu>
+In-Reply-To: <alpine.DEB.2.10.1308071129000.8139@vincent-weaver-1.um.maine.edu>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: Vince Weaver <vincent.weaver@maine.edu>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Mark Rutland <Mark.Rutland@arm.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Ingo Molnar <mingo@redhat.com>, Paul Mackerras <paulus@samba.org>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, "trinity@vger.kernel.org" <trinity@vger.kernel.org>
+Cc: Mark Rutland <Mark.Rutland@arm.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Ingo Molnar <mingo@redhat.com>, Paul Mackerras <paulus@samba.org>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, "trinity@vger.kernel.org" <trinity@vger.kernel.org>
 
-On Wed, Aug 07, 2013 at 09:14:55PM +0100, Vince Weaver wrote:
-> Hello
+On Wed, Aug 07, 2013 at 04:30:33PM +0100, Vince Weaver wrote:
+> On Wed, 7 Aug 2013, Vince Weaver wrote:
+> > On Wed, 7 Aug 2013, Will Deacon wrote:
+> > > diff --git a/arch/arm/kernel/perf_event.c b/arch/arm/kernel/perf_event.c
+> > > index d9f5cd4..0500f10b 100644
+> > > --- a/arch/arm/kernel/perf_event.c
+> > > +++ b/arch/arm/kernel/perf_event.c
+> > > @@ -253,6 +253,9 @@ validate_event(struct pmu_hw_events *hw_events,
+> > >         struct arm_pmu *armpmu = to_arm_pmu(event->pmu);
+> > >         struct pmu *leader_pmu = event->group_leader->pmu;
+> > >  
+> > > +       if (is_software_event(event))
+> > > +               return 1;
+> > > +
+> > >         if (event->pmu != leader_pmu || event->state < PERF_EVENT_STATE_OFF)
+> > >                 return 1;
+> > 
+> > this isn't enough.  You can also trigger the oops by using
+> > tracepoint or breakpoint events as group leaders in addition to software
+> > events.
+> 
+> I take that back, it turns out tracepoint and breakpoint both
+> have task_ctx_nr set to perf_sw_context (althouth breakpoint has
+> a comment saying this may change in the future).
+> 
+> Let me compile and verify the fix.  It may take some time for the compile 
+> to finish as it's not a very fast machine.
 
-Hi Vince,
+Ok, thanks for testing, I'll send the fix to rmk with a CC for stable.
 
-> I don't have time to come up with a test case right now, but I've
-> applied the patch to fix the oops from two days ago, and re-ran
-> my perf_fuzzer tool and it immediately came up with another issue on ARM.
-> This is an ARM Pandaboard running 3.11-rc4 with the one-line
-> oops fix from the other thread.
+As for future work, we want to support multiple HW PMUs on ARM yet restrict
+event groups to accept events targetting the same HW PMU. If we allow groups
+to have a software event as a leader, yet still accept HW events, then this
+check becomes a real pain because we essentially have to stash the PMU for
+the first HW event added to the group.
 
-Thanks for continuing with the fuzzer -- looks like it's finding some real
-issues here. Unfortunately, I've been unable to spot the issue from the
-panic, so could you please share your .config, vmlinux and/or some
-information about the system call parameters?
+I think I'd rather fail validation when adding a HW event to a group with a
+SW event as a group leader.
 
-That should help in deciphering what exactly went wrong.
-
-Cherrs,
+PeterZ: any thoughts? This sort of stuff feels like it should really belong
+in core code...
 
 Will
-
-> [  388.509063] Unable to handle kernel paging request at virtual address 73fd14cc
-> [  388.509063] pgd = eca6c000
-> [  388.519805] [73fd14cc] *pgd=00000000
-> [  388.523651] Internal error: Oops: 5 [#1] SMP ARM
-> [  388.528594] Modules linked in: snd_soc_omap_hdmi omapdss snd_soc_omap_abe_twl6040 snd_soc_twl6040 snd_soc_omap snd_soc_omap_hdmi_card snd_soc_omap_mcpdm snd_soc_omap_mcbsp snd_soc_core snd_compress regmap_spi snd_pcm snd_page_alloc snd_timer snd soundcore
-> [  388.551757] CPU: 1 PID: 2790 Comm: perf_fuzzer Not tainted 3.11.0-rc4 #6
-> [  388.559906] task: eddcab80 ti: ed892000 task.ti: ed892000
-> [  388.565643] PC is at armpmu_map_event+0x20/0x88
-> [  388.570495] LR is at armpmu_event_init+0x38/0x280
-> [  388.574981] pc : [<c001c3e4>]    lr : [<c001c17c>]    psr: 60000013
-> [  388.574981] sp : ed893e40  ip : ecececec  fp : edfaec00
-> [  388.581878] r10: 00000000  r9 : 00000000  r8 : ed8c3ac0
-> [  388.593292] r7 : ed8c3b5c  r6 : edfaec00  r5 : 00000000  r4 : 00000000
-> [  388.593292] r3 : 000000ff  r2 : c0496144  r1 : c049611c  r0 : edfaec00
-> [  388.607177] Flags: nZCv  IRQs on  FIQs on  Mode SVC_32  ISA ARM  Segment user
-> [  388.614776] Control: 10c5387d  Table: aca6c04a  DAC: 00000015
-> [  388.614776] Process perf_fuzzer (pid: 2790, stack limit = 0xed892240)
-> [  388.621826] Stack: (0xed893e40 to 0xed894000)
-> [  388.632385] 3e40: 00000800 c001c17c 00000002 c008a748 00000001 00000000 00000000 c00bf078
-> [  388.634796] 3e60: 00000000 edfaee50 00000000 00000000 00000000 edfaec00 ed8c3ac0 edfaec00
-> [  388.634796] 3e80: 00000000 c073ffac ed893f20 c00bf180 00000001 00000000 c00bf078 ed893f20
-> [  388.652435] 3ea0: 00000000 ed8c3ac0 00000000 00000000 00000000 c0cb0818 eddcab80 c00bf440
-> [  388.667205] 3ec0: ed893f20 00000000 eddcab80 eca76800 00000000 eca76800 00000000 00000000
-> [  388.668487] 3ee0: 00000000 ec984c80 eddcab80 c00bfe68 00000000 00000000 00000000 00000080
-> [  388.684631] 3f00: 00000000 ed892000 00000000 ed892030 00000004 ecc7e3c8 ecc7e3c8 00000000
-> [  388.693328] 3f20: 00000000 00000048 ecececec 00000000 00000000 00000000 00000000 00000000
-> [  388.701843] 3f40: 00000000 00000000 00297810 00000000 00000000 00000000 00000000 00000000
-> [  388.701843] 3f60: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-> [  388.719451] 3f80: 00000002 00000002 000103a4 00000002 0000016c c00128e8 ed892000 00000000
-> [  388.724212] 3fa0: 00090998 c0012700 00000002 000103a4 00090ab8 00000000 00000000 0000000f
-> [  388.731842] 3fc0: 00000002 000103a4 00000002 0000016c 00090ab0 00090ab8 000107a0 00090998
-> [  388.745574] 3fe0: bed92be0 bed92bd0 0000b785 b6e8f6d0 40000010 00090ab8 00000000 00000000
-> [  388.751831] [<c001c3e4>] (armpmu_map_event+0x20/0x88) from [<c001c17c>] (armpmu_event_init+0x38/0x280)
-> [  388.764221] [<c001c17c>] (armpmu_event_init+0x38/0x280) from [<c00bf180>] (perf_init_event+0x108/0x180)
-> [  388.764221] [<c00bf180>] (perf_init_event+0x108/0x180) from [<c00bf440>] (perf_event_alloc+0x248/0x40c)
-> [  388.764221] [<c00bf440>] (perf_event_alloc+0x248/0x40c) from [<c00bfe68>] (SyS_perf_event_open+0x4f4/0x8fc)
-> [  388.791839] [<c00bfe68>] (SyS_perf_event_open+0x4f4/0x8fc) from [<c0012700>] (ret_fast_syscall+0x0/0x48)
-> [  388.804718] Code: 0a000005 e3540004 0a000016 e3540000 (0791010c) 
-> [  388.811248] ---[ end trace 89ea407225495d97 ]---
-> 
