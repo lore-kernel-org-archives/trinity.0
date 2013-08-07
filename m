@@ -1,54 +1,61 @@
-From: Benjamin LaHaise <bcrl@kvack.org>
-Subject: Re: [PATCH aio-next] aio: fix error handling and rcu usage in "convert the ioctx list to table lookup v3"
-Date: Tue, 6 Aug 2013 20:52:04 -0400
-Message-ID: <20130807005204.GF8043@kvack.org>
-References: <51FFAF34.20200@oracle.com> <20130805160828.GH31864@kvack.org> <20130805172032.GI31864@kvack.org> <5201714C.8000100@oracle.com>
+From: Will Deacon <will.deacon@arm.com>
+Subject: Re: perf,arm -- oops in validate_event
+Date: Wed, 7 Aug 2013 14:00:27 +0100
+Message-ID: <20130807130027.GA16474@mudshark.cambridge.arm.com>
+References: <alpine.DEB.2.10.1308051622270.28589@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1308051711080.31327@vincent-weaver-1.um.maine.edu>
+ <20130806111932.GA25383@e106331-lin.cambridge.arm.com>
+ <20130806115921.GA14798@mudshark.cambridge.arm.com>
+ <20130806130815.GC25383@e106331-lin.cambridge.arm.com>
 Mime-Version: 1.0
-Return-path: <owner-linux-aio@kvack.org>
+Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <5201714C.8000100@oracle.com>
-Sender: owner-linux-aio@kvack.org
+In-Reply-To: <20130806130815.GC25383@e106331-lin.cambridge.arm.com>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Sasha Levin <sasha.levin@oracle.com>
-Cc: Kent Overstreet <kmo@daterainc.com>, axboe@kernel.dk, Andrew Morton <akpm@linux-foundation.org>, torvalds@linux-foundation.org, LKML <linux-kernel@vger.kernel.org>, linux-aio@kvack.org, trinity@vger.kernel.org
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: Vince Weaver <vincent.weaver@maine.edu>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Ingo Molnar <mingo@redhat.com>, Paul Mackerras <paulus@samba.org>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, "trinity@vger.kernel.org" <trinity@vger.kernel.org>
 
-On Tue, Aug 06, 2013 at 05:57:32PM -0400, Sasha Levin wrote:
-> Old error is gone, but now seeing this, which seems related.
+On Tue, Aug 06, 2013 at 02:08:15PM +0100, Mark Rutland wrote:
+> On Tue, Aug 06, 2013 at 12:59:21PM +0100, Will Deacon wrote:
+> > But we already check `event->pmu != leader_pmu' in validate_event, so we
+> > shouldn't get anywhere nearer calling get_event_idx in the case you
+> > describe. It sounds more like we have an inconsistency with one of the
+> > events.
 > 
->         ctx = table->table[id];
->         if (ctx->user_id == ctx_id) { <--- here
->                 percpu_ref_get(&ctx->users);
->                 ret = ctx;
->         }
-...
+> Note in my example that the software event was the group leader (so in
+> fact we'd *only* be checking those events which we can't actually
+> handle...).
+> 
+> I was also under the impression that in the case of mixed hardware and
+> software events, a hardware event must be the group leader. That
+> doesn't seem to be the case. If a hardware event is added to a software
+> group, the group is moved to hardware context but the original software
+> event stays as the group leader.
 
-Why am I not surprised.  That should be fixed with the patch below.  I'll 
-post some patches for the libaio test suite tomorrow to check these cases 
-explicitly and scan for any others that need to be added.  Thanks again, 
-Sasha.
+Ok, so the following quick hack below should solve the issue (can you confirm
+it please, since I don't have access to any hardware atm?)
 
-		-ben
--- 
-"Thought is the essence of where you are now."
+We should revisit this for 3.12 though, because I'm not sure that our
+validation code even does the right thing when there are multiple PMUs
+involved.
 
-diff --git a/fs/aio.c b/fs/aio.c
-index 3bc068c..c3f005d 100644
---- a/fs/aio.c
-+++ b/fs/aio.c
-@@ -812,7 +812,7 @@ static struct kioctx *lookup_ioctx(unsigned long ctx_id)
- 		goto out;
+Will
+
+--->8
+
+diff --git a/arch/arm/kernel/perf_event.c b/arch/arm/kernel/perf_event.c
+index d9f5cd4..0500f10b 100644
+--- a/arch/arm/kernel/perf_event.c
++++ b/arch/arm/kernel/perf_event.c
+@@ -253,6 +253,9 @@ validate_event(struct pmu_hw_events *hw_events,
+        struct arm_pmu *armpmu = to_arm_pmu(event->pmu);
+        struct pmu *leader_pmu = event->group_leader->pmu;
  
- 	ctx = table->table[id];
--	if (ctx->user_id == ctx_id) {
-+	if (ctx && ctx->user_id == ctx_id) {
- 		percpu_ref_get(&ctx->users);
- 		ret = ctx;
- 	}
-
---
-To unsubscribe, send a message with 'unsubscribe linux-aio' in
-the body to majordomo@kvack.org.  For more info on Linux AIO,
-see: http://www.kvack.org/aio/
-Don't email: <a href=mailto:"aart@kvack.org">aart@kvack.org</a>
++       if (is_software_event(event))
++               return 1;
++
+        if (event->pmu != leader_pmu || event->state < PERF_EVENT_STATE_OFF)
+                return 1;
