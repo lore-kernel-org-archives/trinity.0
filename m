@@ -1,28 +1,44 @@
-From: Stephen Boyd <sboyd@codeaurora.org>
-Subject: Re: perf,arm -- another (different) fuzzer oops
-Date: Thu, 08 Aug 2013 10:44:16 -0700
-Message-ID: <5203D8F0.9050602@codeaurora.org>
-References: <alpine.DEB.2.10.1308071611290.14098@vincent-weaver-1.um.maine.edu> <20130807223129.GA17118@mudshark.cambridge.arm.com> <5202D5B0.9020107@codeaurora.org> <20130808120939.GB18724@mudshark.cambridge.arm.com>
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] compat.h: Add MSG_CMSG_CLOEXEC for older glibc.
+Date: Thu,  8 Aug 2013 15:01:14 -0700
+Message-ID: <1375999274-6210-1-git-send-email-vlee@freedesktop.org>
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20130808120939.GB18724@mudshark.cambridge.arm.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-To: Will Deacon <will.deacon@arm.com>
-Cc: Vince Weaver <vincent.weaver@maine.edu>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Mark Rutland <Mark.Rutland@arm.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Ingo Molnar <mingo@redhat.com>, Paul Mackerras <paulus@samba.org>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>, "trinity@vger.kernel.org" <trinity@vger.kernel.org>
+Content-Type: text/plain; charset="utf-8"
+To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
-On 08/08/13 05:09, Will Deacon wrote:
-> Well spotted, thanks. If you make that return -EINVAL instead of -ENOENT (to
-> match what we do for cache events) then:
->
->   Acked-by: Will Deacon <will.deacon@arm.com>
->
-> Could you stick it in the patch system please?
+=46rom: Vinson Lee <vlee@twitter.com>
 
-Submitted as 7810/1
+This patch fixes this build error with glibc before 2.7.
 
--- 
-Qualcomm Innovation Center, Inc. is a member of Code Aurora Forum,
-hosted by The Linux Foundation
+  CC    syscalls/recvfrom.o
+syscalls/recvfrom.c:28: error: =E2=80=98MSG_CMSG_CLOEXEC=E2=80=99 undec=
+lared here (not in a function)
+make: *** [syscalls/recvfrom.o] Error 1
+
+Signed-off-by: Vinson Lee <vlee@twitter.com>
+---
+ include/compat.h |    4 ++++
+ 1 files changed, 4 insertions(+), 0 deletions(-)
+
+diff --git a/include/compat.h b/include/compat.h
+index ad1dcb5..7e73131 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -140,6 +140,10 @@ enum {
+ #define MSG_WAITFORONE	0x10000
+ #endif
+=20
++#ifndef MSG_CMSG_CLOEXEC
++#define MSG_CMSG_CLOEXEC	0x40000000
++#endif
++
+ /* linux/socket.h */
+ #ifndef MSG_PROBE
+ #define MSG_PROBE 0x10
+--=20
+1.7.4.1
