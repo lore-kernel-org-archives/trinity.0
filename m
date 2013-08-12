@@ -1,44 +1,38 @@
-From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] compat.h: Add MSG_CMSG_CLOEXEC for older glibc.
-Date: Thu,  8 Aug 2013 15:01:14 -0700
-Message-ID: <1375999274-6210-1-git-send-email-vlee@freedesktop.org>
+From: Peter Zijlstra <peterz@infradead.org>
+Subject: Re: perf, percpu: panic in account_event
+Date: Mon, 12 Aug 2013 11:23:53 +0200
+Message-ID: <20130812092353.GC27162@twins.programming.kicks-ass.net>
+References: <520016D6.8010603@oracle.com>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
-Return-path: <trinity-owner@vger.kernel.org>
-Sender: trinity-owner@vger.kernel.org
+Return-path: <owner-linux-mm@kvack.org>
+Content-Disposition: inline
+In-Reply-To: <520016D6.8010603@oracle.com>
+Sender: owner-linux-mm@kvack.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: Sasha Levin <sasha.levin@oracle.com>
+Cc: paulus@samba.org, Ingo Molnar <mingo@kernel.org>, acme@ghostprotocols.net, Tejun Heo <tj@kernel.org>, cl@linux-foundation.org, LKML <linux-kernel@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, trinity@vger.kernel.org
 
-=46rom: Vinson Lee <vlee@twitter.com>
+On Mon, Aug 05, 2013 at 05:19:18PM -0400, Sasha Levin wrote:
+> Hi all,
+> 
+> While fuzzing with trinity inside a KVM tools guest running latest -next kernel,
+> I've stumbled on the following spew.
+> 
+> It seems to happen on the following line in account_event():
+> 
+> 	if (event->attr.freq)
+> 		atomic_inc(&per_cpu(perf_freq_events, cpu));  <--- here
+> 
 
-This patch fixes this build error with glibc before 2.7.
+Right, Frederic even send a fix for this already. I suppose holidays got
+in the way of getting it merged quickly though, sorry for that.
 
-  CC    syscalls/recvfrom.o
-syscalls/recvfrom.c:28: error: =E2=80=98MSG_CMSG_CLOEXEC=E2=80=99 undec=
-lared here (not in a function)
-make: *** [syscalls/recvfrom.o] Error 1
+Merged his fix, will hopefully get it into tip soon.
 
-Signed-off-by: Vinson Lee <vlee@twitter.com>
----
- include/compat.h |    4 ++++
- 1 files changed, 4 insertions(+), 0 deletions(-)
-
-diff --git a/include/compat.h b/include/compat.h
-index ad1dcb5..7e73131 100644
---- a/include/compat.h
-+++ b/include/compat.h
-@@ -140,6 +140,10 @@ enum {
- #define MSG_WAITFORONE	0x10000
- #endif
-=20
-+#ifndef MSG_CMSG_CLOEXEC
-+#define MSG_CMSG_CLOEXEC	0x40000000
-+#endif
-+
- /* linux/socket.h */
- #ifndef MSG_PROBE
- #define MSG_PROBE 0x10
---=20
-1.7.4.1
+--
+To unsubscribe, send a message with 'unsubscribe linux-mm' in
+the body to majordomo@kvack.org.  For more info on Linux MM,
+see: http://www.linux-mm.org/ .
+Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
