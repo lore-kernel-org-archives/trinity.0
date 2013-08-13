@@ -1,71 +1,45 @@
 From: Hangbin Liu <liuhangbin@gmail.com>
-Subject: [PATCH] net: include compat.h first incase some specifier-qualifier-list error
-Date: Tue, 13 Aug 2013 23:13:29 +0800
-Message-ID: <1376406809-12604-1-git-send-email-liuhangbin@gmail.com>
-Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+Subject: [PATCH] net/netlink.c: include compat.h for NETLINK_CRYPTO
+Date: Tue, 13 Aug 2013 23:14:00 +0800
+Message-ID: <1376406840-12883-1-git-send-email-liuhangbin@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
-        h=from:to:cc:subject:date:message-id:mime-version:content-type
-         :content-transfer-encoding;
-        bh=4OXvdaRFOJfuU0wZdfoq3OEMjJGNGWFC0EiYD8fTHrI=;
-        b=NpnQQp46ZtPNaqYtaWfDuUgufGKkNK5+jsz1rZ98AJ5Bo0kycz07x6soMqGOGyTGBZ
-         hHDS2SlfDrX4hhpMQm/DlF3Saj3uTa4QH5ytnd67YCVEa7xLNAUvgXhp+YNgqaUdu05I
-         3tZ6E9ssR4DJIUnGACdb1ux8vBxBF2kyS457hIf4RyYifHS0Kx+4Hd2IwNuAcSjkZhOF
-         aOZqewfcKlZDrTceEUgXqs23tuwtBjz73IN6hK5iGhWc3xYg2SsNb8PUcrJ/Uf4ZzCi5
-         ERnKrBjQM0mwETOtmz0zDXHJip0bnIzsaR76lXoF233O3D2tCJ2a29oUEPnjV3ZJfucx
-         tAPg==
+        h=from:to:cc:subject:date:message-id;
+        bh=RtDMNT/+Bu0cuHAcRVRK15yss1ZWz/eyyJmyrFZ6POs=;
+        b=r9WA7tsEbLntMVep3I3li3FYV39JG4pkz5yLTXwaBz5zhQni3zv/Ojv6fuM3OiVNgR
+         qvJI5ZvZoguaX/GnpThRlZBpJL+skFeF0w15/xzNqjN6mcetr6EczlgdbF0D+I5M5Zm0
+         DthN1c4s4CsSklk24UyssPCKtGyVqY4WoTaXYG/VkAzgZ4tgNP4cT27VhZ+3VEQDyfaK
+         dT7le+RJ4CGhB9ZSlhCR8fkz4cJy17Gt4gqKXVKXDwufW/kkJxGcGIxMTO++vZOzzOVb
+         yPqEmQzzXx8whHdGjXfHClX1Y8HjmOKzIbhbJSixo0wudRSkJS+4gNaE5KFwhvkXv13p
+         H3bw==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 To: Trinity list <trinity@vger.kernel.org>
 Cc: Hangbin Liu <liuhangbin@gmail.com>
 
-On some old distros, we use sa_family_t in linux/irda.h and linux/netli=
-nk.h
-first, but include the header file bits/sockaddr.h later in compat.h. T=
-hen it
-will compile failed with error: expected specifier-qualifier-list befor=
-e
-=E2=80=98sa_family_t=E2=80=99. So let's move compat.h before irda.h and=
- netlink.h
+compat.h have defined NETLINK_CRYPTO, but net/netlink.c didn't include it.
+Which will make trinity complie filed on some distro.
 
 Signed-off-by: Hangbin Liu <liuhangbin@gmail.com>
 ---
- net/irda_setsockopt.c    | 2 +-
- net/netlink_setsockopt.c | 2 +-
- 2 files changed, 2 insertions(+), 2 deletions(-)
+ net/netlink.c | 1 +
+ 1 file changed, 1 insertion(+)
 
-diff --git a/net/irda_setsockopt.c b/net/irda_setsockopt.c
-index a5d96ec..21ff649 100644
---- a/net/irda_setsockopt.c
-+++ b/net/irda_setsockopt.c
-@@ -1,9 +1,9 @@
+diff --git a/net/netlink.c b/net/netlink.c
+index 9ca2d07..ee73972 100644
+--- a/net/netlink.c
++++ b/net/netlink.c
+@@ -6,6 +6,7 @@
  #include <stdlib.h>
--#include <linux/irda.h>
  #include "net.h"
- #include "maps.h"	// page_rand
- #include "compat.h"
- #include "trinity.h"	// ARRAY_SIZE
-+#include <linux/irda.h>
-=20
- #define NR_SOL_IRDA_OPTS ARRAY_SIZE(irda_opts)
- static const unsigned int irda_opts[] =3D {
-diff --git a/net/netlink_setsockopt.c b/net/netlink_setsockopt.c
-index c6e9297..c401047 100644
---- a/net/netlink_setsockopt.c
-+++ b/net/netlink_setsockopt.c
-@@ -1,9 +1,9 @@
- #include <stdlib.h>
--#include <linux/netlink.h>
- #include "net.h"
- #include "maps.h"	// page_rand
- #include "compat.h"
- #include "trinity.h"	// ARRAY_SIZE
-+#include <linux/netlink.h>
-=20
- #define SOL_NETLINK 270
-=20
---=20
+ #include "random.h"
++#include "compat.h"
+ 
+ void netlink_gen_sockaddr(unsigned long *addr, unsigned long *addrlen)
+ {
+-- 
 1.8.1.4
