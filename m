@@ -1,87 +1,53 @@
-From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] compat.h: Add more address family symbols for older glibc.
-Date: Fri, 16 Aug 2013 19:26:30 -0700
-Message-ID: <1376706390-16617-1-git-send-email-vlee@freedesktop.org>
-Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+From: Will Deacon <will.deacon@arm.com>
+Subject: [PATCH] ARM: tidy up arch-specific constants
+Date: Wed, 21 Aug 2013 11:36:08 +0100
+Message-ID: <1377081368-1609-1-git-send-email-will.deacon@arm.com>
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
+Cc: davej@redhat.com, Will Deacon <will.deacon@arm.com>, Russell King <linux@arm.linux.org.uk>
 
-=46rom: Vinson Lee <vlee@twitter.com>
+arch-arm.h is basically a copy of arch-i386.h, but there are differences
+between the two, so tidy up the ARM header to match exactly how the
+kernel is structured.
 
-This patch fixes these build errors with glibc before 2.10.
-
-syscalls/socket.c:27: error: =E2=80=98AF_CAN=E2=80=99 undeclared here (=
-not in a function)
-syscalls/socket.c:33: error: =E2=80=98AF_LLC=E2=80=99 undeclared here (=
-not in a function)
-syscalls/socket.c:38: error: =E2=80=98AF_PHONET=E2=80=99 undeclared her=
-e (not in a function)
-syscalls/socket.c:39: error: =E2=80=98AF_RDS=E2=80=99 undeclared here (=
-not in a function)
-syscalls/socket.c:40: error: =E2=80=98AF_TIPC=E2=80=99 undeclared here =
-(not in a function)
-
-Signed-off-by: Vinson Lee <vlee@twitter.com>
+Cc: Russell King <linux@arm.linux.org.uk>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
 ---
- include/compat.h |   34 ++++++++++++++++++++++++++++++++++
- 1 files changed, 34 insertions(+), 0 deletions(-)
+ include/arch-arm.h | 17 +++++++----------
+ 1 file changed, 7 insertions(+), 10 deletions(-)
 
-diff --git a/include/compat.h b/include/compat.h
-index 7e73131..fe5d0c7 100644
---- a/include/compat.h
-+++ b/include/compat.h
-@@ -93,6 +93,19 @@ enum {
-=20
-=20
- /* bits/socket.h */
-+#ifndef PF_RDS
-+#define PF_RDS		21
-+#endif
-+#ifndef AF_RDS
-+#define AF_RDS		PF_RDS
-+#endif
-+
-+#ifndef PF_LLC
-+#define PF_LLC		26
-+#endif
-+#ifndef AF_LLC
-+#define AF_LLC		PF_LLC
-+#endif
-=20
- #ifndef AF_IB
- #define AF_IB		27
-@@ -101,6 +114,27 @@ enum {
- #define PF_IB          AF_IB
- #endif
-=20
-+#ifndef PF_CAN
-+#define PF_CAN		29
-+#endif
-+#ifndef AF_CAN
-+#define AF_CAN		PF_CAN
-+#endif
-+
-+#ifndef PF_TIPC
-+#define PF_TIPC		30
-+#endif
-+#ifndef AF_TIPC
-+#define AF_TIPC		PF_TIPC
-+#endif
-+
-+#ifndef PF_PHONET
-+#define PF_PHONET	35
-+#endif
-+#ifndef AF_PHONET
-+#define AF_PHONET	PF_PHONET
-+#endif
-+
- #ifndef PF_CAIF
- #define PF_CAIF		37
- #endif
---=20
-1.7.4.1
+diff --git a/include/arch-arm.h b/include/arch-arm.h
+index d496d94..a711df0 100644
+--- a/include/arch-arm.h
++++ b/include/arch-arm.h
+@@ -1,16 +1,13 @@
+-#define KERNEL_ADDR	0xc0100220
+-#define MODULE_ADDR     0xa0000000	//FIXME: Placeholder
+-
+-#define PAGE_OFFSET 0xC0000000
+-#define TASK_SIZE (PAGE_OFFSET)
++#define PAGE_OFFSET		0xC0000000
+ /*
+  * Alternative possibilities for PAGE_OFFSET:
+- * default 0xB0000000 if VMSPLIT_3G_OPT
+- * default 0x78000000 if VMSPLIT_2G
+  * default 0x40000000 if VMSPLIT_1G
++ * default 0x80000000 if VMSPLIT_2G
+  */
++#define TASK_SIZE		(PAGE_OFFSET - 0x01000000)
++#define MODULE_ADDR		(PAGE_OFFSET - 0x00800000)
++#define KERNEL_ADDR		(PAGE_OFFSET + 0x00008000)
+ 
+-#define PAGE_SHIFT 12
+-
+-#define PTE_FILE_MAX_BITS 31
++#define PAGE_SHIFT		12
+ 
++#define PTE_FILE_MAX_BITS	29
+-- 
+1.8.2.2
