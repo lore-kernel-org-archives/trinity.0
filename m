@@ -1,53 +1,52 @@
-From: Will Deacon <will.deacon@arm.com>
-Subject: [PATCH] ARM: tidy up arch-specific constants
-Date: Wed, 21 Aug 2013 11:36:08 +0100
-Message-ID: <1377081368-1609-1-git-send-email-will.deacon@arm.com>
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] compat.h: Add SOCK_CLOEXEC and SOCK_NONBLOCK for older glibc.
+Date: Wed, 21 Aug 2013 21:22:57 -0700
+Message-ID: <1377145378-22426-1-git-send-email-vlee@freedesktop.org>
+Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
 To: trinity@vger.kernel.org
-Cc: davej@redhat.com, Will Deacon <will.deacon@arm.com>, Russell King <linux@arm.linux.org.uk>
+Cc: Vinson Lee <vlee@twitter.com>
 
-arch-arm.h is basically a copy of arch-i386.h, but there are differences
-between the two, so tidy up the ARM header to match exactly how the
-kernel is structured.
+=46rom: Vinson Lee <vlee@twitter.com>
 
-Cc: Russell King <linux@arm.linux.org.uk>
-Signed-off-by: Will Deacon <will.deacon@arm.com>
+This patch fixes these build errors with glibc before 2.9.
+
+syscalls/socket.c: In function =E2=80=98gen_socket_args=E2=80=99:
+syscalls/socket.c:82: error: =E2=80=98SOCK_CLOEXEC=E2=80=99 undeclared =
+(first use in this function)
+syscalls/socket.c:82: error: (Each undeclared identifier is reported on=
+ly once
+syscalls/socket.c:82: error: for each function it appears in.)
+syscalls/socket.c:84: error: =E2=80=98SOCK_NONBLOCK=E2=80=99 undeclared=
+ (first use in this function)
+
+Signed-off-by: Vinson Lee <vlee@twitter.com>
 ---
- include/arch-arm.h | 17 +++++++----------
- 1 file changed, 7 insertions(+), 10 deletions(-)
+ include/compat.h |    8 ++++++++
+ 1 files changed, 8 insertions(+), 0 deletions(-)
 
-diff --git a/include/arch-arm.h b/include/arch-arm.h
-index d496d94..a711df0 100644
---- a/include/arch-arm.h
-+++ b/include/arch-arm.h
-@@ -1,16 +1,13 @@
--#define KERNEL_ADDR	0xc0100220
--#define MODULE_ADDR     0xa0000000	//FIXME: Placeholder
--
--#define PAGE_OFFSET 0xC0000000
--#define TASK_SIZE (PAGE_OFFSET)
-+#define PAGE_OFFSET		0xC0000000
- /*
-  * Alternative possibilities for PAGE_OFFSET:
-- * default 0xB0000000 if VMSPLIT_3G_OPT
-- * default 0x78000000 if VMSPLIT_2G
-  * default 0x40000000 if VMSPLIT_1G
-+ * default 0x80000000 if VMSPLIT_2G
-  */
-+#define TASK_SIZE		(PAGE_OFFSET - 0x01000000)
-+#define MODULE_ADDR		(PAGE_OFFSET - 0x00800000)
-+#define KERNEL_ADDR		(PAGE_OFFSET + 0x00008000)
- 
--#define PAGE_SHIFT 12
--
--#define PTE_FILE_MAX_BITS 31
-+#define PAGE_SHIFT		12
- 
-+#define PTE_FILE_MAX_BITS	29
--- 
-1.8.2.2
+diff --git a/include/compat.h b/include/compat.h
+index fe5d0c7..ae57fcb 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -93,6 +93,14 @@ enum {
+=20
+=20
+ /* bits/socket.h */
++#ifndef SOCK_CLOEXEC
++#define SOCK_CLOEXEC	02000000
++#endif
++
++#ifndef SOCK_NONBLOCK
++#define SOCK_NONBLOCK	04000
++#endif
++
+ #ifndef PF_RDS
+ #define PF_RDS		21
+ #endif
+--=20
+1.7.4.1
