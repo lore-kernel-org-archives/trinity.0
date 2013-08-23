@@ -1,7 +1,7 @@
 From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] compat.h: Add SOCK_CLOEXEC and SOCK_NONBLOCK for older glibc.
-Date: Wed, 21 Aug 2013 21:22:57 -0700
-Message-ID: <1377145378-22426-1-git-send-email-vlee@freedesktop.org>
+Subject: [PATCH] timerfd_create: Include time.h instead of sys/timerfd.h.
+Date: Thu, 22 Aug 2013 18:07:27 -0700
+Message-ID: <1377220047-23751-1-git-send-email-vlee@freedesktop.org>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
@@ -13,40 +13,32 @@ Cc: Vinson Lee <vlee@twitter.com>
 
 =46rom: Vinson Lee <vlee@twitter.com>
 
-This patch fixes these build errors with glibc before 2.9.
+This patch fixes these build errors with glibc before 2.8.
 
-syscalls/socket.c: In function =E2=80=98gen_socket_args=E2=80=99:
-syscalls/socket.c:82: error: =E2=80=98SOCK_CLOEXEC=E2=80=99 undeclared =
-(first use in this function)
-syscalls/socket.c:82: error: (Each undeclared identifier is reported on=
-ly once
-syscalls/socket.c:82: error: for each function it appears in.)
-syscalls/socket.c:84: error: =E2=80=98SOCK_NONBLOCK=E2=80=99 undeclared=
- (first use in this function)
+syscalls/timerfd_create.c:4:25: error: sys/timerfd.h: No such file or d=
+irectory
+syscalls/timerfd_create.c:15: error: =E2=80=98CLOCK_REALTIME=E2=80=99 u=
+ndeclared here (not in a function)
+syscalls/timerfd_create.c:15: error: =E2=80=98CLOCK_MONOTONIC=E2=80=99 =
+undeclared here (not in a function)
 
 Signed-off-by: Vinson Lee <vlee@twitter.com>
 ---
- include/compat.h |    8 ++++++++
- 1 files changed, 8 insertions(+), 0 deletions(-)
+ syscalls/timerfd_create.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
 
-diff --git a/include/compat.h b/include/compat.h
-index fe5d0c7..ae57fcb 100644
---- a/include/compat.h
-+++ b/include/compat.h
-@@ -93,6 +93,14 @@ enum {
+diff --git a/syscalls/timerfd_create.c b/syscalls/timerfd_create.c
+index d6b291a..92caaa4 100644
+--- a/syscalls/timerfd_create.c
++++ b/syscalls/timerfd_create.c
+@@ -1,7 +1,7 @@
+ /*
+  * SYSCALL_DEFINE2(timerfd_create, int, clockid, int, flags)
+  */
+-#include <sys/timerfd.h>
++#include <time.h>
+ #include "sanitise.h"
+ #include "compat.h"
 =20
-=20
- /* bits/socket.h */
-+#ifndef SOCK_CLOEXEC
-+#define SOCK_CLOEXEC	02000000
-+#endif
-+
-+#ifndef SOCK_NONBLOCK
-+#define SOCK_NONBLOCK	04000
-+#endif
-+
- #ifndef PF_RDS
- #define PF_RDS		21
- #endif
 --=20
 1.7.4.1
