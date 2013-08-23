@@ -1,44 +1,116 @@
-From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] timerfd_create: Include time.h instead of sys/timerfd.h.
-Date: Thu, 22 Aug 2013 18:07:27 -0700
-Message-ID: <1377220047-23751-1-git-send-email-vlee@freedesktop.org>
+From: Vince Weaver <vincent.weaver@maine.edu>
+Subject: [patch] perf_event_open() branch sample support
+Date: Fri, 23 Aug 2013 13:56:51 -0400 (EDT)
+Message-ID: <alpine.DEB.2.10.1308231351500.1889@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
+Content-Type: TEXT/PLAIN; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
 
-=46rom: Vinson Lee <vlee@twitter.com>
 
-This patch fixes these build errors with glibc before 2.8.
+I'm resending this; I sent it before on July 8th but it probably got lost 
+in the shuffle.
 
-syscalls/timerfd_create.c:4:25: error: sys/timerfd.h: No such file or d=
-irectory
-syscalls/timerfd_create.c:15: error: =E2=80=98CLOCK_REALTIME=E2=80=99 u=
-ndeclared here (not in a function)
-syscalls/timerfd_create.c:15: error: =E2=80=98CLOCK_MONOTONIC=E2=80=99 =
-undeclared here (not in a function)
+The following patch exercises some of the recent additions to the 
+perf_event_open() syscall.
 
-Signed-off-by: Vinson Lee <vlee@twitter.com>
----
- syscalls/timerfd_create.c |    2 +-
- 1 files changed, 1 insertions(+), 1 deletions(-)
+The PERF_SAMPLE_WEIGHT and PERF_SAMPLE_DATA_SRC sample types were 
+added in Linux 3.10.
 
-diff --git a/syscalls/timerfd_create.c b/syscalls/timerfd_create.c
-index d6b291a..92caaa4 100644
---- a/syscalls/timerfd_create.c
-+++ b/syscalls/timerfd_create.c
-@@ -1,7 +1,7 @@
- /*
-  * SYSCALL_DEFINE2(timerfd_create, int, clockid, int, flags)
-  */
--#include <sys/timerfd.h>
-+#include <time.h>
- #include "sanitise.h"
- #include "compat.h"
-=20
---=20
-1.7.4.1
+It also adds more complete support for PERF_SAMPLE_REGS_USER which was 
+added in Linux 3.7
+
+Signed-off-by: Vince Weaver <vincent.weaver@maine.edu>
+
+diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
+index 1f1bdbb..7499a3c 100644
+--- a/syscalls/perf_event_open.c
++++ b/syscalls/perf_event_open.c
+@@ -841,6 +841,10 @@ static long long random_sample_type(void)
+ 		sample_type |= PERF_SAMPLE_REGS_USER;
+ 	if (rand_bool())
+ 		sample_type |= PERF_SAMPLE_STACK_USER;
++	if (rand_bool())
++		sample_type |= PERF_SAMPLE_WEIGHT;
++	if (rand_bool())
++		sample_type |= PERF_SAMPLE_DATA_SRC;
+ 
+ 	return sample_type;
+ }
+@@ -893,6 +897,34 @@ static int random_attr_size(void) {
+ 	return size;
+ }
+ 
++static long long random_branch_sample_type(void)
++{
++
++	long long branch_sample = 0;
++
++	if (rand() % 2)
++		return rand64();
++
++	if (rand_bool())
++		branch_sample |= PERF_SAMPLE_BRANCH_USER;
++	if (rand_bool())
++		branch_sample |= PERF_SAMPLE_BRANCH_KERNEL;
++	if (rand_bool())
++		branch_sample |= PERF_SAMPLE_BRANCH_HV;
++
++	if (rand_bool())
++		branch_sample |= PERF_SAMPLE_BRANCH_ANY;
++	if (rand_bool())
++		branch_sample |= PERF_SAMPLE_BRANCH_ANY_CALL;
++	if (rand_bool())
++		branch_sample |= PERF_SAMPLE_BRANCH_ANY_RETURN;
++	if (rand_bool())
++		branch_sample |= PERF_SAMPLE_BRANCH_IND_CALL;
++
++	return branch_sample;
++}
++
++
+ static void create_mostly_valid_counting_event(struct perf_event_attr *attr,
+ 						int group_leader)
+ {
+@@ -944,6 +976,11 @@ static void create_mostly_valid_counting_event(struct perf_event_attr *attr,
+ 		/* leave config2 alone for now */
+ 	}
+ 
++	/* branch_sample_type not relevant if not sampling */
++
++	/* sample_regs_user not relevant if not sampling */
++
++	/* sample_stack_user not relevant if not sampling */
+ }
+ 
+ static void create_mostly_valid_sampling_event(struct perf_event_attr *attr,
+@@ -1000,6 +1037,26 @@ static void create_mostly_valid_sampling_event(struct perf_event_attr *attr,
+ 		/* config1 set earlier */
+ 	}
+ 
++	attr->branch_sample_type = random_branch_sample_type();
++
++	/* sample_regs_user is a bitmask of CPU registers to record.     */
++	/* The values come from arch/ARCH/include/uapi/asm/perf_regs.h   */
++	/* Most architectures have fewer than 64 registers...            */
++	switch(rand()%3) {
++		case 0:		attr->sample_regs_user = rand()%16;
++				break;
++		case 1:		attr->sample_regs_user = rand()%64;
++				break;
++		case 2:		attr->sample_regs_user = rand64();
++				break;
++		default:
++				break;
++	}
++
++	/* sample_stack_user is the size of user stack backtrace we want  */
++	/* if we pick too large of a value the kernel in theory truncates */
++	attr->sample_stack_user = rand32();
++
+ }
+ 
+ /* Creates a completely random event, unlikely to be valid */
