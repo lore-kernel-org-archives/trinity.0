@@ -1,42 +1,54 @@
-From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] can.c: Include compat.h.
-Date: Fri, 23 Aug 2013 20:04:52 -0700
-Message-ID: <1377313492-21875-1-git-send-email-vlee@freedesktop.org>
+From: Hangbin Liu <liuhangbin@gmail.com>
+Subject: How about use default type for syscall setsockopt
+Date: Mon, 26 Aug 2013 11:11:05 +0800
+Message-ID: <20130826031105.GN14331@localhost.localdomain>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=date:from:to:subject:message-id:mime-version:content-type
+         :content-disposition:user-agent;
+        bh=St/7rgLEojYIMbA+GfuwT5U+EWI0K74OYg7GI0b4d74=;
+        b=EYlXIjmWGteSUyP2Khc19K2tye+eFqp1dRGPtMbRXw5rTitzHBitRJIs64aLQwMc1m
+         HGlPMEr+4G6/34b7HmFRFMIj2eLvdikpVl3XF9wXaGMFWaeKFC0fFJ9XQYb7aF6zX5W8
+         cmacpHuVxdnHTHXk7nej1btg5IhxtnJQzKUhe+mCGKi+ii/raXSWfI325qmpA/wmfdsA
+         tItwpGwYKbx+O365ZLamIwiJvHukxa2fTZ6G0gtiMD9LUSO3FJWsNKWUXDlwqwAJYCUA
+         hl/Yoidk0ZzNgPOClsQgVVFNYGP+C6/HVZnvLjsWcOoXskjNW3lXbs5T9pQJPdj2QxSy
+         0VFg==
+Content-Disposition: inline
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
 
-=46rom: Vinson Lee <vlee@twitter.com>
+Hi all,
 
-This patch fixes these build errors with glibc before 2.10.
+I don't know why we use unsigned int/long for all sockopt parameters. But how
+about use the default type for setsockopt. Then we can set optval for some
+special options such as SO_LIGNER, SO_SNDTIMEO...
 
-net/can.c: In function =E2=80=98can_gen_sockaddr=E2=80=99:
-net/can.c:17: error: =E2=80=98AF_CAN=E2=80=99 undeclared (first use in =
-this function)
-net/can.c:17: error: (Each undeclared identifier is reported only once
-net/can.c:17: error: for each function it appears in.)
 
-Signed-off-by: Vinson Lee <vlee@twitter.com>
----
- net/can.c |    1 +
- 1 files changed, 1 insertions(+), 0 deletions(-)
+diff --git a/include/net.h b/include/net.h
+index 78665d2..6306551 100644
+--- a/include/net.h
++++ b/include/net.h
+@@ -29,10 +29,10 @@ struct socket_triplet {
+ };
 
-diff --git a/net/can.c b/net/can.c
-index 6b107cb..7322f3e 100644
---- a/net/can.c
-+++ b/net/can.c
-@@ -6,6 +6,7 @@
- #include <stdlib.h>
- #include "net.h"
- #include "random.h"
-+#include "compat.h"
-=20
- void can_gen_sockaddr(unsigned long *addr, unsigned long *addrlen)
- {
---=20
-1.7.4.1
+ struct sockopt {
+-       unsigned int level;
+-       unsigned long optname;
+-       unsigned long optval;
+-       unsigned long optlen;
++       int level;
++       int optname;
++       const void *optval;
++       socklen_t optlen;
+ };
+
+
+-- 
+
+Thanks & Best Regards
+Hangbin Liu <liuhangbin@gmail.com>
