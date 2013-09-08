@@ -1,107 +1,64 @@
-From: Konstantin Khlebnikov <khlebnikov@openvz.org>
-Subject: Re: mm: gpf in find_vma
-Date: Sun, 08 Sep 2013 10:11:43 +0400
-Message-ID: <522C151F.8020601@openvz.org>
-References: <522B9B5D.4010207@oracle.com>
+From: Sasha Levin <sasha.levin@oracle.com>
+Subject: softirq: soft lockup in __do_softirq
+Date: Sun, 08 Sep 2013 10:43:51 -0400
+Message-ID: <522C8D27.30600@oracle.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Return-path: <owner-linux-mm@kvack.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=sender:message-id:date:from:user-agent:mime-version:to:cc:subject
-         :references:in-reply-to:content-type:content-transfer-encoding;
-        bh=DBpA/mx3l3WyLLLU/AGUMfDYs4mKE/8ylQh6JA/ue2k=;
-        b=UoY6osGA66Aty7JXhm+HKL0ZpropTCB16JfPFldF+2mOWL+HwX20oT0NIHrYWwy1pJ
-         TEtmwXqiNggWK11zwxLvg8HBqAd173PHmLulLs8lTNO9oLsrbdrtHzyaYTO/PuIoIMCY
-         VrmuTRi2rfLOHC0CEHaDRad0dsWirbsXkqP4SatjdF7V7xfkCOp+An2q6G39EgDool6O
-         Pe89sVuftCDujSyAPl0u2xkCcaQkyqHymg+C2EH/Ti6sR60ol2erIWO2URHDIe954quI
-         MBgaOXn/LL38A+Y41NkpU2DfvqUGuKg8vs6KYRw0wmam8tAFJZxddP0zqCPAMPlVrsWl
-         vVYw==
-In-Reply-To: <522B9B5D.4010207@oracle.com>
-Sender: owner-linux-mm@kvack.org
+Return-path: <trinity-owner@vger.kernel.org>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"; format="flowed"
-To: Sasha Levin <sasha.levin@oracle.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, walken@google.com, riel@redhat.com, hughd@google.com, trinity@vger.kernel.org
+To: fweisbec@gmail.com, tglx@linutronix.de
+Cc: LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org
 
-Sasha Levin wrote:
-> Hi all,
->
-> While fuzzing with trinity inside a KVM tools guest, running latest -next kernel, I've
-> stumbled on the following:
->
-> [13600.008029] general protection fault: 0000 [#1] PREEMPT SMP DEBUG_PAGEALLOC
-> [13600.010235] Modules linked in:
-> [13600.010742] CPU: 30 PID: 26329 Comm: kworker/u128:2 Tainted: G W 3.11.0-next-20130906-sasha #3985
-> [13600.012301] task: ffff880e54630000 ti: ffff880e52380000 task.ti: ffff880e52380000
-> [13600.013553] RIP: 0010:[<ffffffff81258b82>] [<ffffffff81258b82>] find_vma+0x12/0x70
-> [13600.014929] RSP: 0018:ffff880e52381c38 EFLAGS: 00010282
-> [13600.016808] RAX: f0000040f0000040 RBX: 00007fffffffe000 RCX: ffff880e54630000
-> [13600.016808] RDX: 0000000000000000 RSI: 00007fffffffe000 RDI: ffff880000000000
-> [13600.016808] RBP: ffff880e52381c38 R08: 0000000000000017 R09: ffff880e52381d70
-> [13600.016808] R10: ffff880e52381d70 R11: 0000000000000007 R12: ffff880e54630000
-> [13600.016808] R13: ffff880000000000 R14: 000000000000000f R15: 0000000000000000
-> [13600.016808] FS: 0000000000000000(0000) GS:ffff880fe3200000(0000) knlGS:0000000000000000
-> [13600.016808] CS: 0010 DS: 0000 ES: 0000 CR0: 000000008005003b
-> [13600.016808] CR2: 0000000004a66678 CR3: 0000000e520fe000 CR4: 00000000000006e0
-> [13600.016808] Stack:
-> [13600.016808] ffff880e52381c68 ffffffff8125a36b ffff880fb7d373c8 ffff880fb6f82238
-> [13600.016808] ffff880e54630000 ffff880000000000 ffff880e52381d28 ffffffff8125622d
-> [13600.016808] ffff880e52381c98 ffffffff84109b7c 00000000b7d373c8 ffff880e52380010
-> [13600.016808] Call Trace:
-> [13600.016808] [<ffffffff8125a36b>] find_extend_vma+0x2b/0x90
-> [13600.016808] [<ffffffff8125622d>] __get_user_pages+0xdd/0x630
-> [13600.016808] [<ffffffff84109b7c>] ? _raw_spin_unlock_irqrestore+0x7c/0xa0
-> [13600.016808] [<ffffffff81256832>] get_user_pages+0x52/0x60
-> [13600.016808] [<ffffffff812adecc>] get_arg_page+0x5c/0x100
-> [13600.016808] [<ffffffff812ade58>] ? get_user_arg_ptr+0x58/0x70
-> [13600.016808] [<ffffffff812ae084>] copy_strings+0x114/0x260
-> [13600.016808] [<ffffffff812ae21b>] copy_strings_kernel+0x4b/0x60
-> [13600.016808] [<ffffffff812b0203>] do_execve_common+0x2f3/0x4d0
-> [13600.016808] [<ffffffff812b001c>] ? do_execve_common+0x10c/0x4d0
-> [13600.016808] [<ffffffff812b04a7>] do_execve+0x37/0x40
-> [13600.016808] [<ffffffff81140721>] ____call_usermodehelper+0x111/0x130
-> [13600.016808] [<ffffffff8115f270>] ? schedule_tail+0x30/0xb0
-> [13600.016808] [<ffffffff81140610>] ? __call_usermodehelper+0xb0/0xb0
-> [13600.016808] [<ffffffff841125ec>] ret_from_fork+0x7c/0xb0
-> [13600.016808] [<ffffffff81140610>] ? __call_usermodehelper+0xb0/0xb0
-> [13600.016808] Code: 40 20 83 f0 01 83 e0 01 eb 09 0f 1f 80 00 00 00 00 31 c0 c9 c3 0f 1f 40 00 55 48 89 e5 66 66 66 66
-> 90 48 8b 47 10 48 85 c0 74 0b <48> 39 70 08 76 05 48 3b 30 73 4d 48 8b 57 08 31 c0 48 85 d2 74
-> [13600.016808] RIP [<ffffffff81258b82>] find_vma+0x12/0x70
-> [13600.016808] RSP <ffff880e52381c38>
->
-> The disassembly is:
->
-> /* Check the cache first. */
-> /* (Cache hit rate is typically around 35%.) */
-> vma = ACCESS_ONCE(mm->mmap_cache);
-> 1f9: 48 8b 47 10 mov 0x10(%rdi),%rax
-> if (!(vma && vma->vm_end > addr && vma->vm_start <= addr)) {
-> 1fd: 48 85 c0 test %rax,%rax
-> 200: 74 0b je 20d <find_vma+0x1d>
-> 202: 48 39 70 08 cmp %rsi,0x8(%rax) <--- here
-> 206: 76 05 jbe 20d <find_vma+0x1d>
-> 208: 48 3b 30 cmp (%rax),%rsi
-> 20b: 73 4d jae 25a <find_vma+0x6a>
->
->
-> Note that I've started seeing this when I started testing with 64 vcpus.
+Hi all,
 
-mm_struct pointer (%rdi) 0xffff880000000000 looks suspicious =)
+While fuzzing with trinity inside a KVM tools guest, running latest -next kernel, I've
+stumbled on the following:
 
->
->
-> Thanks,
-> Sasha
->
-> --
-> To unsubscribe, send a message with 'unsubscribe linux-mm' in
-> the body to majordomo@kvack.org. For more info on Linux MM,
-> see: http://www.linux-mm.org/ .
-> Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
+[ 8096.714511] BUG: soft lockup - CPU#0 stuck for 22s! [trinity-child16:37848]
+[ 8096.715952] Modules linked in:
+[ 8096.716630] CPU: 0 PID: 37848 Comm: trinity-child16 Tainted: G        W 
+3.11.0-next-20130906-sasha #3985
+[ 8096.718709] task: ffff880e80b83000 ti: ffff880e7f0c0000 task.ti: ffff880e7f0c0000
+[ 8096.720639] RIP: 0010:[<ffffffff8112b12c>]  [<ffffffff8112b12c>] __do_softirq+0xdc/0x320
+[ 8096.722457] RSP: 0018:ffff880fdf603eb8  EFLAGS: 00000282
+[ 8096.723694] RAX: ffff880e7f0c0000 RBX: ffff880e80b83610 RCX: 0000000010000002
+[ 8096.724284] RDX: ffff880e7f0c0010 RSI: 0000000000000000 RDI: 0000000000000100
+[ 8096.724284] RBP: ffff880fdf603f58 R08: 00000000e272dc53 R09: 0000000000000001
+[ 8096.724284] R10: 0000000000000001 R11: 0000000000000000 R12: ffff880fdf603e28
+[ 8096.724284] R13: ffffffff8411335d R14: ffff880fdf603f58 R15: 0000000000000000
+[ 8096.724284] FS:  00007faf073b4700(0000) GS:ffff880fdf600000(0000) knlGS:0000000000000000
+[ 8096.724284] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[ 8096.724284] CR2: 00007faf073b8000 CR3: 0000000e7ff8a000 CR4: 00000000000006f0
+[ 8096.724284] DR0: 00007f90b2937000 DR1: 0000000000000000 DR2: 0000000000000000
+[ 8096.724284] DR3: 0000000000000000 DR6: 00000000ffff0ff0 DR7: 0000000000000600
+[ 8096.724284] Stack:
+[ 8096.724284]  ffff880e80b83628 0040604081168f4b ffff880e7f0c0000 0000000000000082
+[ 8096.724284]  ffff880e7f0c0010 00000001000bdcb6 ffff880e7f0c0010 ffff880e7f0c0010
+[ 8096.724284]  ffff880e7f0c0000 ffff880e7f0c0000 0000000a00000000 ffff880e80b83610
+[ 8096.724284] Call Trace:
+[ 8096.724284]  <IRQ>
+[ 8096.724284]  [<ffffffff84109bee>] ? _raw_spin_unlock+0x4e/0x60
+[ 8096.724284]  [<ffffffff8112b4be>] irq_exit+0x8e/0x140
+[ 8096.724284]  [<ffffffff84114975>] do_IRQ+0xb5/0xe0
+[ 8096.724284]  [<ffffffff8410a06d>] common_interrupt+0x6d/0x6d
+[ 8096.724284]  <EOI>
+[ 8096.724284]  [<ffffffff8115f19d>] ? finish_task_switch+0xad/0x150
+[ 8096.724284]  [<ffffffff84109acc>] ? _raw_spin_unlock_irq+0x4c/0x80
+[ 8096.724284]  [<ffffffff84109aab>] ? _raw_spin_unlock_irq+0x2b/0x80
+[ 8096.724284]  [<ffffffff8115f19d>] finish_task_switch+0xad/0x150
+[ 8096.724284]  [<ffffffff8115f160>] ? finish_task_switch+0x70/0x150
+[ 8096.724284]  [<ffffffff84106a29>] __schedule+0x719/0x7c0
+[ 8096.724284]  [<ffffffff84107114>] preempt_schedule_irq+0xb4/0x100
+[ 8096.724284]  [<ffffffff8410a226>] retint_kernel+0x26/0x30
+[ 8096.724284]  [<ffffffff812220c5>] ? context_tracking_user_enter+0x175/0x180
+[ 8096.724284]  [<ffffffff810768cf>] syscall_trace_leave+0xff/0x130
+[ 8096.724284]  [<ffffffff84112985>] int_check_syscall_exit_work+0x34/0x3d
+[ 8096.724284] Code: 48 89 55 80 0f 1f 00 65 c7 04 25 40 47 1d 00 00 00 00 00 48 83 3d dc b6 91 04 
+00 75 0a 0f 0b eb fe 66 0f 1f 44 00 00 fb 66 66 90 <66> 66 90 65 4c 8b 34 25 48 da 00 00 31 db 49 8d 
+96 28 e0 ff ff
 
---
-To unsubscribe, send a message with 'unsubscribe linux-mm' in
-the body to majordomo@kvack.org.  For more info on Linux MM,
-see: http://www.linux-mm.org/ .
-Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
+
+Thanks,
+sasha
