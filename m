@@ -1,64 +1,80 @@
 From: Sasha Levin <sasha.levin@oracle.com>
-Subject: softirq: soft lockup in __do_softirq
-Date: Sun, 08 Sep 2013 10:43:51 -0400
-Message-ID: <522C8D27.30600@oracle.com>
+Subject: hugetlb: NULL ptr deref in region_truncate
+Date: Sun, 08 Sep 2013 10:46:00 -0400
+Message-ID: <522C8DA8.6030701@oracle.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Return-path: <trinity-owner@vger.kernel.org>
-Sender: trinity-owner@vger.kernel.org
+Return-path: <owner-linux-mm@kvack.org>
+Sender: owner-linux-mm@kvack.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"; format="flowed"
-To: fweisbec@gmail.com, tglx@linutronix.de
-Cc: LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org
+To: Andrew Morton <akpm@linux-foundation.org>, mhocko@suse.cz, iamjoonsoo.kim@lge.com, dhillf@gmail.com, liwanp@linux.vnet.ibm.com
+Cc: LKML <linux-kernel@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, trinity@vger.kernel.org
 
 Hi all,
 
 While fuzzing with trinity inside a KVM tools guest, running latest -next kernel, I've
 stumbled on the following:
 
-[ 8096.714511] BUG: soft lockup - CPU#0 stuck for 22s! [trinity-child16:37848]
-[ 8096.715952] Modules linked in:
-[ 8096.716630] CPU: 0 PID: 37848 Comm: trinity-child16 Tainted: G        W 
+[  998.281867] BUG: unable to handle kernel NULL pointer dereference at 0000000000000274
+[  998.283333] IP: [<ffffffff812707c4>] region_truncate+0x64/0xd0
+[  998.284288] PGD 0
+[  998.284717] Oops: 0000 [#1] PREEMPT SMP DEBUG_PAGEALLOC
+[  998.286506] Modules linked in:
+[  998.287101] CPU: 88 PID: 24650 Comm: trinity-child85 Tainted: G    B   W 
 3.11.0-next-20130906-sasha #3985
-[ 8096.718709] task: ffff880e80b83000 ti: ffff880e7f0c0000 task.ti: ffff880e7f0c0000
-[ 8096.720639] RIP: 0010:[<ffffffff8112b12c>]  [<ffffffff8112b12c>] __do_softirq+0xdc/0x320
-[ 8096.722457] RSP: 0018:ffff880fdf603eb8  EFLAGS: 00000282
-[ 8096.723694] RAX: ffff880e7f0c0000 RBX: ffff880e80b83610 RCX: 0000000010000002
-[ 8096.724284] RDX: ffff880e7f0c0010 RSI: 0000000000000000 RDI: 0000000000000100
-[ 8096.724284] RBP: ffff880fdf603f58 R08: 00000000e272dc53 R09: 0000000000000001
-[ 8096.724284] R10: 0000000000000001 R11: 0000000000000000 R12: ffff880fdf603e28
-[ 8096.724284] R13: ffffffff8411335d R14: ffff880fdf603f58 R15: 0000000000000000
-[ 8096.724284] FS:  00007faf073b4700(0000) GS:ffff880fdf600000(0000) knlGS:0000000000000000
-[ 8096.724284] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
-[ 8096.724284] CR2: 00007faf073b8000 CR3: 0000000e7ff8a000 CR4: 00000000000006f0
-[ 8096.724284] DR0: 00007f90b2937000 DR1: 0000000000000000 DR2: 0000000000000000
-[ 8096.724284] DR3: 0000000000000000 DR6: 00000000ffff0ff0 DR7: 0000000000000600
-[ 8096.724284] Stack:
-[ 8096.724284]  ffff880e80b83628 0040604081168f4b ffff880e7f0c0000 0000000000000082
-[ 8096.724284]  ffff880e7f0c0010 00000001000bdcb6 ffff880e7f0c0010 ffff880e7f0c0010
-[ 8096.724284]  ffff880e7f0c0000 ffff880e7f0c0000 0000000a00000000 ffff880e80b83610
-[ 8096.724284] Call Trace:
-[ 8096.724284]  <IRQ>
-[ 8096.724284]  [<ffffffff84109bee>] ? _raw_spin_unlock+0x4e/0x60
-[ 8096.724284]  [<ffffffff8112b4be>] irq_exit+0x8e/0x140
-[ 8096.724284]  [<ffffffff84114975>] do_IRQ+0xb5/0xe0
-[ 8096.724284]  [<ffffffff8410a06d>] common_interrupt+0x6d/0x6d
-[ 8096.724284]  <EOI>
-[ 8096.724284]  [<ffffffff8115f19d>] ? finish_task_switch+0xad/0x150
-[ 8096.724284]  [<ffffffff84109acc>] ? _raw_spin_unlock_irq+0x4c/0x80
-[ 8096.724284]  [<ffffffff84109aab>] ? _raw_spin_unlock_irq+0x2b/0x80
-[ 8096.724284]  [<ffffffff8115f19d>] finish_task_switch+0xad/0x150
-[ 8096.724284]  [<ffffffff8115f160>] ? finish_task_switch+0x70/0x150
-[ 8096.724284]  [<ffffffff84106a29>] __schedule+0x719/0x7c0
-[ 8096.724284]  [<ffffffff84107114>] preempt_schedule_irq+0xb4/0x100
-[ 8096.724284]  [<ffffffff8410a226>] retint_kernel+0x26/0x30
-[ 8096.724284]  [<ffffffff812220c5>] ? context_tracking_user_enter+0x175/0x180
-[ 8096.724284]  [<ffffffff810768cf>] syscall_trace_leave+0xff/0x130
-[ 8096.724284]  [<ffffffff84112985>] int_check_syscall_exit_work+0x34/0x3d
-[ 8096.724284] Code: 48 89 55 80 0f 1f 00 65 c7 04 25 40 47 1d 00 00 00 00 00 48 83 3d dc b6 91 04 
-00 75 0a 0f 0b eb fe 66 0f 1f 44 00 00 fb 66 66 90 <66> 66 90 65 4c 8b 34 25 48 da 00 00 31 db 49 8d 
-96 28 e0 ff ff
+[  998.288844] task: ffff8800c1110000 ti: ffff8800c544a000 task.ti: ffff8800c544a000
+[  998.290257] RIP: 0010:[<ffffffff812707c4>]  [<ffffffff812707c4>] region_truncate+0x64/0xd0
+[  998.290301] RSP: 0018:ffff8800c544ba58  EFLAGS: 00010293
+[  998.290301] RAX: 0000000000000274 RBX: ffff880f47d3b0f8 RCX: 000000003fd075fc
+[  998.290301] RDX: 0000000000000000 RSI: 0000000000000000 RDI: ffff880f47d3b0f8
+[  998.290301] RBP: ffff8800c544ba78 R08: 0000000000000000 R09: 0000000000000000
+[  998.290301] R10: 0000000000000000 R11: 0000000000000000 R12: 0000000000000000
+[  998.290301] R13: ffffffff8741bc60 R14: 0000000000000000 R15: ffff880e9d8b5590
+[  998.290301] FS:  00007f47f28c2700(0000) GS:ffff880fe2200000(0000) knlGS:0000000000000000
+[  998.290301] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[  998.290301] CR2: 0000000000000274 CR3: 0000000005a23000 CR4: 00000000000006e0
+[  998.290301] Stack:
+[  998.290301]  ffff880f47d3ad50 0000000000000000 ffffffff8741bc60 0000000000000000
+[  998.290301]  ffff8800c544bac8 ffffffff81274856 0000000000000000 ffff8800c544bb18
+[  998.290301]  0000000000000000 0000000000000000 0000000000000000 ffff8800c544bb18
+[  998.290301] Call Trace:
+[  998.290301]  [<ffffffff81274856>] hugetlb_unreserve_pages+0x46/0xd0
+[  998.290301]  [<ffffffff8142abe2>] truncate_hugepages+0x202/0x220
+[  998.290301]  [<ffffffff812d2ec8>] ? inode_wait_for_writeback+0x28/0x50
+[  998.290301]  [<ffffffff81150fe7>] ? bit_waitqueue+0x17/0xc0
+[  998.290301]  [<ffffffff812d2ed8>] ? inode_wait_for_writeback+0x38/0x50
+[  998.290301]  [<ffffffff8142ac18>] hugetlbfs_evict_inode+0x18/0x30
+[  998.290301]  [<ffffffff812c4001>] evict+0xc1/0x1a0
+[  998.290301]  [<ffffffff812c4243>] iput_final+0x163/0x180
+[  998.290301]  [<ffffffff812c42af>] iput+0x4f/0x60
+[  998.290301]  [<ffffffff812bf5a8>] dentry_iput+0xc8/0xf0
+[  998.290301]  [<ffffffff812c200a>] dput+0x17a/0x1a0
+[  998.290301]  [<ffffffff812a9ea7>] __fput+0x2b7/0x2d0
+[  998.290301]  [<ffffffff812a9f8e>] ____fput+0xe/0x10
+[  998.290301]  [<ffffffff81149b4e>] task_work_run+0xae/0xf0
+[  998.290301]  [<ffffffff81127c09>] do_exit+0x2d9/0x4d0
+[  998.290301]  [<ffffffff81127ea9>] do_group_exit+0xa9/0xe0
+[  998.290301]  [<ffffffff8113c185>] get_signal_to_deliver+0x475/0x4d0
+[  998.290301]  [<ffffffff81067c2b>] do_signal+0x4b/0x120
+[  998.290301]  [<ffffffff8114ba24>] ? __rcu_read_unlock+0x44/0x80
+[  998.290301]  [<ffffffff8116911c>] ? vtime_account_user+0x5c/0x70
+[  998.290301]  [<ffffffff81222215>] ? context_tracking_user_exit+0x145/0x150
+[  998.290301]  [<ffffffff81067f8a>] do_notify_resume+0x5a/0xe0
+[  998.290301]  [<ffffffff841129a0>] int_signal+0x12/0x17
+[  998.290301] Code: 0e 48 8b 00 48 39 d8 75 ee eb 6c 0f 1f 40 00 45 31 f6 48 3b 70 10 90 7e 0e 4c 
+8b 70 18 48 89 70 18 49 29 f6 48 8b 00 48 8b 40 08 <4c> 8b 28 4d 8b 65 00 4c 89 ef 4d 3b 6d 08 74 44 
+4c 39 eb 75 12
+[  998.290301] RIP  [<ffffffff812707c4>] region_truncate+0x64/0xd0
+[  998.290301]  RSP <ffff8800c544ba58>
+[  998.290301] CR2: 0000000000000274
 
 
 Thanks,
-sasha
+Sasha
+
+--
+To unsubscribe, send a message with 'unsubscribe linux-mm' in
+the body to majordomo@kvack.org.  For more info on Linux MM,
+see: http://www.linux-mm.org/ .
+Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
