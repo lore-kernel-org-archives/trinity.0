@@ -1,66 +1,52 @@
-From: Vince Weaver <vincent.weaver@maine.edu>
-Subject: Re: [PATCH 1/2] tools, perf: Add a precise event qualifier v2
-Date: Thu, 12 Sep 2013 15:35:52 -0400 (EDT)
-Message-ID: <alpine.DEB.2.10.1309121515440.10687@vincent-weaver-1.um.maine.edu>
-References: <1374501138-13496-1-git-send-email-andi@firstfloor.org> <alpine.DEB.2.02.1307230137160.18617@pianoman.cluster.toy> <20130723060108.GA18396@tassilo.jf.intel.com> <alpine.DEB.2.02.1307231717580.27628@pianoman.cluster.toy> <20130723225150.GT6123@two.firstfloor.org>
- <20130912165733.GA23698@gmail.com>
+From: Thomas Gleixner <tglx@linutronix.de>
+Subject: Re: softirq: soft lockup in __do_softirq
+Date: Thu, 12 Sep 2013 21:45:24 +0200 (CEST)
+Message-ID: <alpine.DEB.2.02.1309122142450.4089@ionos.tec.linutronix.de>
+References: <522C8D27.30600@oracle.com>
 Mime-Version: 1.0
 Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <20130912165733.GA23698@gmail.com>
+In-Reply-To: <522C8D27.30600@oracle.com>
 Sender: linux-kernel-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Andi Kleen <andi@firstfloor.org>, Andi Kleen <ak@linux.intel.com>, acme@infradead.org, linux-kernel@vger.kernel.org, Peter Zijlstra <peterz@infradead.org>, Stephane Eranian <eranian@google.com>, torvalds@linux-foundation.org, trinity@vger.kernel.org, Peter Zijlstra <a.p.zijlstra@chello.nl>, Thomas Gleixner <tglx@linutronix.de>, =?ISO-8859-15?Q?Fr=E9d=E9ric_Weisbecker?= <fweisbec@gmail.com>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+To: Sasha Levin <sasha.levin@oracle.com>
+Cc: fweisbec@gmail.com, LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org
 
-On Thu, 12 Sep 2013, Ingo Molnar wrote:
- 
-> * Andi Kleen <andi@firstfloor.org> wrote:
+On Sun, 8 Sep 2013, Sasha Levin wrote:
+
+> Hi all,
 > 
-> > On Tue, Jul 23, 2013 at 05:27:43PM -0400, Vince Weaver wrote:
-> > > 
-> > > I hate having to justify why breaking the ABI is unacceptable.
-> > 
-> > Well it's a testing ABI, so we can do changes to it.
-> > 
-> > I hope you're not suggesting that perf cannot be extended anymore.
+> While fuzzing with trinity inside a KVM tools guest, running latest -next
+> kernel, I've
+> stumbled on the following:
 > 
-> It obviously should remain extensible, limiting it to 'config' is rather 
-> stupid. If a parser sees something it cannot parse it should ignore that 
-> event.
+> [ 8096.714511] BUG: soft lockup - CPU#0 stuck for 22s! [trinity-child16:37848]
+> [ 8096.724284]  [<ffffffff84109bee>] ? _raw_spin_unlock+0x4e/0x60
+> [ 8096.724284]  [<ffffffff8112b4be>] irq_exit+0x8e/0x140
+> [ 8096.724284]  [<ffffffff84114975>] do_IRQ+0xb5/0xe0
+> [ 8096.724284]  [<ffffffff8410a06d>] common_interrupt+0x6d/0x6d
+> [ 8096.724284]  <EOI>
+> [ 8096.724284]  [<ffffffff8115f19d>] ? finish_task_switch+0xad/0x150
+> [ 8096.724284]  [<ffffffff84109acc>] ? _raw_spin_unlock_irq+0x4c/0x80
+> [ 8096.724284]  [<ffffffff84109aab>] ? _raw_spin_unlock_irq+0x2b/0x80
+> [ 8096.724284]  [<ffffffff8115f19d>] finish_task_switch+0xad/0x150
+> [ 8096.724284]  [<ffffffff8115f160>] ? finish_task_switch+0x70/0x150
+> [ 8096.724284]  [<ffffffff84106a29>] __schedule+0x719/0x7c0
+> [ 8096.724284]  [<ffffffff84107114>] preempt_schedule_irq+0xb4/0x100
+> [ 8096.724284]  [<ffffffff8410a226>] retint_kernel+0x26/0x30
+> [ 8096.724284]  [<ffffffff812220c5>] ? context_tracking_user_enter+0x175/0x180
+> [ 8096.724284]  [<ffffffff810768cf>] syscall_trace_leave+0xff/0x130
+> [ 8096.724284]  [<ffffffff84112985>] int_check_syscall_exit_work+0x34/0x3d
+> [ 8096.724284] Code: 48 89 55 80 0f 1f 00 65 c7 04 25 40 47 1d 00 00 00 00 00
+> 48 83 3d dc b6 91 04 00 75 0a 0f 0b eb fe 66 0f 1f 44 00 00 fb 66 66 90 <66>
+> 66 90 65 4c 8b 34 25 48 da 00 00 31 db 49 8d 96 28 e0 ff ff
 
-Well 
+All I can guess from that sparse information that you are observing an
+interrupt storm caused by what ever the heck. It's not a softirq storm
+as softirq breaks out after N iterations.
 
-     Documentation/ABI/testing/sysfs-bus-event_source-devices-events
+Thanks,
 
-implies that you won't find field names that aren't in a format file, and
+	tglx
 
-     Documentation/ABI/testing/sysfs-bus-event_source-devices-format
-
-specifies that only "config" fields will appear there.
-
-So if this will be changing you might want to update the documentation, or 
-just remove it altogether because it is getting increasingly inaccurate.
-
-I've tried getting this documentation updated
-  ( https://lkml.org/lkml/2013/7/25/2 ) 
-but the patches have been ignored.
-
-
-
-In any case, I notice perf also uses the "open" syscall, so I look forward 
-to your eventual creation of
-  /sys/bus/open/file_permissions/*
-
-$ cat /sys/bus/open/file_permissions/write
-flags=0101,mode=0666
-
-Because what every system call needs is some sort of tree under sysfs
-exporting various common settings in unswappable kernel memory that 
-require a complex LEX/YACC parser to interpret.  
-
-That's much simpler than using a library, or having a user looking 
-things up in a manpage and placing a few comments in their code.
-
-Vince
