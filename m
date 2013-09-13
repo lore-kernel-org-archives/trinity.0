@@ -1,28 +1,38 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: [PATCH] add support for the AArch64 architecture
-Date: Fri, 13 Sep 2013 11:14:25 -0400
-Message-ID: <20130913151425.GA29262@redhat.com>
-References: <1379076991-4812-1-git-send-email-will.deacon@arm.com>
+From: Andi Kleen <ak@linux.intel.com>
+Subject: Re: [PATCH 1/2] tools, perf: Add a precise event qualifier v2
+Date: Fri, 13 Sep 2013 10:48:02 -0700
+Message-ID: <20130913174802.GU11427@tassilo.jf.intel.com>
+References: <1374501138-13496-1-git-send-email-andi@firstfloor.org>
+ <alpine.DEB.2.02.1307230137160.18617@pianoman.cluster.toy>
+ <20130723060108.GA18396@tassilo.jf.intel.com>
+ <alpine.DEB.2.02.1307231717580.27628@pianoman.cluster.toy>
+ <20130723225150.GT6123@two.firstfloor.org>
+ <20130912165733.GA23698@gmail.com>
+ <20130912173617.GI18242@two.firstfloor.org>
+ <20130913085654.GI31370@twins.programming.kicks-ass.net>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1379076991-4812-1-git-send-email-will.deacon@arm.com>
+In-Reply-To: <20130913085654.GI31370@twins.programming.kicks-ass.net>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Will Deacon <will.deacon@arm.com>
-Cc: trinity@vger.kernel.org
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Andi Kleen <andi@firstfloor.org>, Ingo Molnar <mingo@kernel.org>, Vince Weaver <vince@deater.net>, acme@infradead.org, linux-kernel@vger.kernel.org, Stephane Eranian <eranian@google.com>, torvalds@linux-foundation.org, trinity@vger.kernel.org, Thomas Gleixner <tglx@linutronix.de>, =?iso-8859-1?Q?Fr=E9d=E9ric?= Weisbecker <fweisbec@gmail.com>, Jiri Olsa <jolsa@redhat.com>, Namhyung Kim <namhyung@gmail.com>
 
-On Fri, Sep 13, 2013 at 01:56:31PM +0100, Will Deacon wrote:
- > This patch wires up support for the AArch64 architecture, which has been
- > supported in the mainline kernel (as arm64) since 3.7.
- > 
- > Signed-off-by: Will Deacon <will.deacon@arm.com>
- > ---
- > 
- > If I'm hacking on Alpha, I should probably do AArch64 as well...
+> Typically PMU drivers are per arch and all the format stuff is per pmu
+> driver so I'd not worry about that just yet.
 
-heh, looks good. thanks Will, Applied.
+That's a good point. So hard coded numbers would be fine for now.
 
-	Dave
+> Yes, that is an unfortunate situation. I (and either Acme or Jolsa)
+> tried wrapping the bitfield in an anonymous union to create a named
+> variable for the entire u64 but older GCC completely fails with that.
+
+In theory it's possible by parsing readelf output.
+
+-Andi
+
+-- 
+ak@linux.intel.com -- Speaking for myself only
