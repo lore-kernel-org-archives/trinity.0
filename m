@@ -1,249 +1,299 @@
-From: Ildar Muslukhov <ildarm@google.com>
-Subject: [PATCH] Selection of 32 and 64 bit variants of syscalls
-Date: Mon, 16 Sep 2013 15:05:56 -0700 (PDT)
-Message-ID: <alpine.DEB.2.02.1309161454450.10873@ildarm-linux.kir.corp.google.com>
+From: Vince Weaver <vincent.weaver@maine.edu>
+Subject: [patch] update perf_event support for 3.12-rc1
+Date: Tue, 17 Sep 2013 15:11:57 -0400 (EDT)
+Message-ID: <alpine.DEB.2.10.1309171509240.15599@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20120113;
-        h=date:from:to:cc:subject:message-id:user-agent:mime-version
-         :content-type;
-        bh=g5QTp5i4pXJVIsUY8OCdAFpDVPWNZRSMLFq5Xc0lrK4=;
-        b=hJwe/BYLNWdxX7o/egshxSpH9JU3gPuM28iXZyNWge41dtV838WQmc0dnWZ+gVmIIu
-         aS1y3s3FImo1TmxwrwSWqMfrwL6lFJfneNBhZiSX7QbhomEK4REV6brnVT4M0x0gZjSl
-         QyJFnEYEt/oW0hwy1reyTx5SYYnGi2itNoPIbJ7dttIi7NlYeFSqT9t69pIe2LK8rmvf
-         XaJ3XXIp5v+KaziCNw0AJ631eFbkW8qQ4QsXenRpAHLkYmoVQrbmzDauE3q1fcbfbHc9
-         muk0gYonl30Y4a8g7RDMFZzLUzsdeZ9gIBuGKQS33BRcT0ognBwi3hHxbySLRZGbnKyl
-         Bj1Q==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
-Cc: davej@redhat.com
 
-This patch adds parameter that enables explicit selection of either 32 or 64 bit version of syscall(s).
 
-Signed-off-by: Ildar Muslukhov <ildarm@google.com>
----
- README           |  4 +++-
- include/params.h |  4 ++++
- params.c         | 22 ++++++++++++++++--
- tables.c         | 71 +++++++++++++++++++++++++++++++++++++++++++++++++++-----
- 4 files changed, 92 insertions(+), 9 deletions(-)
+This patch wires up PERF_COUNT_SW_DUMMY and PERF_SAMPLE_IDENTIFIER
+which appear in 3.12-rc1
 
-diff --git a/README b/README
-index 3999c42..05a1ec3 100644
---- a/README
-+++ b/README
-@@ -100,7 +100,9 @@ tmp directory. (Handy for cleaning up any garbage named files; just rm -rf tmp a
-          what maps got set up etc. Does make things go considerably faster however,
-          as it no longer fsync()'s after every syscall
+Signed-off-by: Vince Weaver <vincent.weaver@maine.edu>
+
+diff --git a/include/perf_event.h b/include/perf_event.h
+index 0b1df41..40a1fb8 100644
+--- a/include/perf_event.h
++++ b/include/perf_event.h
+@@ -109,6 +109,7 @@ enum perf_sw_ids {
+ 	PERF_COUNT_SW_PAGE_FAULTS_MAJ		= 6,
+ 	PERF_COUNT_SW_ALIGNMENT_FAULTS		= 7,
+ 	PERF_COUNT_SW_EMULATION_FAULTS		= 8,
++	PERF_COUNT_SW_DUMMY			= 9,
  
----ioctls/-I will dump all available ioctls.
-+ --ioctls/-I will dump all available ioctls.
+ 	PERF_COUNT_SW_MAX,			/* non-ABI */
+ };
+@@ -134,8 +135,9 @@ enum perf_event_sample_format {
+ 	PERF_SAMPLE_STACK_USER			= 1U << 13,
+ 	PERF_SAMPLE_WEIGHT			= 1U << 14,
+ 	PERF_SAMPLE_DATA_SRC			= 1U << 15,
++	PERF_SAMPLE_IDENTIFIER			= 1U << 16,
+ 
+-	PERF_SAMPLE_MAX = 1U << 16,		/* non-ABI */
++	PERF_SAMPLE_MAX = 1U << 17,		/* non-ABI */
+ };
+ 
+ /*
+@@ -275,8 +277,9 @@ struct perf_event_attr {
+ 
+ 				exclude_callchain_kernel : 1, /* exclude kernel callchains */
+ 				exclude_callchain_user   : 1, /* exclude user callchains */
++				mmap2          :  1, /* include mmap with inode data     */
+ 
+-				__reserved_1   : 41;
++				__reserved_1   : 40;
+ 
+ 	union {
+ 		__u32		wakeup_events;	  /* wakeup every n events */
+@@ -321,6 +324,7 @@ struct perf_event_attr {
+ #define PERF_EVENT_IOC_PERIOD		_IOW('$', 4, __u64)
+ #define PERF_EVENT_IOC_SET_OUTPUT	_IO ('$', 5)
+ #define PERF_EVENT_IOC_SET_FILTER	_IOW('$', 6, char *)
++#define PERF_EVENT_IOC_ID		_IOR('$', 7, __u64 *)
+ 
+ enum perf_event_ioc_flags {
+ 	PERF_IOC_FLAG_GROUP		= 1U << 0,
+@@ -375,9 +379,12 @@ struct perf_event_mmap_page {
+ 	__u64	time_running;		/* time event on cpu */
+ 	union {
+ 		__u64	capabilities;
+-		__u64	cap_usr_time  : 1,
+-			cap_usr_rdpmc : 1,
+-			cap_____res   : 62;
++		struct {
++			__u64	cap_usr_time		: 1,
++				cap_usr_rdpmc		: 1,
++				cap_usr_time_zero	: 1,
++				cap_____res		: 61;
++		};
+ 	};
+ 
+ 	/*
+@@ -418,12 +425,29 @@ struct perf_event_mmap_page {
+ 	__u16	time_shift;
+ 	__u32	time_mult;
+ 	__u64	time_offset;
++	/*
++	 * If cap_usr_time_zero, the hardware clock (e.g. TSC) can be calculated
++	 * from sample timestamps.
++	 *
++	 *   time = timestamp - time_zero;
++	 *   quot = time / time_mult;
++	 *   rem  = time % time_mult;
++	 *   cyc = (quot << time_shift) + (rem << time_shift) / time_mult;
++	 *
++	 * And vice versa:
++	 *
++	 *   quot = cyc >> time_shift;
++	 *   rem  = cyc & ((1 << time_shift) - 1);
++	 *   timestamp = time_zero + quot * time_mult +
++	 *               ((rem * time_mult) >> time_shift);
++	 */
++	__u64	time_zero;
+ 
+ 		/*
+ 		 * Hole for extension of the self monitor capabilities
+ 		 */
+ 
+-	__u64	__reserved[120];	/* align to 1k */
++	__u64	__reserved[119];	/* align to 1k */
+ 
+ 	/*
+ 	 * Control data for the mmap() data buffer.
+@@ -471,13 +495,28 @@ enum perf_event_type {
+ 	/*
+ 	 * If perf_event_attr.sample_id_all is set then all event types will
+ 	 * have the sample_type selected fields related to where/when
+-	 * (identity) an event took place (TID, TIME, ID, CPU, STREAM_ID)
+-	 * described in PERF_RECORD_SAMPLE below, it will be stashed just after
+-	 * the perf_event_header and the fields already present for the existing
+-	 * fields, i.e. at the end of the payload. That way a newer perf.data
+-	 * file will be supported by older perf tools, with these new optional
+-	 * fields being ignored.
++	 * (identity) an event took place (TID, TIME, ID, STREAM_ID, CPU,
++	 * IDENTIFIER) described in PERF_RECORD_SAMPLE below, it will be stashed
++	 * just after the perf_event_header and the fields already present for
++	 * the existing fields, i.e. at the end of the payload. That way a newer
++	 * perf.data file will be supported by older perf tools, with these new
++	 * optional fields being ignored.
++	 *
++	 * struct sample_id {
++	 * 	{ u32			pid, tid; } && PERF_SAMPLE_TID
++	 * 	{ u64			time;     } && PERF_SAMPLE_TIME
++	 * 	{ u64			id;       } && PERF_SAMPLE_ID
++	 * 	{ u64			stream_id;} && PERF_SAMPLE_STREAM_ID
++	 * 	{ u32			cpu, res; } && PERF_SAMPLE_CPU
++	 *	{ u64			id;	  } && PERF_SAMPLE_IDENTIFIER
++	 * } && perf_event_attr::sample_id_all
+ 	 *
++	 * Note that PERF_SAMPLE_IDENTIFIER duplicates PERF_SAMPLE_ID.  The
++	 * advantage of PERF_SAMPLE_IDENTIFIER is that its position is fixed
++	 * relative to header.size.
++	 */
 +
-+ --arch/-a Explicit selection of 32 or 64 bit variant of system calls.
++	/*
+ 	 * The MMAP events record the PROT_EXEC mappings so that we can
+ 	 * correlate userspace IPs to code. They have the following structure:
+ 	 *
+@@ -498,6 +537,7 @@ enum perf_event_type {
+ 	 *	struct perf_event_header	header;
+ 	 *	u64				id;
+ 	 *	u64				lost;
++	 * 	struct sample_id		sample_id;
+ 	 * };
+ 	 */
+ 	PERF_RECORD_LOST			= 2,
+@@ -508,6 +548,7 @@ enum perf_event_type {
+ 	 *
+ 	 *	u32				pid, tid;
+ 	 *	char				comm[];
++	 * 	struct sample_id		sample_id;
+ 	 * };
+ 	 */
+ 	PERF_RECORD_COMM			= 3,
+@@ -518,6 +559,7 @@ enum perf_event_type {
+ 	 *	u32				pid, ppid;
+ 	 *	u32				tid, ptid;
+ 	 *	u64				time;
++	 * 	struct sample_id		sample_id;
+ 	 * };
+ 	 */
+ 	PERF_RECORD_EXIT			= 4,
+@@ -528,6 +570,7 @@ enum perf_event_type {
+ 	 *	u64				time;
+ 	 *	u64				id;
+ 	 *	u64				stream_id;
++	 * 	struct sample_id		sample_id;
+ 	 * };
+ 	 */
+ 	PERF_RECORD_THROTTLE			= 5,
+@@ -539,6 +582,7 @@ enum perf_event_type {
+ 	 *	u32				pid, ppid;
+ 	 *	u32				tid, ptid;
+ 	 *	u64				time;
++	 * 	struct sample_id		sample_id;
+ 	 * };
+ 	 */
+ 	PERF_RECORD_FORK			= 7,
+@@ -549,6 +593,7 @@ enum perf_event_type {
+ 	 *	u32				pid, tid;
+ 	 *
+ 	 *	struct read_format		values;
++	 * 	struct sample_id		sample_id;
+ 	 * };
+ 	 */
+ 	PERF_RECORD_READ			= 8,
+@@ -557,6 +602,13 @@ enum perf_event_type {
+ 	 * struct {
+ 	 *	struct perf_event_header	header;
+ 	 *
++	 *	#
++	 *	# Note that PERF_SAMPLE_IDENTIFIER duplicates PERF_SAMPLE_ID.
++	 *	# The advantage of PERF_SAMPLE_IDENTIFIER is that its position
++	 *	# is fixed relative to header.
++	 *	#
++	 *
++	 *	{ u64			id;	  } && PERF_SAMPLE_IDENTIFIER
+ 	 *	{ u64			ip;	  } && PERF_SAMPLE_IP
+ 	 *	{ u32			pid, tid; } && PERF_SAMPLE_TID
+ 	 *	{ u64			time;     } && PERF_SAMPLE_TIME
+@@ -596,11 +648,32 @@ enum perf_event_type {
+ 	 * 	  u64			dyn_size; } && PERF_SAMPLE_STACK_USER
+ 	 *
+ 	 *	{ u64			weight;   } && PERF_SAMPLE_WEIGHT
+-	 *	{ u64			data_src;     } && PERF_SAMPLE_DATA_SRC
++	 *	{ u64			data_src; } && PERF_SAMPLE_DATA_SRC
+ 	 * };
+ 	 */
+ 	PERF_RECORD_SAMPLE			= 9,
  
- #######################################################################
- 
-diff --git a/include/params.h b/include/params.h
-index 6fe7d29..53776bd 100644
---- a/include/params.h
-+++ b/include/params.h
-@@ -7,6 +7,10 @@
- void parse_args(int argc, char *argv[]);
- 
- extern bool debug;
++	/*
++	 * The MMAP2 records are an augmented version of MMAP, they add
++	 * maj, min, ino numbers to be used to uniquely identify each mapping
++	 *
++	 * struct {
++	 *	struct perf_event_header	header;
++	 *
++	 *	u32				pid, tid;
++	 *	u64				addr;
++	 *	u64				len;
++	 *	u64				pgoff;
++	 *	u32				maj;
++	 *	u32				min;
++	 *	u64				ino;
++	 *	u64				ino_generation;
++	 *	char				filename[];
++	 * 	struct sample_id		sample_id;
++	 * };
++	 */
++	PERF_RECORD_MMAP2			= 10,
 +
-+extern bool do_32_arch;
-+extern bool do_64_arch;
+ 	PERF_RECORD_MAX,			/* non-ABI */
+ };
+ 
+@@ -685,4 +758,28 @@ union perf_mem_data_src {
+ #define PERF_MEM_S(a, s) \
+ 	(((u64)PERF_MEM_##a##_##s) << PERF_MEM_##a##_SHIFT)
+ 
++/*
++ * single taken branch record layout:
++ *
++ *      from: source instruction (may not always be a branch insn)
++ *        to: branch target
++ *   mispred: branch target was mispredicted
++ * predicted: branch target was predicted
++ *
++ * support for mispred, predicted is optional. In case it
++ * is not supported mispred = predicted = 0.
++ *
++ *     in_tx: running in a hardware transaction
++ *     abort: aborting a hardware transaction
++ */
++struct perf_branch_entry {
++	__u64	from;
++	__u64	to;
++	__u64	mispred:1,  /* target mispredicted */
++		predicted:1,/* target predicted */
++		in_tx:1,    /* in transaction */
++		abort:1,    /* transaction abort */
++		reserved:60;
++};
 +
- extern bool do_specific_syscall;
- extern bool do_exclude_syscall;
- extern unsigned int specific_proto;
-diff --git a/params.c b/params.c
-index e266c18..3c0ae0a 100644
---- a/params.c
-+++ b/params.c
-@@ -17,6 +17,9 @@ bool debug = FALSE;
- bool do_specific_syscall = FALSE;
- bool do_exclude_syscall = FALSE;
- 
-+bool do_32_arch = TRUE;
-+bool do_64_arch = TRUE;
-+
- unsigned int specific_proto = 0;
- unsigned int user_specified_children = 0;
- 
-@@ -60,8 +63,9 @@ static void usage(void)
- 	fprintf(stderr, " --syslog,-S: log important info to syslog. (useful if syslog is remote)\n");
- 	fprintf(stderr, " --verbose,-v: increase output verbosity.\n");
- 	fprintf(stderr, " --victims,-V: path to victim files.\n");
-+	fprintf(stderr, " --arch, -a: selects syscalls for the specified architecture (32 or 64). Both by default.");
- 	fprintf(stderr, "\n");
--	fprintf(stderr, " -c#: target specific syscall (takes syscall name as parameter).\n");
-+	fprintf(stderr, " -c#,@: target specific syscall (takes syscall name as parameter and @ as architecture. No @ defaults to both archs.).\n");
- 	fprintf(stderr, " -N#: do # syscalls then exit.\n");
- 	fprintf(stderr, " -p:  pause after syscall.\n");
- 	fprintf(stderr, " -s#: use # as random seed.\n");
-@@ -86,6 +90,7 @@ static const struct option longopts[] = {
- 	{ "syslog", no_argument, NULL, 'S' },
- 	{ "victims", required_argument, NULL, 'V' },
- 	{ "verbose", no_argument, NULL, 'v' },
-+	{ "arch", required_argument, NULL, 'a' }, 
- 	{ NULL, 0, NULL, 0 } };
- 
- 
-@@ -93,7 +98,7 @@ void parse_args(int argc, char *argv[])
- {
- 	int opt;
- 
--	while ((opt = getopt_long(argc, argv, "c:C:dDg:hIl:LN:mnP:pqr:s:SV:vx:", longopts, NULL)) != -1) {
-+	while ((opt = getopt_long(argc, argv, "a:c:C:dDg:hIl:LN:mnP:pqr:s:SV:vx:", longopts, NULL)) != -1) {
- 		switch (opt) {
- 		default:
- 			if (opt == '?')
-@@ -111,6 +116,19 @@ void parse_args(int argc, char *argv[])
- 			toggle_syscall(optarg, TRUE);
+ #endif /* _UAPI_LINUX_PERF_EVENT_H */
+diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
+index 05046f2..dfcec77 100644
+--- a/syscalls/perf_event_open.c
++++ b/syscalls/perf_event_open.c
+@@ -681,7 +681,7 @@ static long long random_event_config(__u32 *event_type,
+ 		}
+ 		break;
+ 	case PERF_TYPE_SOFTWARE:
+-		switch (rand() % 10) {
++		switch (rand() % 11) {
+ 		case 0:
+ 			config = PERF_COUNT_SW_CPU_CLOCK;
  			break;
- 
-+		case 'a':
-+			/* One of the architectures selected*/
-+			do_32_arch = FALSE;
-+			do_64_arch = FALSE;
-+			if (strcmp(optarg, "64") == 0)
-+				do_64_arch = TRUE;
-+			else if (strcmp(optarg, "32") == 0)
-+				do_32_arch = TRUE;
-+			else
-+				exit(EXIT_FAILURE);
-+
+@@ -710,6 +710,9 @@ static long long random_event_config(__u32 *event_type,
+ 			config = PERF_COUNT_SW_EMULATION_FAULTS;
+ 			break;
+ 		case 9:
++			config = PERF_COUNT_SW_DUMMY;
 +			break;
-+
- 		case 'C':
- 			user_specified_children = strtoll(optarg, NULL, 10);
++		case 10:
+ 			config = rand64();
  			break;
-diff --git a/tables.c b/tables.c
-index 59969c3..2803ce8 100644
---- a/tables.c
-+++ b/tables.c
-@@ -281,34 +281,89 @@ void mark_all_syscalls_active(void)
- 	}
+ 		default:
+@@ -845,6 +848,8 @@ static long long random_sample_type(void)
+ 		sample_type |= PERF_SAMPLE_WEIGHT;
+ 	if (rand_bool())
+ 		sample_type |= PERF_SAMPLE_DATA_SRC;
++	if (rand_bool())
++		sample_type |= PERF_SAMPLE_IDENTIFIER;
+ 
+ 	return sample_type;
  }
- 
-+static void check_user_specified_arch(const char *arg, char **arg_name, bool *only_64bit, bool *only_32bit)
-+{
-+	//Check if the arch is specified
-+	char *arg_arch = strstr(arg,",");
-+	unsigned long size = 0;
-+
-+	if (arg_arch  != NULL) {
-+		size = (unsigned long)arg_arch - (unsigned long)arg;
-+		*arg_name = malloc(size + 1);
-+		if (*arg_name == NULL)
-+			exit(EXIT_FAILURE);
-+		(*arg_name)[size] = 0;
-+		memcpy(*arg_name, arg, size);
-+
-+		//identify architecture
-+		if ((only_64bit != NULL) && (only_32bit != NULL)) {
-+			if ((strcmp(arg_arch + 1, "64") == 0)) {
-+				*only_64bit = TRUE;
-+				*only_32bit = FALSE;
-+			} else if ((strcmp(arg_arch + 1,"32") == 0)) {
-+				*only_64bit = FALSE;
-+				*only_32bit = TRUE;
-+			} else {
-+				printf("No idea what architecture for syscall (%s) is.\n", arg);
-+				exit(EXIT_FAILURE);
-+			}
-+		}
-+	} else {
-+		*arg_name = (char*)arg;//castaway const.
-+ 	}
-+
-+
-+}
-+
-+static void clear_check_user_specified_arch(const char *arg, char **arg_name)
-+{
-+	//Release memory only if we have allocated it
-+	if (((char *)arg) != *arg_name) {
-+		free(*arg_name);
-+		*arg_name = NULL;
-+	}
-+}
-+
- static void toggle_syscall_biarch(const char *arg, unsigned char state)
- {
- 	int specific_syscall32 = 0;
- 	int specific_syscall64 = 0;
-+	char *arg_name = NULL;
-+	bool only_32bit = TRUE;
-+	bool only_64bit = TRUE;
- 
--	specific_syscall64 = search_syscall_table(syscalls_64bit, max_nr_64bit_syscalls, arg);
-+	check_user_specified_arch(arg, &arg_name, &only_64bit, &only_32bit);
-+
-+	specific_syscall64 = search_syscall_table(syscalls_64bit, max_nr_64bit_syscalls, arg_name);
- 
- 	/* If we found a 64bit syscall, validate it. */
- 	if (specific_syscall64 != -1) {
- 		validate_specific_syscall(syscalls_64bit, specific_syscall64);
- 
--		if (state == TRUE)
-+		if ((state == TRUE) && only_64bit && do_64_arch)
- 			syscalls_64bit[specific_syscall64].entry->flags |= ACTIVE;
- 		else
- 			syscalls_64bit[specific_syscall64].entry->flags |= TO_BE_DEACTIVATED;
- 	}
- 
- 	/* Search for and validate 32bit */
--	specific_syscall32 = search_syscall_table(syscalls_32bit, max_nr_32bit_syscalls, arg);
-+	specific_syscall32 = search_syscall_table(syscalls_32bit, max_nr_32bit_syscalls, arg_name);
- 	if (specific_syscall32 != -1) {
- 		validate_specific_syscall(syscalls_32bit, specific_syscall32);
- 
--		if (state == TRUE)
-+		if ((state == TRUE) && only_32bit && do_32_arch)
- 			syscalls_32bit[specific_syscall32].entry->flags |= ACTIVE;
- 		else
- 			syscalls_32bit[specific_syscall32].entry->flags |= TO_BE_DEACTIVATED;
- 	}
- 
-+	clear_check_user_specified_arch(arg, &arg_name);
-+
-+	if ((!only_32bit) && (!only_64bit)) {
-+		printf("No idea what architecture for syscall (%s) is.\n", arg);
-+		exit(EXIT_FAILURE);
-+	}
-+
- 	if ((specific_syscall64 == -1) && (specific_syscall32 == -1)) {
- 		printf("No idea what syscall (%s) is.\n", arg);
- 		exit(EXIT_FAILURE);
-@@ -340,6 +395,7 @@ static void toggle_syscall_biarch(const char *arg, unsigned char state)
- void toggle_syscall(const char *arg, unsigned char state)
- {
- 	int specific_syscall = 0;
-+	char * arg_name = NULL;
- 
- 	if (biarch == TRUE) {
- 		toggle_syscall_biarch(arg, state);
-@@ -347,9 +403,12 @@ void toggle_syscall(const char *arg, unsigned char state)
- 	}
- 
- 	/* non-biarch case. */
--	specific_syscall = search_syscall_table(syscalls, max_nr_syscalls, arg);
-+	check_user_specified_arch(arg, &arg_name, NULL, NULL); //We do not care about arch here, just to get rid of arg flags.
-+	specific_syscall = search_syscall_table(syscalls, max_nr_syscalls, arg_name);
-+	clear_check_user_specified_arch(arg, &arg_name);
-+
- 	if (specific_syscall == -1) {
--		printf("No idea what syscall (%s) is.\n", arg);
-+		printf("No idea what syscall (%s) is.\n", arg_name);
- 		exit(EXIT_FAILURE);
- 	}
- 
--- 
-1.8.4
