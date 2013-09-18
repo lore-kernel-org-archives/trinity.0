@@ -1,30 +1,31 @@
 From: Dan Merillat <dan.merillat@gmail.com>
 Subject: Re: mm: gpf in find_vma
-Date: Wed, 18 Sep 2013 12:24:43 -0400
-Message-ID: <5239D3CB.2050201@gmail.com>
+Date: Wed, 18 Sep 2013 12:40:30 -0400
+Message-ID: <5239D77E.7050403@gmail.com>
 References: <522B9B5D.4010207@oracle.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Return-path: <owner-linux-mm@kvack.org>
+Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=message-id:date:from:user-agent:mime-version:to:cc:subject
          :references:in-reply-to:content-type:content-transfer-encoding;
-        bh=Ss3qjkWgoT3eNVFp2KTkczxpla/NXYZj5me426/yxR8=;
-        b=HbXFVFdrGtsol0wW4i2l6D+dCeatoiei8alZcwDo6u2IkRQ2lPo7VcBpCkIWEBcG9D
-         FZxdPpiVz+Zp1+dkWJtBQ149SKZ9lnmdGGbWY/M7iEopJ5P43eh5YiN+AnBGhKyFgKjI
-         6Rxo05XBMjnB057hVRy/EEro1R2+cVSikm/YQXW+bZpUB0KiJlVDRYouQuZqZV8iFNMT
-         jiDPlWZV5s7Tyn+L9x1LBZPuwPCcKWHso7ICRhPN6cktFZfGfX/Esy1lRhzdQAQbKOaw
-         Z32CNqJjT5mEAKAMw/wE+0Z/lATo1JE8+4iZwNuw28CH+qQ+Z3Vy6j3fPJ11RwW3nzfx
-         Po9g==
+        bh=QlVUfeamH+rY8IU8trrCkr1fvQlkY41IpJzDSEGKXVE=;
+        b=ncJP/rAX/LXYssXcjVULhPszL6S5j8TfE73TBvrsaoEPQwO4N8X5HCvnBU3Ix/qfJu
+         CwS+q4190etmp/K0CbocrmxlC3JB2Mg+WaM71C2oVESvd9hWAvh+0//EBkJGFQfR7hSA
+         aBT2UBpzG1EFABhGvaxICF+8hPDspbXl93kXX/Ek1Kq4W+eKg+1z77Dy85dQX13uqye3
+         IFS7CrFEuFC1RdpxpIYmXS5rJHx9iXvZZN0nqvGnUU6gMtxxIUguunMX3ATq8sYWmrMY
+         yHFBKgJcUn2cFhJdsFbjEpM6AMc3oJ7HLPOMv/Ue2/YjiiCpuyRr4aelBM0657TPC9sx
+         7b5A==
 In-Reply-To: <522B9B5D.4010207@oracle.com>
-Sender: owner-linux-mm@kvack.org
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 To: Sasha Levin <sasha.levin@oracle.com>
 Cc: Andrew Morton <akpm@linux-foundation.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, walken@google.com, riel@redhat.com, hughd@google.com, khlebnikov@openvz.org, trinity@vger.kernel.org
 
 Resent due to Thunderbird completely mangling it the first time around:
+(Apologies if this is a third copy, gmail told me it didn't send)
 
 On 09/07/2013 05:32 PM, Sasha Levin wrote:
 > Hi all,
@@ -145,9 +146,3 @@ Both of mine look like current->mm is getting clobbered somewhere.
 
 
 
-
---
-To unsubscribe, send a message with 'unsubscribe linux-mm' in
-the body to majordomo@kvack.org.  For more info on Linux MM,
-see: http://www.linux-mm.org/ .
-Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
