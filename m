@@ -1,58 +1,56 @@
-From: Dave Jones <davej@redhat.com>
+From: Vince Weaver <vincent.weaver@maine.edu>
 Subject: Re: Reproducible run and binary logs (ideas)
-Date: Thu, 19 Sep 2013 12:21:48 -0400
-Message-ID: <20130919162148.GA8528@redhat.com>
-References: <CAEGbLtsg8_xLx9YvdrZ-gLWR4UqSQ+DT4mzEV9BfGnf-uHxDjQ@mail.gmail.com>
- <20130919150746.GA2416@redhat.com>
- <CAEGbLtvKqXuGNvFCTTkjL5pr0xKeXrWem36cFYrXBrq_5hLVNw@mail.gmail.com>
+Date: Thu, 19 Sep 2013 12:49:47 -0400 (EDT)
+Message-ID: <alpine.DEB.2.10.1309191240250.2666@vincent-weaver-1.um.maine.edu>
+References: <CAEGbLtsg8_xLx9YvdrZ-gLWR4UqSQ+DT4mzEV9BfGnf-uHxDjQ@mail.gmail.com> <20130919150746.GA2416@redhat.com> <CAEGbLtvKqXuGNvFCTTkjL5pr0xKeXrWem36cFYrXBrq_5hLVNw@mail.gmail.com> <20130919162148.GA8528@redhat.com>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <CAEGbLtvKqXuGNvFCTTkjL5pr0xKeXrWem36cFYrXBrq_5hLVNw@mail.gmail.com>
+In-Reply-To: <20130919162148.GA8528@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Ildar Muslukhov <ildarm@google.com>
-Cc: trinity@vger.kernel.org
+To: Dave Jones <davej@redhat.com>
+Cc: Ildar Muslukhov <ildarm@google.com>, trinity@vger.kernel.org
 
-On Thu, Sep 19, 2013 at 09:03:41AM -0700, Ildar Muslukhov wrote:
- > Ok, lets me just make some tests on that. But what about synching
- > multiple children processes? And what do you make of a binary log,
- > that allows to do that.
- > 
- > Ildar
+On Thu, 19 Sep 2013, Dave Jones wrote:
 
-So while things like synchronising threads are a nice idea, I'm not
-really sweating it, because I don't think it's a major factor in
-the lack of reproducability right now. There are probably a whole bunch
-of other factors that have a higher impact.  Also, it's not as simple
-a problem as just starting threads at a certain time, because they
-can go out of sync later. Think about what happens if one of the syscalls
-we run does a write() of a gigabyte of data. There's no deterministic
-time that has to complete, and depending on the filesystem/mount options in use, we could
-go away for a while until that write() completes while the filesystem does
-tree rebalancing or whatever..  On a subsequent run, that same write() might
-return almost instantly because the filesystem doesn't need to do as much
-book-keeping. And that's just write(). Other syscalls have similar non-deterministic
-runtimes.
+> It might be worth looking at Vince's perf fuzzer to see what he's done there
+> for bisecting/generating test cases.
 
-It's a tricky problem, and one that I think we're probably better off not trying
-to solve completely, because I don't think we'll ever recreate the exact conditions across two runs.
-I'm not saying it's all useless to even try and recreate conditions, but that perfection
-isn't really attainable, and some of those ideas may be more realistic than others.
+my perf_fuzzer doesn't do anything that complicated.
 
-Of all the bugs that trinity has found, I can only recall one that
-actually had multi-thread interaction (involving ecryptfs fd passing,
-which was actually a problem between main process & child, rather than child<->child)
+In its current setup it only has one thread, which occasionally forks off 
+a child but it always kills the child before forking off another.
 
-We might be better off just treating the individual trinity child processes
-as standalone instances, and concentrating on taking a logfile from each of those,
-and working on strategies to extract the useful info from them for re-run them
-as a single process, because 99.9% of the time, what the other child processes are
-doing is irrelevant to the bug.
+I find the run-to-run reproducibility of traces to be surprisingly 
+consistent when given the same random seed.  Even hundreds of thousands
+of syscalls in I can usually hit the same bugs at roughly the same
+syscall count.
 
-It might be worth looking at Vince's perf fuzzer to see what he's done there
-for bisecting/generating test cases.
+I find this suprising because when perf events are involved nothing is 
+deterministic; if you are measuring things like cycles with overflow, the 
+cycle count is going to depend on what else is going on in the system, and 
+if your overflow handler consumes randomness (hard because rand() isn't
+signal-handler safe, but possible with a few hacks) you'd expect things ro 
+diverge.
 
-	Dave
+As for bisecting, my major problem is dependent syscalls, something that 
+might not be as big an issue on trinity.  The way perf_fuzzer is set up 
+you open an fd with perf_event_open(), then lots of other syscalls act on 
+the fd.  So if your bisect happens to cut off the open of the fd, then 
+all subsequent dependent syscalls fail.  I don't have a good automatic 
+solution to that, I've so far been placing the bisect points by hand and 
+just having the replayer be robust in cases where invalid dependent 
+syscalls appear in the trace.
+
+perf_fuzzer also has a somewhat human-readable log format, which wastes 
+disk space but makes it easier to do somewhat manual bisects using a text 
+editor.
+
+Vince
+
+
+
+
+
