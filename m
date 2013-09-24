@@ -1,53 +1,39 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: [PATCH] Added parameter that controls which taint flag causes
- trinity to stop.
-Date: Tue, 24 Sep 2013 12:15:19 -0400
-Message-ID: <20130924161519.GA10098@redhat.com>
-References: <alpine.DEB.2.02.1309231938120.18899@ildarm-linux.kir.corp.google.com>
+From: Ildar Muslukhov <ildarm@google.com>
+Subject: [Patch suggestion] Probability flag for 32 bit syscalls
+Date: Tue, 24 Sep 2013 11:36:53 -0700
+Message-ID: <CAEGbLtsPpimeDotO09H7Lqm0p=RKmaX1DR05Mu60=c9fazacCA@mail.gmail.com>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.02.1309231938120.18899@ildarm-linux.kir.corp.google.com>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20120113;
+        h=mime-version:date:message-id:subject:from:to:cc:content-type;
+        bh=bu1HWCaz2ILBTjA+7aV2dKNfLvVTnAB4R3Zh0BerTKc=;
+        b=lYGOy8uzlx90s11b0S6ZPm8r2IuUjMJteWGJUU3+X7lOdjAsg8UQYDLI4R+TPLspjw
+         LUzzOz13ie05ioAKAhpwZpSSz0VgkmC6/y7F1kLu2lHbSvjzprZAGjP9mPprXcbPcaxj
+         CIUexa4z6HtP15raWwhaO3Bg9DReWbNogwIgcTuA2RjLpFbdQMm2lHS/ZJh/spMiue7+
+         1/hcfdaL28YiXTD6YvuWgiZrlZeyTiV8DK04EDOX4CMC00jrxLEWGZ730Nw5NU7C4dsF
+         RYvMCG8DvKSZQs3RtgZbQ+rsZ+Z0JgTQOFu3Ts8TP51Ut/3+V5uCDxZLde/XcgyuM5nq
+         IOCg==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Ildar Muslukhov <ildarm@google.com>
-Cc: trinity@vger.kernel.org
+To: trinity@vger.kernel.org
+Cc: Dave Jones <davej@redhat.com>
 
-On Mon, Sep 23, 2013 at 07:41:14PM -0700, Ildar Muslukhov wrote:
- > 
- > Hello Everyone,
- > 
- > This is reworked patch for the parameter that allows to control which 
- > kernel taint flags causes trinity to stop. In particular, now the short 
- > parameter is -T (instead of -t) and flags has to be specified as literals 
- > (e.g., DIE, WARN, USER, etc.). All 13 supported flags are specified in 
- > README.
- > 
- > Signed-off-by: Ildar Muslukhov <ildarm@google.com>
- 
-Applied. Watch out for your whitespace though..
+Hi everyone,
 
-$ git am ~/ildar
-Applying: Added parameter that controls which taint flag causes trinity to stop.
-/home/davej/src/git-trees/trinity/.git/rebase-apply/patch:158: indent with spaces.
-                toggle_taint_flag(TAINT_FORCED_MODULE);
-/home/davej/src/git-trees/trinity/.git/rebase-apply/patch:160: indent with spaces.
-                toggle_taint_flag(TAINT_UNSAFE_SMP);
-/home/davej/src/git-trees/trinity/.git/rebase-apply/patch:162: indent with spaces.
-                toggle_taint_flag(TAINT_FORCED_RMMOD);
-/home/davej/src/git-trees/trinity/.git/rebase-apply/patch:164: indent with spaces.
-                toggle_taint_flag(TAINT_MACHINE_CHECK);
-/home/davej/src/git-trees/trinity/.git/rebase-apply/patch:166: indent with spaces.
-                toggle_taint_flag(TAINT_BAD_PAGE);
-warning: squelched 7 whitespace errors
-warning: 12 lines applied after fixing whitespace errors.
+In the children/random-syscalls.c file (function choose_syscall_table)
+there is a FIXME section that right now disables 32 bit version of
+syscall if a 64 bit version is present and enabled.
 
+// FIXME: I forgot why this got disabled. Revisit.
+//                      if (rand() % 100 < 10)
+//
 
-There's a commit hook that fixes things up when I commit them, but it's better
-if I don't even see that spew when I apply diffs ;)
+Just want to clear this one out. Should it be a command line
+parameter? Something like -P 50 (for 50% probability, lets say of 32
+bit). If so, what should be a default behaviour when the parameter is
+not present 50/50 or 0/100 as it is right now.
 
-thanks,
-
-	Dave
+-Ildar
