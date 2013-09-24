@@ -1,39 +1,41 @@
-From: Ildar Muslukhov <ildarm@google.com>
-Subject: [Patch suggestion] Probability flag for 32 bit syscalls
-Date: Tue, 24 Sep 2013 11:36:53 -0700
-Message-ID: <CAEGbLtsPpimeDotO09H7Lqm0p=RKmaX1DR05Mu60=c9fazacCA@mail.gmail.com>
+From: Dave Jones <davej@redhat.com>
+Subject: Re: [Patch suggestion] Probability flag for 32 bit syscalls
+Date: Tue, 24 Sep 2013 14:50:45 -0400
+Message-ID: <20130924185045.GB21307@redhat.com>
+References: <CAEGbLtsPpimeDotO09H7Lqm0p=RKmaX1DR05Mu60=c9fazacCA@mail.gmail.com>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20120113;
-        h=mime-version:date:message-id:subject:from:to:cc:content-type;
-        bh=bu1HWCaz2ILBTjA+7aV2dKNfLvVTnAB4R3Zh0BerTKc=;
-        b=lYGOy8uzlx90s11b0S6ZPm8r2IuUjMJteWGJUU3+X7lOdjAsg8UQYDLI4R+TPLspjw
-         LUzzOz13ie05ioAKAhpwZpSSz0VgkmC6/y7F1kLu2lHbSvjzprZAGjP9mPprXcbPcaxj
-         CIUexa4z6HtP15raWwhaO3Bg9DReWbNogwIgcTuA2RjLpFbdQMm2lHS/ZJh/spMiue7+
-         1/hcfdaL28YiXTD6YvuWgiZrlZeyTiV8DK04EDOX4CMC00jrxLEWGZ730Nw5NU7C4dsF
-         RYvMCG8DvKSZQs3RtgZbQ+rsZ+Z0JgTQOFu3Ts8TP51Ut/3+V5uCDxZLde/XcgyuM5nq
-         IOCg==
+Content-Disposition: inline
+In-Reply-To: <CAEGbLtsPpimeDotO09H7Lqm0p=RKmaX1DR05Mu60=c9fazacCA@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
-Cc: Dave Jones <davej@redhat.com>
+To: Ildar Muslukhov <ildarm@google.com>
+Cc: trinity@vger.kernel.org
 
-Hi everyone,
+On Tue, Sep 24, 2013 at 11:36:53AM -0700, Ildar Muslukhov wrote:
+ > Hi everyone,
+ > 
+ > In the children/random-syscalls.c file (function choose_syscall_table)
+ > there is a FIXME section that right now disables 32 bit version of
+ > syscall if a 64 bit version is present and enabled.
+ > 
+ > // FIXME: I forgot why this got disabled. Revisit.
+ > //                      if (rand() % 100 < 10)
+ > //
+ > 
+ > Just want to clear this one out. Should it be a command line
+ > parameter? Something like -P 50 (for 50% probability, lets say of 32
+ > bit). If so, what should be a default behaviour when the parameter is
+ > not present 50/50 or 0/100 as it is right now.
 
-In the children/random-syscalls.c file (function choose_syscall_table)
-there is a FIXME section that right now disables 32 bit version of
-syscall if a 64 bit version is present and enabled.
+So that got disabled a long time ago. Back in May of last year in commit
+2d4de3c15fa80c42cccb1863fbd7879ef5aeaf38.
 
-// FIXME: I forgot why this got disabled. Revisit.
-//                      if (rand() % 100 < 10)
-//
+I'm not sure that ever got fixed up. It might be worth doing some long
+runs to see if it's still a problem.
 
-Just want to clear this one out. Should it be a command line
-parameter? Something like -P 50 (for 50% probability, lets say of 32
-bit). If so, what should be a default behaviour when the parameter is
-not present 50/50 or 0/100 as it is right now.
+	Dave
 
--Ildar
+
