@@ -1,101 +1,226 @@
 From: Ildar Muslukhov <ildarm@google.com>
-Subject: Re: [PATCH] converted COLOR_ARG macro to a function
-Date: Mon, 30 Sep 2013 18:21:45 -0700
-Message-ID: <CAEGbLtuOx-TNy93_gj=6X9afTt1QJ+kFY1z=C7ARgOq19CSU2A@mail.gmail.com>
-References: <alpine.DEB.2.02.1309301739430.17550@ildarm-linux.kir.corp.google.com>
-	<20131001011034.GA2140@redhat.com>
+Subject: [PATCH] converted COLOR_ARG macro to a function
+Date: Tue, 1 Oct 2013 10:54:39 -0700 (PDT)
+Message-ID: <alpine.DEB.2.02.1310011052210.7238@ildarm-linux.kir.corp.google.com>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20120113;
-        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
-         :cc:content-type;
-        bh=HrbVLXg9+wNQk8O9teQSc9rcDKJaZPJLv69j1sv16Vc=;
-        b=eth3+negWWcDGSp73QvVCaeItt8cm/l0Yw3/r962qxOkIgWqqpUPZvkdOuSHv4aGEr
-         bg2+Ae1Xvx9xtBvkISgxNLjmQwgA6JwvDNrJknVFTeWBDQmsRrHY+xmrjjCU8oo8RodN
-         dwH/14huMVgAlk0HFizFA4Tr1oduc2U/K/jJ4j1/eATRLl5XAgoNUK/8Dk8JiBj5WLmI
-         gD5gk9pwn6CzxLhEKVUpnWIHt5Py5FHgUl7UQgrNJ15i6sPKYJ5nEZ8t5OsHCd9IYmpN
-         RwW0qww+JQPq+9cOQjud5ID87b3Tbbg0DL27OKApb8W5GtNA5DO9FkriaF+qZoPqFqT0
-         2X6w==
-In-Reply-To: <20131001011034.GA2140@redhat.com>
+        h=date:from:to:cc:subject:message-id:user-agent:mime-version
+         :content-type;
+        bh=ZQbT7fXaVqM5VEkgIdMHopJvq+HCmSbc0m7pFSfFVdU=;
+        b=LjXhdDYC4Lvtl7wJn/EOFy9IrXAywVTo0kfjGTAKaZi3El/YONygs/lTMqHj5Yuknv
+         cppME5+MI9bbY3JBK9MqvOGEksBigtLeN2/tdVj/cJIb84JX4L7wByJ/QwXwX2VNNGES
+         GoCSFHgybx0PY5flLQEVe3lps6b0RvQdArPzPFjcEyUdKGpSdZEZ6IGrNYrVFB4i2C+L
+         Qf2uAaxB4eCtaHCx7qSPoxm1S1P+dMVNPpUvqyVT63j25zjP4H0ofJzujiRiVVQAFPkj
+         +roRaK7pu1GlMHNCJfl+hE4amjEZ8EkQDtY5rthYawd5ASRJNcLDEe2VsMPnoTadbVwK
+         TbIQ==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Dave Jones <davej@redhat.com>
-Cc: trinity@vger.kernel.org
+To: trinity@vger.kernel.org
+Cc: davej@redhat.com
 
-WRT to CYANPTR, just tried to be consistent with the way we do it
-right now. But, sure will inline it.
 
-The rest is just fixes after running checkpatch.pl on the patch.
+Revised the previous patch that refactors COLOR_ARG macro into a function.
 
-On Mon, Sep 30, 2013 at 6:10 PM, Dave Jones <davej@redhat.com> wrote:
-> On Mon, Sep 30, 2013 at 05:43:01PM -0700, Ildar Muslukhov wrote:
->  >
->  > This patch converts COLOR_ARG macro to a function. The sole purpose is to
->  > make the code a bit more readable.
->  >
->  > Signed-off-by: Ildar Muslukhov <ildarm@google.com>
->  >
->  > ---
->  >  include/log.h |   3 ++
->  >  syscall.c     | 164 ++++++++++++++++++++++++++++++----------------------------
->  >  2 files changed, 87 insertions(+), 80 deletions(-)
->  >
->  > diff --git a/include/log.h b/include/log.h
->  > index f3fc7c4..627985c 100644
->  > --- a/include/log.h
->  > +++ b/include/log.h
->  > @@ -19,6 +19,9 @@
->  >  #define WHITE if (monochrome == FALSE)      sptr += sprintf(sptr, "%s", ANSI_WHITE);
->  >  #define CRESET if (monochrome == FALSE)     sptr += sprintf(sptr, "%s", ANSI_RESET);
->  >
->  > +#define CYANPTR if (monochrome == FALSE)    *sptr += sprintf(*sptr, "%s", ANSI_CYAN);
->  > +#define CRESETPTR if (monochrome == FALSE)  *sptr += sprintf(*sptr, "%s", ANSI_RESET);
->
-> We only use CYANPTR once. Might as well just inline it ?
->
->  > --- a/syscall.c
->  > +++ b/syscall.c
->  > @@ -41,14 +41,14 @@ long syscall32(int num_args, unsigned int call,
->  >
->  >      if (num_args <= 6) {
->  >              long __res;
->  > -#if defined( __i386__)
->  > +#if defined(__i386__)
->  >              __asm__ volatile (
->  >                      "pushl %%ebp\n\t"
->  >                      "movl %7, %%ebp\n\t"
->  >                      "int $0x80\n\t"
->  >                      "popl %%ebp\n\t"
->  >                      : "=a" (__res)
->  > -                    : "0" (call),"b" ((long)(a1)),"c" ((long)(a2)),"d" ((long)(a3)), "S" ((long)(a4)),"D" ((long)(a5)), "g" ((long)(a6))
->  > +                    : "0" (call), "b" ((long)(a1)), "c" ((long)(a2)), "d" ((long)(a3)), "S" ((long)(a4)), "D" ((long)(a5)), "g" ((long)(a6))
->  >                      : "%ebp" /* mark EBP reg as dirty */
->  >                      );
->  >  #elif defined(__x86_64__)
->  > @@ -58,7 +58,7 @@ long syscall32(int num_args, unsigned int call,
->  >                      "int $0x80\n\t"
->  >                      "popq %%rbp\n\t"
->  >                      : "=a" (__res)
->  > -                    : "0" (call),"b" ((long)(a1)),"c" ((long)(a2)),"d" ((long)(a3)), "S" ((long)(a4)),"D" ((long)(a5)), "g" ((long)(a6))
->  > +                    : "0" (call), "b" ((long)(a1)), "c" ((long)(a2)), "d" ((long)(a3)), "S" ((long)(a4)), "D" ((long)(a5)), "g" ((long)(a6))
->  >                      : "%rbp" /* mark EBP reg as dirty */
->  >                      );
->  >  #else
->  > @@ -73,7 +73,7 @@ long syscall32(int num_args, unsigned int call,
->  >      UNUSED(a5);
->  >      UNUSED(a6);
->  >  #endif
->  > -            __syscall_return(long,__res);
->  > +            __syscall_return(long, __res);
->  >      }
->
-> I suspect this belongs in a different diff ;)
->
->
-> Otherwise, looks ok.
->
->         Dave
->
+Signed-off-by: Ildar Muslukhov <ildarm@google.com>
+
+---
+ include/log.h |   2 +
+ syscall.c     | 156 ++++++++++++++++++++++++++++++----------------------------
+ 2 files changed, 82 insertions(+), 76 deletions(-)
+
+diff --git a/include/log.h b/include/log.h
+index f3fc7c4..2497988 100644
+--- a/include/log.h
++++ b/include/log.h
+@@ -19,6 +19,8 @@
+ #define WHITE if (monochrome == FALSE)	sptr += sprintf(sptr, "%s", ANSI_WHITE);
+ #define CRESET if (monochrome == FALSE)	sptr += sprintf(sptr, "%s", ANSI_RESET);
+ 
++#define CRESETPTR if (monochrome == FALSE)	*sptr += sprintf(*sptr, "%s", ANSI_RESET);
++
+ #define MAX_LOGLEVEL 3
+ unsigned int highest_logfile(void);
+ void synclogs(void);
+diff --git a/syscall.c b/syscall.c
+index 824102a..71f0a16 100644
+--- a/syscall.c
++++ b/syscall.c
+@@ -131,6 +131,71 @@ static unsigned long do_syscall(int childno, int *errno_saved)
+ 	return ret;
+ }
+ 
++static void color_arg(unsigned int call, unsigned int argnum, const char *name, unsigned long oldreg, unsigned long reg, int type, char **sptr)
++{
++	if (syscalls[call].entry->num_args >= argnum) {
++		if (!name)
++			return;
++
++		if (argnum != 1) {
++			CRESETPTR
++			*sptr += sprintf(*sptr, ", ");
++		}
++		if (name)
++			*sptr += sprintf(*sptr, "%s=", name);
++
++		if (oldreg == reg) {
++			CRESETPTR
++		} else {
++			*sptr += sprintf(*sptr, "%s", ANSI_CYAN);
++		}
++
++		switch (type) {
++		case ARG_PATHNAME:
++			*sptr += sprintf(*sptr, "\"%s\"", (char *) reg);
++			break;
++		case ARG_PID:
++		case ARG_FD:
++			CRESETPTR
++			*sptr += sprintf(*sptr, "%ld", reg);
++			break;
++		case ARG_MODE_T:
++			CRESETPTR
++			*sptr += sprintf(*sptr, "%o", (mode_t) reg);
++			break;
++		case ARG_UNDEFINED:
++		case ARG_LEN:
++		case ARG_ADDRESS:
++		case ARG_NON_NULL_ADDRESS:
++		case ARG_RANGE:
++		case ARG_OP:
++		case ARG_LIST:
++		case ARG_RANDPAGE:
++		case ARG_CPU:
++		case ARG_RANDOM_LONG:
++		case ARG_IOVEC:
++		case ARG_IOVECLEN:
++		case ARG_SOCKADDR:
++		case ARG_SOCKADDRLEN:
++		default:
++			if (reg > 8 * 1024)
++				*sptr += sprintf(*sptr, "0x%lx", reg);
++			else
++				*sptr += sprintf(*sptr, "%ld", reg);
++				CRESETPTR
++			break;
++		}
++		if (reg == (((unsigned long)page_zeros) & PAGE_MASK))
++			*sptr += sprintf(*sptr, "[page_zeros]");
++		if (reg == (((unsigned long)page_rand) & PAGE_MASK))
++			*sptr += sprintf(*sptr, "[page_rand]");
++		if (reg == (((unsigned long)page_0xff) & PAGE_MASK))
++			*sptr += sprintf(*sptr, "[page_0xff]");
++		if (reg == (((unsigned long)page_allocs) & PAGE_MASK))
++			*sptr += sprintf(*sptr, "[page_allocs]");
++	}
++}
++
+ /*
+  * Generate arguments, print them out, then call the syscall.
+  */
+@@ -168,85 +233,24 @@ long mkcall(int childno)
+ 	if (syscalls[call].entry->sanitise)
+ 		syscalls[call].entry->sanitise(childno);
+ 
+-/*
+- * I *really* loathe how this macro has grown. It should be a real function one day.
+- */
+-#define COLOR_ARG(ARGNUM, NAME, BIT, OLDREG, REG, TYPE)			\
+-	if ((logging == FALSE) && (quiet_level < MAX_LOGLEVEL))		\
+-		goto args_done;						\
+-									\
+-	if (syscalls[call].entry->num_args >= ARGNUM) {			\
+-		if (!NAME)						\
+-			goto args_done;					\
+-		if (ARGNUM != 1) {					\
+-			CRESET						\
+-			sptr += sprintf(sptr, ", ");			\
+-		}							\
+-		if (NAME)						\
+-			sptr += sprintf(sptr, "%s=", NAME);		\
+-									\
+-		if (OLDREG == REG) {					\
+-			CRESET						\
+-		} else {						\
+-			CYAN						\
+-		}							\
+-									\
+-		switch(TYPE) {						\
+-		case ARG_PATHNAME:					\
+-			sptr += sprintf(sptr, "\"%s\"", (char *) REG);	\
+-			break;						\
+-		case ARG_PID:						\
+-		case ARG_FD:						\
+-			CRESET						\
+-			sptr += sprintf(sptr, "%ld", REG);		\
+-			break;						\
+-		case ARG_MODE_T:					\
+-			CRESET						\
+-			sptr += sprintf(sptr, "%o", (mode_t) REG);	\
+-			break;						\
+-		case ARG_UNDEFINED:					\
+-		case ARG_LEN:						\
+-		case ARG_ADDRESS:					\
+-		case ARG_NON_NULL_ADDRESS:				\
+-		case ARG_RANGE:						\
+-		case ARG_OP:						\
+-		case ARG_LIST:						\
+-		case ARG_RANDPAGE:					\
+-		case ARG_CPU:						\
+-		case ARG_RANDOM_LONG:					\
+-		case ARG_IOVEC:						\
+-		case ARG_IOVECLEN:					\
+-		case ARG_SOCKADDR:					\
+-		case ARG_SOCKADDRLEN:					\
+-		default:						\
+-			if (REG > 8 * 1024)				\
+-				sptr += sprintf(sptr, "0x%lx", REG);	\
+-			else						\
+-				sptr += sprintf(sptr, "%ld", REG);	\
+-			CRESET						\
+-			break;						\
+-		}							\
+-		if (REG == (((unsigned long)page_zeros) & PAGE_MASK))	\
+-			sptr += sprintf(sptr, "[page_zeros]");		\
+-		if (REG == (((unsigned long)page_rand) & PAGE_MASK))	\
+-			sptr += sprintf(sptr, "[page_rand]");		\
+-		if (REG == (((unsigned long)page_0xff) & PAGE_MASK))	\
+-			sptr += sprintf(sptr, "[page_0xff]");		\
+-		if (REG == (((unsigned long)page_allocs) & PAGE_MASK))	\
+-			sptr += sprintf(sptr, "[page_allocs]");		\
++	if ((logging == TRUE) && (quiet_level == MAX_LOGLEVEL)) {
++		CRESET
++		sptr += sprintf(sptr, "(");
++		color_arg(call, 1, syscalls[call].entry->arg1name, olda1, shm->a1[childno],
++				syscalls[call].entry->arg1type, &sptr);
++		color_arg(call, 2, syscalls[call].entry->arg2name, olda2, shm->a2[childno],
++				syscalls[call].entry->arg2type, &sptr);
++		color_arg(call, 3, syscalls[call].entry->arg3name, olda3, shm->a3[childno],
++				syscalls[call].entry->arg3type, &sptr);
++		color_arg(call, 4, syscalls[call].entry->arg4name, olda4, shm->a4[childno],
++				syscalls[call].entry->arg4type, &sptr);
++		color_arg(call, 5, syscalls[call].entry->arg5name, olda5, shm->a5[childno],
++				syscalls[call].entry->arg5type, &sptr);
++		color_arg(call, 6, syscalls[call].entry->arg6name, olda6, shm->a6[childno],
++				syscalls[call].entry->arg6type, &sptr);
+ 	}
+ 
+ 	CRESET
+-	sptr += sprintf(sptr, "(");
+-
+-	COLOR_ARG(1, syscalls[call].entry->arg1name, 1<<5, olda1, shm->a1[childno], syscalls[call].entry->arg1type);
+-	COLOR_ARG(2, syscalls[call].entry->arg2name, 1<<4, olda2, shm->a2[childno], syscalls[call].entry->arg2type);
+-	COLOR_ARG(3, syscalls[call].entry->arg3name, 1<<3, olda3, shm->a3[childno], syscalls[call].entry->arg3type);
+-	COLOR_ARG(4, syscalls[call].entry->arg4name, 1<<2, olda4, shm->a4[childno], syscalls[call].entry->arg4type);
+-	COLOR_ARG(5, syscalls[call].entry->arg5name, 1<<1, olda5, shm->a5[childno], syscalls[call].entry->arg5type);
+-	COLOR_ARG(6, syscalls[call].entry->arg6name, 1<<0, olda6, shm->a6[childno], syscalls[call].entry->arg6type);
+-args_done:
+-	CRESET
+ 	sptr += sprintf(sptr, ") ");
+ 	*sptr = '\0';
+ 
+-- 
+1.8.4
