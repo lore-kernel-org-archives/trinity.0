@@ -1,186 +1,98 @@
-From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
-Subject: Re: [uml-devel] BUG: soft lockup for a user mode linux image
-Date: Thu, 03 Oct 2013 21:33:09 +0200
-Message-ID: <524DC675.4020201@gmx.de>
-References: <524C6643.2040209@gmx.de> <CAFLxGvwiH7L4oAW8tw6FyeGczg+rKjUDCdkLKdegy9yX==2cMA@mail.gmail.com> <524DBD5D.1040203@gmx.de> <524DBFBB.1050002@nod.at> <524DC278.3020106@gmx.de> <524DC394.6030406@nod.at>
+From: Ildar Muslukhov <ildarm@google.com>
+Subject: Re: [PATCH] Fixes weired looping in child_random_syscalls function.
+Date: Thu, 3 Oct 2013 13:12:19 -0700
+Message-ID: <CAEGbLttXGU-G9e9XCoZwoTCfPJTTyGei688Dd51ZG25CxWHx5Q@mail.gmail.com>
+References: <alpine.DEB.2.02.1310021641240.24433@ildarm-linux.kir.corp.google.com>
+	<20131003183349.GA13162@redhat.com>
+	<CAEGbLtvYzMHJvEw+BnPj3449ZuNuyxYe3V=5e3VyMpjDwFW47w@mail.gmail.com>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <524DC394.6030406@nod.at>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20120113;
+        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
+         :content-type;
+        bh=J+Yjh4JL4a+HtgeeA+x26XrOTPz1vtnvy3NFxVItG+Y=;
+        b=YWC++gYI90ADhAlsm4xafOipRNE9etLRKtHQcEwLO1rBlBD7gk/96mw3R0un6xBgk+
+         kphtOrw1t7bHY93wSBE2gzj/O3xU2WcnojvwHCGiT/H0toEsmMBINRB4J/lsQXzcfynw
+         jqgf3Gb4S3QfCZhXy3K7R0DLtwOyVR2DHOLa64htfdPx0yuPApC37yEHgbotPHttU25c
+         0jfNWnvKXHt3sGthLcNJ9V2TnCTHYnwX1FCXx4AI2T63h/EnLi2qejnBqGVocpohgLEm
+         9JudLhj3JEnkdcgSwwu38WzBp6svUIuqDnIkYPVwnwEBsfLkDqmleskzPCKFxoqe45hG
+         KQBw==
+In-Reply-To: <CAEGbLtvYzMHJvEw+BnPj3449ZuNuyxYe3V=5e3VyMpjDwFW47w@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: Richard Weinberger <richard@nod.at>
-Cc: Richard Weinberger <richard.weinberger@gmail.com>, trinity@vger.kernel.org, UML devel <user-mode-linux-devel@lists.sourceforge.net>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: Dave Jones <davej@redhat.com>, trinity@vger.kernel.org
 
-On 10/03/2013 09:20 PM, Richard Weinberger wrote:
-> Am 03.10.2013 21:16, schrieb Toralf F=C3=B6rster:
->> On 10/03/2013 09:04 PM, Richard Weinberger wrote:
->>> Am 03.10.2013 20:54, schrieb Toralf F=C3=B6rster:
->>>> On 10/02/2013 09:55 PM, Richard Weinberger wrote:
->>>>> On Wed, Oct 2, 2013 at 8:30 PM, Toralf F=C3=B6rster <toralf.foers=
-ter@gmx.de> wrote:
->>>>>> Running trinity (1 process, no victim files, just "$>trinity -C1=
-) for a longer time
->>>>>> within a 32 bit user mode linux image with a recent git kernel (=
-host: 3.11.3 guest 3.12-rc3-g...)
->>>>>> yields into this konsole message :
->>>>>>
->>>>>>  * Starting local
->>>>>> net.core.warnings =3D 0                                         =
-                                [ ok ]
->>>>>> BUG: soft lockup - CPU#0 stuck for 23s! [trinity-child0:2031]
->>>>>>
->>>>>>
->>>>>> and at the host t1 of the "linux"-processes eats all CPU cycles =
-at 1 CPU core.
->>>>>> 2 subsequent made back traces made with
->>>>>>
->>>>>> $> sudo gdb /home/tfoerste/devel/linux/linux 28144 -n -batch -ex=
- bt
->>>>>>
->>>>>> shows nearly a similar position around __get_user_pages() - both=
- are attached.
->>>>>>
->>>>>> I'm not surprised that trinity harms a systems - I'm just wonder=
-ing whether this particular picture is
->>>>>> expected or if it points to an issue.
->>>>>>
->>>>>>
->>>>>> FWIW the last lines of trinity log were :
->>>>>>
->>>>>>
->>>>>> [2031] [94] setsid() =3D 2031
->>>>>> [2031] [95] setresgid(rgid=3D0xffff33e3, egid=3D0xffffff93, sgid=
-=3D0x22000040) =3D -1 (Operation not permitted)
->>>>>> [2031] [96] vmsplice(fd=3D5, iov=3D0x85501e0, nr_segs=3D300, fla=
-gs=3D9) =3D 0x3000
->>>>>> [2031] [97] setresuid(ruid=3D0x80549193, euid=3D0xc61041e0, suid=
-=3D0xff19b6fa) =3D -1 (Operation not permitted)
->>>>>> [2031] [98] setpriority(which=3D0xff010000, who=3D0xf3737373, ni=
-ceval=3D0x8088960c) =3D -1 (Invalid argument)
->>>>>> [2031] [99] socketcall(call=3D1, args=3D0x8550200) =3D -1 (Addre=
-ss family not supported by protocol)
->>>>>> [2031] [100] access(filename=3D"=EF=BF=BD", mode=3D2017) =3D -1 =
-(Invalid argument)
->>>>>> [2031] [101] getgroups(gidsetsize=3D0, grouplist=3D0x80d0000[pag=
-e_rand]) =3D 3
->>>>>> [2031] [102] msync(start=3D0xc0100220, len=3D0, flags=3D3) =3D -=
-1 (Invalid argument)
->>>>>> [2031] [103] sigpending(set=3D0x40025000) =3D 0
->>>>>> [2031] [104] signalfd4(ufd=3D383, user_mask=3D1, sizemask=3D0xa4=
-200000, flags=3D0x80800) =3D -1 (Invalid argument)
->>>>>> [2031] [105] sendfile(out_fd=3D383, in_fd=3D382, offset=3D0, cou=
-nt=3D4096) =3D -1 (Invalid argument)
->>>>>> [2031] [106] fanotify_mark(fanotify_fd=3D382, flags=3D5, mask=3D=
-0x8000023, dfd=3D382, pathname=3D"/proc/1092/task/1092/fdinfo/68") =3D =
--1 (Invalid argument)
->>>>>> [2031] [107] wait4(upid=3D1, stat_addr=3D4, options=3D0xd761979b=
-, ru=3D8) =3D -1 (Invalid argument)
->>>>>> [2031] [108] sigpending(set=3D0x80ca000[page_zeros]) =3D 0
->>>>>> [2031] [109] setresuid(ruid=3D0xefffd6fc, euid=3D0x1bf4c92f, sui=
-d=3D0xffff2e33) =3D -1 (Operation not permitted)
->>>>>> [2031] [110] munlock(addr=3D0x40025000, len=3D34) =3D 0
->>>>>> [2031] [111] timer_delete(timer_id=3D0xffffffdc) =3D -1 (Invalid=
- argument)
->>>>>> [2031] [112] sched_get_priority_max(policy=3D0x10000040) =3D -1 =
-(Invalid argument)
->>>>>> [2031] [113] syslog(type=3D0xc1000000, buf=3D1, len=3D0x82a5) =3D=
- -1 (Operation not permitted)
->>>>>> [2031] [114] setpriority(which=3D0xc4c806c6, who=3D0xffffff01, n=
-iceval=3D0xffff0682) =3D -1 (Invalid argument)
->>>>>> [2031] [115] getgroups16(gidsetsize=3D0xfffe, grouplist=3D1) =3D=
- -1 (Bad address)
->>>>>> [2031] [116] rename(oldname=3D4, newname=3D8) =3D -1 (Bad addres=
-s)
->>>>>> [2031] [117] inotify_init() =3D 654
->>>>>> [2031] [118] getgid() =3D 100
->>>>>> [2031] [119] fstatat64(dfd=3D382, filename=3D"/sys/devices/virtu=
-al/net/sit0/duplex", statbuf=3D0, flag=3D0xb545d727) =3D -1 (Invalid ar=
-gument)
->>>>>> [2031] [120] unlinkat(dfd=3D382, pathname=3D"/proc/sys/net/ipv4/=
-neigh/default/retrans_time", flag=3D0xc00ef76) =3D -1 (Invalid argument=
-)
->>>>>> [2031] [121] timerfd_create(clockid=3D0, flags=3D0) =3D 655
->>>>>> [2031] [122] munlock(addr=3D4, len=3D0x3fff) =3D -1 (Cannot allo=
-cate memory)
->>>>>> [2031] [123] fremovexattr(fd=3D382, name=3D0) =3D -1 (Bad addres=
-s)
->>>>>> [2031] [124] sched_get_priority_min(policy=3D0xff58bfef) =3D -1 =
-(Invalid argument)
->>>>>> [2031] [125] mq_timedreceive(mqdes=3D397, u_msg_ptr=3D4, msg_len=
-=3D5245, u_msg_prio=3D0xc0100220, u_abs_timeout=3D0xc0100220) =3D -1 (B=
-ad address)
->>>>>> [2031] [126] chdir(filename=3D"/proc/116/net/ptype") =3D -1 (Not=
- a directory)
->>>>>> [2031] [127] ssetmask(newmask=3D0x88000092) =3D 0
->>>>>> [2031] [128] statfs(pathname=3D"/proc/6/mounts", buf=3D0) =3D -1=
- (Bad address)
->>>>>> [2031] [129] fchown16(fd=3D397, user=3D104, group=3D0x94100000) =
-=3D -1 (Operation not permitted)
->>>>>> [2031] [130] fchdir(fd=3D397) =3D -1 (Not a directory)
->>>>>> [2031] [131] mkdir(pathname=3D"/proc/1092/task/1092/fdinfo/316",=
- mode=3D525) =3D -1 (File exists)
->>>>>> [2031] [132] fsetxattr(fd=3D386, name=3D0x856f158, value=3D0x857=
-1160, size=3D0, flags=3D0) =3D -1 (Numerical result out of range)
->>>>>> [2031] [133] io_setup(nr_events=3D4095, ctxp=3D0x40266000) ^CKil=
-led by signal 2.
->>>>>
->>>>> Reading your gdb backtraces show that schedule_timeout() got call=
-ed
->>>>> with a negative value.
->>>>> Looks like an integer overflow.
->>>>> The soft-lockup might also origin from that (very big integer whi=
-ch
->>>>> did not overflow jet)
->>>>>
->>>>
->>>> If the culprit is solved by this patch I'd like to send it out. Bu=
-t I'm
->>>> unsure whether it catches the culprit or if it just covers the roo=
-t cause.
->>>
->>> I fear your Patch will not fix the issue.
->>>
->>> Does the issue only trigger on 32bit UMLs?
->> No diea, I do only have a 32 bit system here (both host and client).
+I think I found the problem, seems to work now. Will keep it running
+for 10-20 min to confirm.
+
+On Thu, Oct 3, 2013 at 11:44 AM, Ildar Muslukhov <ildarm@google.com> wrote:
+> Will take a look into it.
+>
+> On Thu, Oct 3, 2013 at 11:33 AM, Dave Jones <davej@redhat.com> wrote:
+>> On Wed, Oct 02, 2013 at 04:46:41PM -0700, Ildar Muslukhov wrote:
+>>  >
+>>  > This patch removes makes the loop in child_random_syscalls aware of which
+>>  > system calls are enabled, thus, avoiding unnecessary looping.
+>>  >
+>>  > Signed-off-by: Ildar Muslukhov <ildarm@google.com>
 >>
->>> How long does it take till trinity hits it?
->> a command like
+>> I knew I should have tested this before merging it..
 >>
->> $> ssh tfoerste@trinity "rm -rf t3; mkdir t3; cd t3; trinity -C4"
+>> This seems all kinds of broken:
 >>
->> usually needs 10 till 15 min to trigger the issue. With just 1 trini=
-ty
->> task (-C1) however it needs often a hour or more.
->=20
-> That's good. :-)
-> You can place some printk()s into balance_dirty_pages() and observe t=
-he values
-> of period, max_pause, min_pause, etc...
-> Maybe this will give us a clue.
-
-Will do it again. I did it before already but period was the only thing
-which becames otherwise negative -
-and because pages_dirtied was often in the range of 20 - 30 and perioad
-around -3000
-
-I just wondered if HZ is casts as a short int in the calculation ?
-BTW printk doesn't showed anything in the syslog (ok, I used
-printk(KERN_ERR ...)
-BUG_ON however worked fine, but do not give any output ...
-
->=20
-> So far the issue looks not really UML specific.
-> But maybe it is more likely to happen on UML because of the slow page=
- faults...
->=20
-> Thanks,
-> //richard
->=20
->=20
-
---=20
-MfG/Sincerely
-Toralf F=C3=B6rster
-pgp finger print: 7B1A 07F4 EC82 0F90 D4C2 8936 872A E508 7DB6 9DA3
+>> $ ./trinity -l off -q
+>> Trinity v1.3pre  Dave Jones <davej@redhat.com>
+>> Done parsing arguments.
+>> Marking all syscalls as enabled.
+>> [init] 32-bit syscalls: 351 enabled, 0 disabled.  64-bit syscalls: 314 enabled, 0 disabled.
+>> [init] Using pid_max = 32768
+>> [init] Started watchdog process, PID is 29722
+>> [watchdog] Watchdog is alive. (pid:29722)
+>> [main] Main thread is alive.
+>> [main] 375 sockets created based on info from socket cachefile.
+>> [main] Generating file descriptors
+>> [main] Added 48 filenames from /dev
+>> [main] Added 28849 filenames from /proc
+>> [main] Added 14258 filenames from /sys
+>> [child3:29727] uselib (134) returned ENOSYS, marking as inactive.
+>> [child3:29729] ni_syscall (generic) (185) returned ENOSYS, marking as inactive.
+>> [child3:29729] nfsservctl (180) returned ENOSYS, marking as inactive.
+>> [child3:29729] nfsservctl (180) returned ENOSYS, marking as inactive.
+>> [child3:29729] ni_syscall (generic) (182) returned ENOSYS, marking as inactive.
+>> [child-1:29729] ni_syscall (generic) (177) returned ENOSYS, marking as inactive.
+>> [child0:29724] ni_syscall (generic) (215) returned ENOSYS, marking as inactive.
+>> [child1:29725] ni_syscall (generic) (182) returned ENOSYS, marking as inactive.
+>> [child2:29726] ni_syscall (generic) (177) returned ENOSYS, marking as inactive.
+>> [child3:29732] ni_syscall (generic) (214) returned ENOSYS, marking as inactive.
+>> [child1:29739] ni_syscall (generic) (211) returned ENOSYS, marking as inactive.
+>> [child1:29739] ni_syscall (generic) (181) returned ENOSYS, marking as inactive.
+>> [child1:29739] ni_syscall (generic) (185) returned ENOSYS, marking as inactive.
+>> [child2:29742] ni_syscall (generic) (205) returned ENOSYS, marking as inactive.
+>> [child1:29750] ni_syscall (generic) (181) returned ENOSYS, marking as inactive.
+>> [child1:29752] ni_syscall (generic) (236) returned ENOSYS, marking as inactive.
+>> [child1:29754] ni_syscall (generic) (181) returned ENOSYS, marking as inactive.
+>> [child2:29755] ni_syscall (generic) (211) returned ENOSYS, marking as inactive.
+>> [child2:29755] ni_syscall (generic) (185) returned ENOSYS, marking as inactive.
+>> [child1:29756] ni_syscall (generic) (185) returned ENOSYS, marking as inactive.
+>> [child3:29757] ni_syscall (generic) (215) returned ENOSYS, marking as inactive.
+>> [child1:29758] BUG!: CHILD (pid:29758) GOT REPARENTED! parent pid:29723. Watchdog pid:29722
+>> [child1:29758] BUG!: Last syscalls:
+>> [child1:29758] [0]  pid:29733 call:fcntl callno:5
+>> [child1:29758] [1]  pid:29758 call:timer_create callno:9
+>> [child1:29758] [2]  pid:29755 call:fchownat callno:24
+>> [child1:29758] [3]  pid:29757 call:fchdir callno:10
+>> [child-1:29757] child exiting.
+>>
+>>
+>> 1. "child-1" looks suspect
+>> 2. There's a lot more ni_syscall's there than there should be.
+>> 3. The reparent thing.
+>>    Running with -D shows lots of segv's.
+>>
+>>
+>>         Dave
+>>
+>> `
