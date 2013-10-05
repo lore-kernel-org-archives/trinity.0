@@ -1,10 +1,8 @@
 From: Jiri Slaby <jslaby@suse.cz>
-Subject: [PATCH 3/3] fix broken includes
-Date: Sat,  5 Oct 2013 09:33:48 +0200
-Message-ID: <1380958428-9611-3-git-send-email-jslaby@suse.cz>
-References: <1380958428-9611-1-git-send-email-jslaby@suse.cz>
+Subject: [PATCH 1/3] compat: define some net constants
+Date: Sat,  5 Oct 2013 09:33:46 +0200
+Message-ID: <1380958428-9611-1-git-send-email-jslaby@suse.cz>
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <1380958428-9611-1-git-send-email-jslaby@suse.cz>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -13,33 +11,47 @@ Content-Transfer-Encoding: 7bit
 To: davej@redhat.com
 Cc: trinity@vger.kernel.org, jirislaby@gmail.com, Jiri Slaby <jslaby@suse.cz>
 
-In 3.0, we get errors like:
-/usr/include/linux/netlink.h:34: error: expected specifier-qualifier-list before 'sa_family_t'
+To be able to build for 3.0.
 ---
- net/irda_setsockopt.c    | 1 +
- net/netlink_setsockopt.c | 1 +
- 2 files changed, 2 insertions(+)
+ include/compat.h | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
 
-diff --git a/net/irda_setsockopt.c b/net/irda_setsockopt.c
-index a5d96ec..e6255b2 100644
---- a/net/irda_setsockopt.c
-+++ b/net/irda_setsockopt.c
-@@ -1,4 +1,5 @@
- #include <stdlib.h>
-+#include <sys/socket.h> /* old irda.h is broken */
- #include <linux/irda.h>
- #include "net.h"
- #include "maps.h"	// page_rand
-diff --git a/net/netlink_setsockopt.c b/net/netlink_setsockopt.c
-index c6e9297..549c3f0 100644
---- a/net/netlink_setsockopt.c
-+++ b/net/netlink_setsockopt.c
-@@ -1,4 +1,5 @@
- #include <stdlib.h>
-+#include <sys/socket.h> /* old netlink.h is broken */
- #include <linux/netlink.h>
- #include "net.h"
- #include "maps.h"	// page_rand
+diff --git a/include/compat.h b/include/compat.h
+index bb77e3b..e8d6b9a 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -418,9 +418,21 @@ enum kcmp_type {
+ #ifndef IP_TRANSPARENT
+ #define IP_TRANSPARENT		19
+ #endif
++#ifndef IP_MINTTL
++#define IP_MINTTL		21
++#endif
++#ifndef IP_ORIGDSTADDR
++#define IP_ORIGDSTADDR		20
++#endif
++#ifndef IP_RECVORIGDSTADDR
++#define IP_RECVORIGDSTADDR	IP_ORIGDSTADDR
++#endif
+ #ifndef IP_NODEFRAG
+ #define IP_NODEFRAG		22
+ #endif
++#ifndef IP_MULTICAST_ALL
++#define IP_MULTICAST_ALL	49
++#endif
+ #ifndef IP_UNICAST_IF
+ #define IP_UNICAST_IF		50
+ #endif
+@@ -754,6 +766,9 @@ struct kvm_get_htab_fd {
+ #endif
+ 
+ /* linux/mroute.h */
++#ifndef MRT_TABLE
++#define MRT_TABLE		(MRT_BASE+9)
++#endif
+ #ifndef MRT_ADD_MFC_PROXY
+ #define MRT_ADD_MFC_PROXY	(MRT_BASE+10)
+ #endif
 -- 
 1.8.4
 
