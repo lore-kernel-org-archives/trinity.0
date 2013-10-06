@@ -1,77 +1,151 @@
-From: Geert Uytterhoeven <geert@linux-m68k.org>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
 Subject: Re: [uml-devel] BUG: soft lockup for a user mode linux image
-Date: Sun, 6 Oct 2013 20:38:19 +0200
-Message-ID: <CAMuHMdXrU0e_6AxvdboMkDs+N+tSWD+b8ou92j28c0vsq2eQQA@mail.gmail.com>
-References: <524C6643.2040209@gmx.de>
-	<CAFLxGvwiH7L4oAW8tw6FyeGczg+rKjUDCdkLKdegy9yX==2cMA@mail.gmail.com>
-	<524DBD5D.1040203@gmx.de>
-	<524DBFBB.1050002@nod.at>
-	<524DC278.3020106@gmx.de>
-	<524DC394.6030406@nod.at>
-	<524DC675.4020201@gmx.de>
-	<524E57BA.805@nod.at>
-	<52517109.90605@gmx.de>
+Date: Sun, 06 Oct 2013 22:08:20 +0200
+Message-ID: <5251C334.3010604@gmx.de>
+References: <524C6643.2040209@gmx.de>	<CAFLxGvwiH7L4oAW8tw6FyeGczg+rKjUDCdkLKdegy9yX==2cMA@mail.gmail.com>	<524DBD5D.1040203@gmx.de>	<524DBFBB.1050002@nod.at>	<524DC278.3020106@gmx.de>	<524DC394.6030406@nod.at>	<524DC675.4020201@gmx.de>	<524E57BA.805@nod.at>	<52517109.90605@gmx.de> <CAMuHMdXrU0e_6AxvdboMkDs+N+tSWD+b8ou92j28c0vsq2eQQA@mail.gmail.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=mime-version:sender:in-reply-to:references:date:message-id:subject
-         :from:to:cc:content-type:content-transfer-encoding;
-        bh=Wg5GHAKxVW3sKfTLI2wz88vbE1ZIaTrVdItTvQSNBiQ=;
-        b=jrc+v9Z/obVrmUM99BgeIeOGtN8k1LPSzyTAsKGjjnfXYxgZ8EyWoroj/RgqaFTrsV
-         QzKwnjTwX3pAzMFo5xnZl/o1PwDuSdXkIBS29DR7MIZxv8+nnTfx6bABNiHi5HOwU6kC
-         f7mdt5wLlHlqtsroft73f8cnstfwbgvChFwfS027oSjXDB1PzdBskTx4N7eGKdn8HO8w
-         YCnSy4rBbWzGVex/QJelJtct8gq/RUSjdqaWvPePDN6tvrCW5p4cGQqsUcVgHffMvA9X
-         E8X51ElTSy4w0UC1xbxkp+3OaleAhB/hDPc5dKCTRbpHUtIEK7NmrJYibAFaUnBanp7V
-         y9PA==
-In-Reply-To: <52517109.90605@gmx.de>
+In-Reply-To: <CAMuHMdXrU0e_6AxvdboMkDs+N+tSWD+b8ou92j28c0vsq2eQQA@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: =?UTF-8?Q?Toralf_F=C3=B6rster?= <toralf.foerster@gmx.de>
+Content-Type: text/plain; charset="utf-8"
+To: Geert Uytterhoeven <geert@linux-m68k.org>
 Cc: Richard Weinberger <richard@nod.at>, UML devel <user-mode-linux-devel@lists.sourceforge.net>, trinity@vger.kernel.org
 
-On Sun, Oct 6, 2013 at 4:17 PM, Toralf F=C3=B6rster <toralf.foerster@gm=
-x.de> wrote:
-> The UML stopped here :
-> ...
->                 if (unlikely(task_ratelimit =3D=3D 0)) {
->                         period =3D max_pause;
->                         pause =3D max_pause;
->                         BUG_ON(pause < 0);
->                         goto pause;
->                 }
->                 BUG_ON(pages_dirtied < 0);
->                 BUG_ON(task_ratelimit < 0);
->                 period =3D HZ * pages_dirtied / task_ratelimit;
->                 BUG_ON(period < 0);         <----------------------he=
-re
+On 10/06/2013 08:38 PM, Geert Uytterhoeven wrote:
+> On Sun, Oct 6, 2013 at 4:17 PM, Toralf F=C3=B6rster <toralf.foerster@=
+gmx.de> wrote:
+>> The UML stopped here :
+>> ...
+>>                 if (unlikely(task_ratelimit =3D=3D 0)) {
+>>                         period =3D max_pause;
+>>                         pause =3D max_pause;
+>>                         BUG_ON(pause < 0);
+>>                         goto pause;
+>>                 }
+>>                 BUG_ON(pages_dirtied < 0);
+>>                 BUG_ON(task_ratelimit < 0);
+>>                 period =3D HZ * pages_dirtied / task_ratelimit;
+>>                 BUG_ON(period < 0);         <----------------------h=
+ere
+>=20
+> So pages_dirtied becomes that big compared to task_ratelimit (both ar=
+e
+> "unsigned long"), that period (which is "long", just like "pause") ov=
+erflows
+> into a negative number.
+>=20
+> This is indeed much more likely to happen on 32-bit.
+>=20
+>> The back trace is :
+>=20
+>> #9  0x08411c64 in balance_dirty_pages (pages_dirtied=3D9, mapping=3D=
+<optimized out>) at mm/page-writeback.c:1471
+>=20
+> But here pages_dirtied is only 9??
+>=20
+> Gr{oetje,eeting}s,
+>=20
+>                         Geert
+>=20
+> --
+> Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linu=
+x-m68k.org
+>=20
+> In personal conversations with technical people, I call myself a hack=
+er. But
+> when I'm talking to journalists I just say "programmer" or something =
+like that.
+>                                 -- Linus Torvalds
+>=20
+Well, this points to an overflow or ? :
 
-So pages_dirtied becomes that big compared to task_ratelimit (both are
-"unsigned long"), that period (which is "long", just like "pause") over=
-flows
-into a negative number.
+tfoerste@n22 ~/devel/linux $ nl -ba mm/page-writeback.c | grep -A 5 -B =
+5 1468
+  1463                          BUG_ON(pause < 0);
+  1464                          goto pause;
+  1465                  }
+  1466                  period =3D HZ * pages_dirtied / task_ratelimit;
+  1467                  pause =3D period;
+  1468                  BUG_ON(pause < 0 && pages_dirtied > 0 && task_r=
+atelimit > 0);
+  1469                  if (current->dirty_paused_when)
+  1470                          pause -=3D now - current->dirty_paused_=
+when;
+  1471                  /*
+  1472                   * For less than 1s think time (ext3/4 may bloc=
+k the dirtier
+  1473                   * for up to 800ms from time to time on 1-HDD; =
+so does xfs,
 
-This is indeed much more likely to happen on 32-bit.
 
-> The back trace is :
+and the back trace is :
 
-> #9  0x08411c64 in balance_dirty_pages (pages_dirtied=3D9, mapping=3D<=
-optimized out>) at mm/page-writeback.c:1471
+tfoerste@n22 ~/devel/linux $ gdb --core=3D/mnt/ramdisk/core /home/tfoer=
+ste/devel/linux/linux -batch -ex bt
+[New LWP 13163]
+Core was generated by `/home/tfoerste/devel/linux/linux earlyprintk ubd=
+a=3D/home/tfoerste/virtual/uml/tr'.
+Program terminated with signal 6, Aborted.
+#0  0xb77d2424 in __kernel_vsyscall ()
+#0  0xb77d2424 in __kernel_vsyscall ()
+#1  0x083b33b5 in kill ()
+#2  0x0807190d in uml_abort () at arch/um/os-Linux/util.c:93
+#3  0x08071c45 in os_dump_core () at arch/um/os-Linux/util.c:148
+#4  0x08061417 in panic_exit (self=3D0x85b9558 <panic_exit_notifier>, u=
+nused1=3D0, unused2=3D0x85ef720 <buf.16084>) at arch/um/kernel/um_arch.=
+c:240
+#5  0x0809a7d8 in notifier_call_chain (nl=3D0x0, val=3D0, v=3D0x85ef720=
+ <buf.16084>, nr_to_call=3D-2, nr_calls=3D0x0) at kernel/notifier.c:93
+#6  0x0809a923 in __atomic_notifier_call_chain (nr_calls=3D<optimized o=
+ut>, nr_to_call=3D<optimized out>, v=3D<optimized out>, val=3D<optimize=
+d out>, nh=3D<optimized out>) at kernel/notifier.c:182
+#7  atomic_notifier_call_chain (nh=3D0x85ef704 <panic_notifier_list>, v=
+al=3D0, v=3D0x85ef720 <buf.16084>) at kernel/notifier.c:191
+#8  0x08410d1c in panic (fmt=3D0x0) at kernel/panic.c:130
+#9  0x08411c6c in balance_dirty_pages (pages_dirtied=3D0, mapping=3D<op=
+timized out>) at mm/page-writeback.c:1468
+#10 0x080d1ce4 in balance_dirty_pages_ratelimited (mapping=3D0x6) at mm=
+/page-writeback.c:1657
+#11 0x080e2d0c in __do_fault (mm=3D0x47b09600, vma=3D0x48bc9e58, addres=
+s=3D1082572800, pmd=3D0x0, pgoff=3D0, flags=3D1167616488, orig_pte=3D<i=
+ncomplete type>) at mm/memory.c:3452
+#12 0x080e5286 in do_nonlinear_fault (orig_pte=3D..., flags=3D<optimize=
+d out>, pmd=3D<optimized out>, address=3D<optimized out>, vma=3D<optimi=
+zed out>, mm=3D<optimized out>, page_table=3D<optimized out>) at mm/mem=
+ory.c:3518
+#13 handle_pte_fault (flags=3D<optimized out>, pmd=3D<optimized out>, p=
+te=3D<optimized out>, address=3D<optimized out>, vma=3D<optimized out>,=
+ mm=3D<optimized out>) at mm/memory.c:3717
+#14 __handle_mm_fault (flags=3D<optimized out>, address=3D<optimized ou=
+t>, vma=3D<optimized out>, mm=3D<optimized out>) at mm/memory.c:3845
+#15 handle_mm_fault (mm=3D0x47b09600, vma=3D0x48bc9e58, address=3D10825=
+72800, flags=3D1) at mm/memory.c:3868
+#16 0x080e5a07 in __get_user_pages (tsk=3D0x47a3ea00, mm=3D0x47b09600, =
+start=3D1082572800, nr_pages=3D962, gup_flags=3D519, pages=3D0x47b96120=
+, vmas=3D0x0, nonblocking=3D0x0) at mm/memory.c:1822
+#17 0x080e5cc3 in get_user_pages (tsk=3D0x0, mm=3D0x0, start=3D0, nr_pa=
+ges=3D0, write=3D1, force=3D0, pages=3D0x4789fb9c, vmas=3D0x6) at mm/me=
+mory.c:2019
+#18 0x08140d0e in aio_setup_ring (ctx=3D<optimized out>) at fs/aio.c:34=
+0
+#19 ioctx_alloc (nr_events=3D<optimized out>) at fs/aio.c:605
+#20 SYSC_io_setup (ctxp=3D<optimized out>, nr_events=3D<optimized out>)=
+ at fs/aio.c:1122
+#21 SyS_io_setup (nr_events=3D-2147422135, ctxp=3D135045120) at fs/aio.=
+c:1105
+#22 0x080619c2 in handle_syscall (r=3D0x47a3ebd4) at arch/um/kernel/ska=
+s/syscall.c:35
+#23 0x08073f2d in handle_trap (local_using_sysemu=3D<optimized out>, re=
+gs=3D<optimized out>, pid=3D<optimized out>) at arch/um/os-Linux/skas/p=
+rocess.c:198
+#24 userspace (regs=3D0x47a3ebd4) at arch/um/os-Linux/skas/process.c:43=
+1
+#25 0x0805e6ac in fork_handler () at arch/um/kernel/process.c:160
+#26 0x5a5a5a5a in ?? ()
 
-But here pages_dirtied is only 9??
-
-Gr{oetje,eeting}s,
-
-                        Geert
-
---
-Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-=
-m68k.org
-
-In personal conversations with technical people, I call myself a hacker=
-=2E But
-when I'm talking to journalists I just say "programmer" or something li=
-ke that.
-                                -- Linus Torvalds
+--=20
+MfG/Sincerely
+Toralf F=C3=B6rster
+pgp finger print: 7B1A 07F4 EC82 0F90 D4C2 8936 872A E508 7DB6 9DA3
