@@ -1,123 +1,134 @@
-From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
-Subject: Re: [uml-devel] BUG: soft lockup for a user mode linux image
-Date: Sun, 06 Oct 2013 23:01:08 +0200
-Message-ID: <5251CF94.5040101@gmx.de>
-References: <524C6643.2040209@gmx.de>	<CAFLxGvwiH7L4oAW8tw6FyeGczg+rKjUDCdkLKdegy9yX==2cMA@mail.gmail.com>	<524DBD5D.1040203@gmx.de>	<524DBFBB.1050002@nod.at>	<524DC278.3020106@gmx.de>	<524DC394.6030406@nod.at>	<524DC675.4020201@gmx.de>	<524E57BA.805@nod.at>	<52517109.90605@gmx.de>	<CAMuHMdXrU0e_6AxvdboMkDs+N+tSWD+b8ou92j28c0vsq2eQQA@mail.gmail.com>	<5251C334.3010604@gmx.de> <CAMuHMdUo8dSd4s3089ZDEc485wL1sFxBKLeaExJuqNiQY+S-Lw@mail.gmail.com>
+From: Ildar Muslukhov <ildarm@google.com>
+Subject: Re: [PATCH] Fix to broken random selection of syscalls.
+Date: Mon, 7 Oct 2013 16:04:21 -0700
+Message-ID: <CAEGbLtvTo5gC02bqZ3U66Gr6UDMtqd=guV-Xbkc9iu7yiSjksw@mail.gmail.com>
+References: <alpine.DEB.2.02.1310041127580.20432@ildarm-linux.kir.corp.google.com>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <CAMuHMdUo8dSd4s3089ZDEc485wL1sFxBKLeaExJuqNiQY+S-Lw@mail.gmail.com>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20120113;
+        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
+         :cc:content-type;
+        bh=+DTEKbJOxoKJbqOs3cYZr+gYUWNqr8yUgb/Wkxibx40=;
+        b=Kjgiz3ZKfCNKkIEStVJfh0iJWofbaSpRDVldhzUTwcKZMrFzEw8QSJaEbXLBF0p7la
+         Bi47rLVFVqz/1D6PeT3UEGigufb+jyyfWmugiRbR6eyMtignLTrMq8zEGgFFsXBvx/Ep
+         vpXB5kgnlm7lfsIH6D8C68dwL1vi5/TPT6N5U1OFKCLUE9r4N/jnR/6y1jOTWBpI3QSi
+         RY6OCEM4rT/61Tj24obRWKcZ7imvCtZ24XmlBtTa3H27qtxQ6XUPafs/Xl3U3rg6xoxn
+         +1zzmY7MTuY853+xX6J2LKG/Qc1VyK5Rw8X/Q4AbDH/iJLFClhMR676bsRu7adUTJZtR
+         EwJA==
+In-Reply-To: <alpine.DEB.2.02.1310041127580.20432@ildarm-linux.kir.corp.google.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: Geert Uytterhoeven <geert@linux-m68k.org>
-Cc: Richard Weinberger <richard@nod.at>, UML devel <user-mode-linux-devel@lists.sourceforge.net>, trinity@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: trinity@vger.kernel.org
+Cc: Dave Jones <davej@redhat.com>
 
-On 10/06/2013 10:26 PM, Geert Uytterhoeven wrote:
-> On Sun, Oct 6, 2013 at 10:08 PM, Toralf F=C3=B6rster <toralf.foerster=
-@gmx.de> wrote:
->> On 10/06/2013 08:38 PM, Geert Uytterhoeven wrote:
->>> On Sun, Oct 6, 2013 at 4:17 PM, Toralf F=C3=B6rster <toralf.foerste=
-r@gmx.de> wrote:
->>>> The UML stopped here :
->>>> ...
->>>>                 if (unlikely(task_ratelimit =3D=3D 0)) {
->>>>                         period =3D max_pause;
->>>>                         pause =3D max_pause;
->>>>                         BUG_ON(pause < 0);
->>>>                         goto pause;
->>>>                 }
->>>>                 BUG_ON(pages_dirtied < 0);
->>>>                 BUG_ON(task_ratelimit < 0);
->>>>                 period =3D HZ * pages_dirtied / task_ratelimit;
->>>>                 BUG_ON(period < 0);         <---------------------=
--here
->>>
->>> So pages_dirtied becomes that big compared to task_ratelimit (both =
-are
->>> "unsigned long"), that period (which is "long", just like "pause") =
-overflows
->>> into a negative number.
->>>
->>> This is indeed much more likely to happen on 32-bit.
->>>
->>>> The back trace is :
->>>
->>>> #9  0x08411c64 in balance_dirty_pages (pages_dirtied=3D9, mapping=3D=
-<optimized out>) at mm/page-writeback.c:1471
->>>
->>> But here pages_dirtied is only 9??
->=20
->> Well, this points to an overflow or ? :
->=20
-> Negative indicates an overflow, but pages_dirtied doesn't.
->=20
->> tfoerste@n22 ~/devel/linux $ nl -ba mm/page-writeback.c | grep -A 5 =
--B 5 1468
->>   1463                          BUG_ON(pause < 0);
->>   1464                          goto pause;
->>   1465                  }
->>   1466                  period =3D HZ * pages_dirtied / task_ratelim=
-it;
->>   1467                  pause =3D period;
->>   1468                  BUG_ON(pause < 0 && pages_dirtied > 0 && tas=
-k_ratelimit > 0);
->>   1469                  if (current->dirty_paused_when)
->>   1470                          pause -=3D now - current->dirty_paus=
-ed_when;
->>   1471                  /*
->>   1472                   * For less than 1s think time (ext3/4 may b=
-lock the dirtier
->>   1473                   * for up to 800ms from time to time on 1-HD=
-D; so does xfs,
->>
->>
->> and the back trace is :
->>
->> #9  0x08411c6c in balance_dirty_pages (pages_dirtied=3D0, mapping=3D=
-<optimized out>) at mm/page-writeback.c:1468
->=20
-> Hmm, now pages_dirtied is zero, according to the backtrace, but the B=
-UG_ON()
-> asserts its strict positive?!?
->=20
-> Can you please try the following instead of the BUG_ON():
->=20
-> if (pause < 0) {
->         printk("pages_dirtied =3D %lu\n", pages_dirtied);
->         printk("task_ratelimit =3D %lu\n", task_ratelimit);
->         printk("pause =3D %ld\n", pause);
-> }
->=20
-> Gr{oetje,eeting}s,
->=20
->                         Geert
-I tried it in different ways already - I'm completely unsuccessful in g=
-etting any printk output.
-As soon as the issue happens I do have a=20
+Any news on that one?
 
-BUG: soft lockup - CPU#0 stuck for 22s! [trinity-child0:1521]
-
-at stderr of the UML and then no further input is accepted. With uml_mc=
-onsole I'm however able
-to run very basic commands like a crash dump, sysrq ond so on.
-
-
-
->=20
+On Fri, Oct 4, 2013 at 11:29 AM, Ildar Muslukhov <ildarm@google.com> wrote:
+>
+> This patch fixes random selection of system calls, introduced in the
+> earlier commit.
+>
+> Signed-off-by: Ildar Muslukhov <ildarm@google.com>
+>
+> ---
+>  tables.c | 28 ++++++++++++++--------------
+>  1 file changed, 14 insertions(+), 14 deletions(-)
+>
+> diff --git a/tables.c b/tables.c
+> index f41ffac..618d742 100644
+> --- a/tables.c
+> +++ b/tables.c
+> @@ -15,6 +15,8 @@
+>  #include "log.h"
+>  #include "shm.h"
+>
+> +#define NOTFOUND (unsigned int)-1
+> +
+>  const struct syscalltable *syscalls;
+>  const struct syscalltable *syscalls_32bit;
+>  const struct syscalltable *syscalls_64bit;
+> @@ -813,9 +815,7 @@ void disable_non_net_syscalls(void)
+>  void enable_random_syscalls(void)
+>  {
+>         unsigned int i;
+> -       unsigned int call, call32, call64, callnotfound;
+> -
+> -       callnotfound = (unsigned int)-1;
+> +       unsigned int call, call32, call64;
+>
+>         if (random_selection_num == 0) {
+>                 printf("-r 0 syscalls ? what?\n");
+> @@ -840,8 +840,8 @@ void enable_random_syscalls(void)
+>
+>  retry:
+>                 if (biarch == TRUE) {
+> -                       call64 = callnotfound;
+> -                       call32 = callnotfound;
+> +                       call64 = NOTFOUND;
+> +                       call32 = NOTFOUND;
+>
+>                         //Search for 64 bit version
+>                         if (do_64_arch) {
+> @@ -853,11 +853,11 @@ retry:
+>                                         if (is_syscall_net_related(syscalls_64bit, call64) == FALSE)
+>                                                 goto retry;
+>
+> -                               if (syscalls_64bit[call64].entry->flags & TO_BE_DEACTIVATED)
+> +                               if ((syscalls_64bit[call64].entry->flags & TO_BE_DEACTIVATED) || (syscalls_64bit[call64].entry->active_number != 0))
+>                                         goto try32bit;
+>
+>                                 //If we got so far, then active it.
+> -                               toggle_syscall_biarch_n(i, syscalls_64bit, TRUE, do_64_arch, TRUE,
+> +                               toggle_syscall_biarch_n(call64, syscalls_64bit, TRUE, do_64_arch, TRUE,
+>                                                         &activate_syscall64, 64, syscalls_64bit[call64].entry->name);
+>                         }
+>  try32bit:
+> @@ -867,35 +867,35 @@ try32bit:
+>                                 if (do_64_arch) {
+>                                         call32 = search_syscall_table(syscalls_32bit, max_nr_32bit_syscalls, syscalls_64bit[call64].entry->name);
+>                                         if (syscalls_64bit[call64].entry->flags & TO_BE_DEACTIVATED)
+> -                                               call64 = callnotfound; //mark as not found in order not to increment i.
+> +                                               call64 = NOTFOUND; //mark as not found in order not to increment i.
+>                                 } else {
+>                                         call32 = rand() % max_nr_32bit_syscalls;
+>                                 }
+>
+>                                 if (validate_specific_syscall_silent(syscalls_32bit, call32) == FALSE) {
+> -                                       if (call64 == callnotfound)
+> +                                       if (call64 == NOTFOUND)
+>                                                 goto retry;
+>                                         else
+>                                                 continue;
+>                                 }
+>
+>                                 if (no_files == TRUE)
+> -                                       if (is_syscall_net_related(syscalls_64bit, call64) == FALSE) {
+> -                                               if (call64 == callnotfound)
+> +                                       if (is_syscall_net_related(syscalls_32bit, call32) == FALSE) {
+> +                                               if (call64 == NOTFOUND)
+>                                                         goto retry;
+>                                                 else
+>                                                         continue;
+>                                         }
+>
+> -                               if (syscalls_64bit[call64].entry->flags & TO_BE_DEACTIVATED) {
+> -                                       if (call64 == callnotfound)
+> +                               if ((syscalls_32bit[call32].entry->flags & TO_BE_DEACTIVATED) || (syscalls_32bit[call32].entry->active_number != 0)) {
+> +                                       if (call64 == NOTFOUND)
+>                                                 goto retry;
+>                                         else
+>                                                 continue;
+>                                 }
+>
+>                                 //If we got so far, then active it.
+> -                               toggle_syscall_biarch_n(i, syscalls_32bit, TRUE, do_32_arch, TRUE,
+> +                               toggle_syscall_biarch_n(call32, syscalls_32bit, TRUE, do_32_arch, TRUE,
+>                                                         &activate_syscall32, 32, syscalls_32bit[call32].entry->name);
+>                         }
+>
 > --
-> Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linu=
-x-m68k.org
->=20
-> In personal conversations with technical people, I call myself a hack=
-er. But
-> when I'm talking to journalists I just say "programmer" or something =
-like that.
->                                 -- Linus Torvalds
->=20
-
-
---=20
-MfG/Sincerely
-Toralf F=C3=B6rster
-pgp finger print: 7B1A 07F4 EC82 0F90 D4C2 8936 872A E508 7DB6 9DA3
+> 1.8.4
+>
