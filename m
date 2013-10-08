@@ -1,392 +1,188 @@
 From: Ildar Muslukhov <ildarm@google.com>
-Subject: [PATCH 4/6] wired in output function instead of printf (and some missing outputstd)
-Date: Tue,  8 Oct 2013 14:26:53 -0700
-Message-ID: <1381267615-9826-4-git-send-email-ildarm@google.com>
+Subject: [PATCH 5/6] added bufferless logging functions for syscall pamaters
+Date: Tue,  8 Oct 2013 14:26:54 -0700
+Message-ID: <1381267615-9826-5-git-send-email-ildarm@google.com>
 References: <1381267615-9826-1-git-send-email-ildarm@google.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20120113;
         h=from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=ow2369N0u/R1nrO74gTsxQpmgC2TAbJcbltC1Znb8fM=;
-        b=bAd5aOM+KD1G4bKWFLpIw0E80sXsOntOq7Z7NBuihLAP6c7s8zSJlx24I8kvHS8NDf
-         7YTcuBMfgY4Kx8r85M627iL+lNBrXjPSdwf2KdttD3uKj/Vkkd1giH7t/sVf8lCWbQ62
-         kg04OU2UY+iWexXHZdHb9ECdQt54r0msezDzTjSj7CnHWP0DPDVp7bzdGnq5417Vvrok
-         RO5Jd/b9me4SeCgUJp3wtJN6GPhESF/54/7ISfHjxLTt84nqPa00UsGueKMyS2VWCaln
-         nHPAkUfV0wturxc5bF1j2OMDCeuj+RD4nIaNH/quMaaXNUjUX6LvDPn0B97etg+5wMTY
-         gCWw==
+        bh=duJlUa0GVlaMQ7MwAK21tCF3mBx3HO7VrriiEcd/QC8=;
+        b=G0U8+ACY1uYjlDoo9ZdAiIm6XvQ3SqHzjBlO13SfzOp8DiIgt2j1yT6ZxsJLN7AaaA
+         NP94HVaHsyFCjlJx4KZrWBIJ9MDRK4YY0phyaJ5yGiCWH5FBlMqgVlEbzeUTFPmMLzHy
+         JOxP7ke/PmWYMYEHMc8CJkb8zP8291wNYmvGbxa4R+N27lANF5QuNve/G+yrKqlMgA8s
+         rClYikah1gVsQn+uam9xrMpjonVtRb48Y1nvq+Zh3kDGfMCIkE6qqaZYXYCZXFpXtXCD
+         wN8do4LHKfFY1Es94dklOnFZ8CnDk+8Q8VzAfZ1oJDP6y+/V1jI9YL2cZuqdu/DB1d3m
+         GIiA==
 In-Reply-To: <1381267615-9826-1-git-send-email-ildarm@google.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
 Cc: davej@redhat.com, Ildar Muslukhov <ildarm@google.com>
 
 Signed-off-by: Ildar Muslukhov <ildarm@google.com>
 
 ---
- children/random-syscalls.c |  9 ++-------
- net/protocols.c            |  4 ++--
- pids.c                     |  2 +-
- seed.c                     |  7 +++++--
- sockets.c                  | 10 +++++-----
- tables.c                   | 34 +++++++++++++++++-----------------
- trinity.c                  |  8 ++++----
- watchdog.c                 |  8 ++++----
- 8 files changed, 40 insertions(+), 42 deletions(-)
+ include/log.h |   9 ++++++
+ log.c         | 101 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 110 insertions(+)
 
-diff --git a/children/random-syscalls.c b/children/random-syscalls.c
-index 8f8d770..553586d 100644
---- a/children/random-syscalls.c
-+++ b/children/random-syscalls.c
-@@ -76,7 +76,6 @@ extern int sigwas;
+diff --git a/include/log.h b/include/log.h
+index 7041eda..76b825e 100644
+--- a/include/log.h
++++ b/include/log.h
+@@ -1,6 +1,8 @@
+ #ifndef _LOG_H
+ #define _LOG_H 1
  
- int child_random_syscalls(int childno)
++#include "types.h"
++
+ #define ANSI_RED	"[1;31m"
+ #define ANSI_GREEN	"[1;32m"
+ #define ANSI_YELLOW	"[1;33m"
+@@ -21,12 +23,19 @@
+ 
+ #define CRESETPTR if (monochrome == FALSE)	*sptr += sprintf(*sptr, "%s", ANSI_RESET);
+ 
++#define REDFD if (mono == FALSE)	fprintf(fd, "%s", ANSI_RED);
++#define GREENFD if (mono == FALSE)	fprintf(fd, "%s", ANSI_GREEN);
++#define CRESETFD if (mono == FALSE)	fprintf(fd, "%s", ANSI_RESET);
++
+ #define MAX_LOGLEVEL 3
+ unsigned int highest_logfile(void);
+ void synclogs(void);
+ void output(unsigned char level, const char *fmt, ...);
+ void outputerr(const char *fmt, ...);
+ void outputstd(const char *fmt, ...);
++void output_syscall_prefix(const unsigned int childno, const unsigned int syscallno);
++void output_syscall_postfix(unsigned long ret, int errno_saved, bool err);
++
+ void open_logfiles(void);
+ void close_logfiles(void);
+ 
+diff --git a/log.c b/log.c
+index 518dd81..2a9c140 100644
+--- a/log.c
++++ b/log.c
+@@ -9,6 +9,9 @@
+ #include "shm.h"
+ #include "pids.h"
+ #include "log.h"
++#include "arch.h" //PAGE_MASK
++#include "maps.h" //pages
++#include "syscall.h" //syscalls
+ 
+ #define BUFSIZE 1024
+ 
+@@ -128,6 +131,10 @@ void synclogs(void)
+ 	fsync(fileno(mainlogfile));
+ }
+ 
++static void output_arg(unsigned int call, unsigned int argnum, const char *name, unsigned long oldreg, unsigned long reg, int type, FILE *fd, bool mono)
++{
++}
++
+ static FILE *robust_find_logfile_handle(void)
  {
--	pid_t pid = getpid();
- 	int ret;
- 	unsigned int syscallnr;
- 
-@@ -139,14 +138,10 @@ int child_random_syscalls(int childno)
- 
- 		if (syscalls_todo) {
- 			if (shm->total_syscalls_done >= syscalls_todo) {
--				output(0, "[%d] shm->total_syscalls_done (%d) >= syscalls_todo (%d)\n",
--					pid, shm->total_syscalls_done,syscalls_todo);
-+				output(0, "Reached maximum syscall count (todo = %d, done = %d), exiting...\n",
-+					syscalls_todo, shm->total_syscalls_done);
- 				shm->exit_reason = EXIT_REACHED_COUNT;
- 			}
--
--			if (shm->total_syscalls_done == syscalls_todo)
--				printf("[%d] Reached maximum syscall count %ld\n",
--					pid, shm->total_syscalls_done);
- 		}
- 
- 		ret = mkcall(childno);
-diff --git a/net/protocols.c b/net/protocols.c
-index 3cec507..891acfe 100644
---- a/net/protocols.c
-+++ b/net/protocols.c
-@@ -77,7 +77,7 @@ void find_specific_proto(const char *protoarg)
- 		for (i = 0; i < ARRAY_SIZE(protocols); i++) {
- 			if (strcmp(protoarg, protocols[i].name) == 0) {
- 				specific_proto = protocols[i].proto;
--				printf("Proto %s = %d\n", protoarg, specific_proto);
-+				output(2, "Proto %s = %d\n", protoarg, specific_proto);
- 				break;
- 			}
- 		}
-@@ -98,5 +98,5 @@ void find_specific_proto(const char *protoarg)
- 		exit(EXIT_FAILURE);
- 	}
- 
--	printf("Using protocol %s (%u) for all sockets\n", protocols[i].name, protocols[i].proto);
-+	output(2, "Using protocol %s (%u) for all sockets\n", protocols[i].name, protocols[i].proto);
+ 	unsigned int j;
+@@ -262,3 +269,97 @@ void outputstd(const char *fmt, ...)
+ 	vfprintf(stdout, fmt, args);
+ 	va_end(args);
  }
-diff --git a/pids.c b/pids.c
-index 100bc69..a2005c1 100644
---- a/pids.c
-+++ b/pids.c
-@@ -98,7 +98,7 @@ void pids_init(void)
- 		outputerr("Couldn't read pid_max from proc\n");
- 	}
- 
--	printf("[init] Using pid_max = %d\n", pidmax);
-+	output(0, "Using pid_max = %d\n", pidmax);
- }
- 
- int pid_is_valid(pid_t pid)
-diff --git a/seed.c b/seed.c
-index ac32f5b..a9c6f6a 100644
---- a/seed.c
-+++ b/seed.c
-@@ -50,11 +50,11 @@ unsigned int new_seed(void)
- unsigned int init_seed(unsigned int seedparam)
- {
- 	if (user_set_seed == TRUE)
--		printf("Using user passed random seed: %u\n", seedparam);
-+		output(0, "Using user passed random seed: %u\n", seedparam);
- 	else {
- 		seedparam = new_seed();
- 
--		printf("Initial random seed: %u\n", seedparam);
-+		output(0, "Initial random seed: %u\n", seedparam);
- 	}
- 
- 	if (do_syslog == TRUE)
-@@ -69,6 +69,9 @@ unsigned int init_seed(unsigned int seedparam)
-  */
- void set_seed(unsigned int pidslot)
- {
-+	pid_t pid = getpid();
-+	if ((pid != watchdog_pid) && (pid != initpid) && (pid != mainpid))
-+		output(0, "Setting seed: %u\n", shm->seed + (pidslot + 1));
- 	srand(shm->seed + (pidslot + 1));
- 	shm->seeds[pidslot] = shm->seed;
- }
-diff --git a/sockets.c b/sockets.c
-index 32142ba..de43d4b 100644
---- a/sockets.c
-+++ b/sockets.c
-@@ -190,7 +190,7 @@ static void close_sockets(void)
- 		fd = shm->socket_fds[i];
- 		shm->socket_fds[i] = 0;
- 		if (close(fd) != 0) {
--			printf("failed to close socket.(%s)\n", strerror(errno));
-+			output(1, "failed to close socket.(%s)\n", strerror(errno));
- 		}
- 	}
- 
-@@ -211,7 +211,7 @@ void open_sockets(void)
- 
- 	cachefile = open(cachefilename, O_RDONLY);
- 	if (cachefile < 0) {
--		printf("Couldn't find socket cachefile. Regenerating.\n");
-+		output(1, "Couldn't find socket cachefile. Regenerating.\n");
- 		generate_sockets();
- 		return;
- 	}
-@@ -229,7 +229,7 @@ void open_sockets(void)
- 
- 		if (do_specific_proto == TRUE) {
- 			if (domain != specific_proto) {
--				printf("ignoring socket cachefile due to specific protocol request, and stale data in cachefile.\n");
-+				output(1, "ignoring socket cachefile due to specific protocol request, and stale data in cachefile.\n");
- regenerate:
- 				unlock_cachefile(cachefile);	/* drop the reader lock. */
- 				close(cachefile);
-@@ -241,7 +241,7 @@ regenerate:
- 
- 		fd = open_socket(domain, type, protocol);
- 		if (fd < 0) {
--			printf("Cachefile is stale. Need to regenerate.\n");
-+			output(1, "Cachefile is stale. Need to regenerate.\n");
- 			close_sockets();
- 			goto regenerate;
- 		}
-@@ -254,7 +254,7 @@ regenerate:
- 	}
- 
- 	if (nr_sockets < NR_SOCKET_FDS) {
--		printf("Insufficient sockets in cachefile (%d). Regenerating.\n", nr_sockets);
-+		output(1, "Insufficient sockets in cachefile (%d). Regenerating.\n", nr_sockets);
- 		goto regenerate;
- 	}
- 
-diff --git a/tables.c b/tables.c
-index 07d4346..fab6675 100644
---- a/tables.c
-+++ b/tables.c
-@@ -52,10 +52,10 @@ static void validate_specific_syscall(const struct syscalltable *table, int call
- 		return;
- 
- 	if (table[call].entry->flags & AVOID_SYSCALL)
--		printf("%s is marked as AVOID. Skipping\n", table[call].entry->name);
-+		output(0, "%s is marked as AVOID. Skipping\n", table[call].entry->name);
- 
- 	if (table[call].entry->flags & NI_SYSCALL)
--		printf("%s is NI_SYSCALL. Skipping\n", table[call].entry->name);
-+		output(0, "%s is NI_SYSCALL. Skipping\n", table[call].entry->name);
- }
- 
- int validate_specific_syscall_silent(const struct syscalltable *table, int call)
-@@ -145,12 +145,12 @@ void deactivate_syscall(unsigned int calln)
- void count_syscalls_enabled(void)
- {
- 	if (biarch == TRUE) {
--		printf("[init] 32-bit syscalls: %d enabled, %d disabled.  "
-+		output(0, "32-bit syscalls: %d enabled, %d disabled.  "
- 			"64-bit syscalls: %d enabled, %d disabled.\n",
- 			shm->nr_active_32bit_syscalls, max_nr_32bit_syscalls - shm->nr_active_32bit_syscalls,
- 			shm->nr_active_64bit_syscalls, max_nr_64bit_syscalls - shm->nr_active_64bit_syscalls);
- 	} else {
--		printf("Enabled %d syscalls. Disabled %d syscalls.\n",
-+		output(0, "Enabled %d syscalls. Disabled %d syscalls.\n",
- 			shm->nr_active_syscalls, max_nr_syscalls - shm->nr_active_syscalls);
- 	}
- }
-@@ -380,7 +380,7 @@ static void toggle_syscall_biarch_n(int calln, const struct syscalltable *table,
- 	}
- 
- 	if ((arch_bits != 0) && (calln != -1))
--		printf("Marking %d-bit syscall %s (%d) as to be %sabled.\n",
-+		output(0, "Marking %d-bit syscall %s (%d) as to be %sabled.\n",
- 			arch_bits, arg_name, calln,
- 			state ? "en" : "dis");
- }
-@@ -415,7 +415,7 @@ static void toggle_syscall_biarch(const char *arg, bool state)
- 	}
- 
- 	if ((specific_syscall64 != -1) && (specific_syscall32 != -1)) {
--		printf("Marking syscall %s (64bit:%d 32bit:%d) as to be %sabled.\n",
-+		output(0, "Marking syscall %s (64bit:%d 32bit:%d) as to be %sabled.\n",
- 			arg_name, specific_syscall64, specific_syscall32,
- 			state ? "en" : "dis");
- 		clear_check_user_specified_arch(arg, &arg_name);
-@@ -423,7 +423,7 @@ static void toggle_syscall_biarch(const char *arg, bool state)
- 	}
- 
- 	if (specific_syscall64 != -1) {
--		printf("Marking 64-bit syscall %s (%d) as to be %sabled.\n",
-+		output(0, "Marking 64-bit syscall %s (%d) as to be %sabled.\n",
- 			arg, specific_syscall64,
- 			state ? "en" : "dis");
- 		clear_check_user_specified_arch(arg, &arg_name);
-@@ -431,7 +431,7 @@ static void toggle_syscall_biarch(const char *arg, bool state)
- 	}
- 
- 	if  (specific_syscall32 != -1) {
--		printf("Marking 32-bit syscall %s (%d) as to be %sabled.\n",
-+		output(0, "Marking 32-bit syscall %s (%d) as to be %sabled.\n",
- 			arg, specific_syscall32,
- 			state ? "en" : "dis");
- 		clear_check_user_specified_arch(arg, &arg_name);
-@@ -456,7 +456,7 @@ static void toggle_syscall_n(int calln, bool state, const char *arg, const char
- 		syscalls[calln].entry->flags |= TO_BE_DEACTIVATED;
- 	}
- 
--	printf("Marking syscall %s (%d) as to be %sabled.\n",
-+	output(0, "Marking syscall %s (%d) as to be %sabled.\n",
- 		arg_name, calln,
- 		state ? "en" : "dis");
- }
-@@ -482,14 +482,14 @@ void deactivate_disabled_syscalls(void)
- {
- 	unsigned int i;
- 
--	printf("Disabling syscalls marked as disabled by command line options\n");
-+	output(0, "Disabling syscalls marked as disabled by command line options\n");
- 
- 	if (biarch == TRUE) {
- 		for_each_64bit_syscall(i) {
- 			if (syscalls_64bit[i].entry->flags & TO_BE_DEACTIVATED) {
- 				syscalls_64bit[i].entry->flags &= ~(ACTIVE|TO_BE_DEACTIVATED);
- 				deactivate_syscall64(i);
--				printf("Marked 64-bit syscall %s (%d) as deactivated.\n",
-+				output(0, "Marked 64-bit syscall %s (%d) as deactivated.\n",
- 					syscalls_64bit[i].entry->name, syscalls_64bit[i].entry->number);
- 			}
- 		}
-@@ -497,7 +497,7 @@ void deactivate_disabled_syscalls(void)
- 			if (syscalls_32bit[i].entry->flags & TO_BE_DEACTIVATED) {
- 				syscalls_32bit[i].entry->flags &= ~(ACTIVE|TO_BE_DEACTIVATED);
- 				deactivate_syscall32(i);
--				printf("Marked 32-bit syscall %s (%d) as deactivated.\n",
-+				output(0, "Marked 32-bit syscall %s (%d) as deactivated.\n",
- 					syscalls_32bit[i].entry->name, syscalls_32bit[i].entry->number);
- 			}
- 		}
-@@ -507,7 +507,7 @@ void deactivate_disabled_syscalls(void)
- 			if (syscalls[i].entry->flags & TO_BE_DEACTIVATED) {
- 				syscalls[i].entry->flags &= ~(ACTIVE|TO_BE_DEACTIVATED);
- 				deactivate_syscall(i);
--				printf("Marked syscall %s (%d) as deactivated.\n",
-+				output(0, "Marked syscall %s (%d) as deactivated.\n",
- 					syscalls[i].entry->name, syscalls[i].entry->number);
- 			}
- 		}
-@@ -704,19 +704,19 @@ void display_enabled_syscalls(void)
- 	if (biarch == TRUE) {
- 		for_each_64bit_syscall(i) {
- 			if (syscalls_64bit[i].entry->flags & ACTIVE)
--				printf("64-bit syscall %d:%s enabled.\n", i, syscalls_64bit[i].entry->name);
-+				output(0, "64-bit syscall %d:%s enabled.\n", i, syscalls_64bit[i].entry->name);
- 		}
- 
- 		for_each_32bit_syscall(i) {
- 			if (syscalls_32bit[i].entry->flags & ACTIVE)
--				printf("32-bit syscall %d:%s enabled.\n", i, syscalls_32bit[i].entry->name);
-+				output(0, "32-bit syscall %d:%s enabled.\n", i, syscalls_32bit[i].entry->name);
- 		}
- 
- 	} else {
- 		/* non-biarch */
- 		for_each_syscall(i) {
- 			if (syscalls[i].entry->flags & ACTIVE)
--				printf("syscall %d:%s enabled.\n", i, syscalls[i].entry->name);
-+				output(0, "syscall %d:%s enabled.\n", i, syscalls[i].entry->name);
- 		}
- 	}
- }
-@@ -766,7 +766,7 @@ void disable_non_net_syscalls(void)
- {
- 	unsigned int i;
- 
--	printf("Disabling non networking related syscalls\n");
-+	output(0, "Disabling non networking related syscalls\n");
- 
- 	if (biarch == TRUE) {
- 		for_each_64bit_syscall(i) {
-diff --git a/trinity.c b/trinity.c
-index 8140da1..63f205c 100644
---- a/trinity.c
-+++ b/trinity.c
-@@ -185,7 +185,7 @@ int main(int argc, char* argv[])
- 	int childstatus;
- 	unsigned int i;
- 
--	printf("Trinity v" __stringify(VERSION) "  Dave Jones <davej@redhat.com>\n");
-+	outputstd("Trinity v" __stringify(VERSION) "  Dave Jones <davej@redhat.com>\n");
- 
- 	progname = argv[0];
- 
-@@ -200,10 +200,10 @@ int main(int argc, char* argv[])
- 		exit(EXIT_FAILURE);
- 
- 	parse_args(argc, argv);
--	printf("Done parsing arguments.\n");
-+	outputstd("Done parsing arguments.\n");
- 
- 	if (kernel_taint_mask != (int)0xFFFFFFFF) {
--		printf("Custom kernel taint mask has been specified: 0x%08x (%d).\n", kernel_taint_mask, kernel_taint_mask);
-+		outputstd("Custom kernel taint mask has been specified: 0x%08x (%d).\n", kernel_taint_mask, kernel_taint_mask);
- 	}
- 
- 	setup_shm_postargs();
-@@ -274,7 +274,7 @@ int main(int argc, char* argv[])
- 	/* Shutting down. */
- 	waitpid(watchdog_pid, &childstatus, 0);
- 
--	printf("\nRan %ld syscalls. Successes: %ld  Failures: %ld\n",
-+	output(0, "\nRan %ld syscalls. Successes: %ld  Failures: %ld\n",
- 		shm->total_syscalls_done - 1, shm->successes, shm->failures);
- 
- 	ret = EXIT_SUCCESS;
-diff --git a/watchdog.c b/watchdog.c
-index 7f9999b..268c401 100644
---- a/watchdog.c
-+++ b/watchdog.c
-@@ -188,7 +188,7 @@ static void check_children(void)
- 
- 		/* if we wrapped, just reset it, we'll pick it up next time around. */
- 		if (old > (now + 3)) {
--			printf("child %d wrapped! old=%ld now=%ld\n", i, old, now);
-+			output(1, "child %d wrapped! old=%ld now=%ld\n", i, old, now);
- 			shm->tv[i].tv_sec = now;
- 			continue;
- 		}
-@@ -275,7 +275,7 @@ static void watchdog(void)
- 	bool watchdog_exit = FALSE;
- 	int ret = 0;
- 
--	printf("[watchdog] Watchdog is alive. (pid:%d)\n", watchdog_pid);
-+	output(0, "Watchdog is alive. (pid:%d)\n", watchdog_pid);
- 
- 	prctl(PR_SET_NAME, (unsigned long) &watchdogname);
- 	(void)signal(SIGSEGV, SIG_DFL);
-@@ -303,9 +303,9 @@ static void watchdog(void)
- 			if (shm->total_syscalls_done % 1000 == 0)
- 				synclogs();
- 
--			if ((quiet_level > 1) && (shm->total_syscalls_done > 1)) {
-+			if (shm->total_syscalls_done > 1) {
- 				if (shm->total_syscalls_done - lastcount > 10000) {
--					printf("[watchdog] %ld iterations. [F:%ld S:%ld]\n",
-+					output(0, "%ld iterations. [F:%ld S:%ld]\n",
- 						shm->total_syscalls_done, shm->failures, shm->successes);
- 					lastcount = shm->total_syscalls_done;
- 				}
++
++static void output_syscall_prefix_to_fd(const unsigned int childno, const pid_t pid, const unsigned int syscallno, FILE *fd, bool mono)
++{
++	fprintf(fd, "[child%d:%d] [%ld] %s", childno, pid, shm->child_syscall_count[childno],
++			(shm->do32bit[childno] == TRUE) ? "[32BIT] " : "");
++
++	if (syscallno > max_nr_syscalls)
++		fprintf(fd, "%u", syscallno);
++	else
++		fprintf(fd, "%s", syscalls[syscallno].entry->name);
++
++	CRESETFD
++	fprintf(fd, "(");
++	output_arg(syscallno, 1, syscalls[syscallno].entry->arg1name, shm->previous_a1[childno], shm->a1[childno],
++			syscalls[syscallno].entry->arg1type, fd, mono);
++	output_arg(syscallno, 2, syscalls[syscallno].entry->arg2name, shm->previous_a2[childno], shm->a2[childno],
++			syscalls[syscallno].entry->arg2type, fd, mono);
++	output_arg(syscallno, 3, syscalls[syscallno].entry->arg3name, shm->previous_a3[childno], shm->a3[childno],
++			syscalls[syscallno].entry->arg3type, fd, mono);
++	output_arg(syscallno, 4, syscalls[syscallno].entry->arg4name, shm->previous_a4[childno], shm->a4[childno],
++			syscalls[syscallno].entry->arg4type, fd, mono);
++	output_arg(syscallno, 5, syscalls[syscallno].entry->arg5name, shm->previous_a5[childno], shm->a5[childno],
++			syscalls[syscallno].entry->arg5type, fd, mono);
++	output_arg(syscallno, 6, syscalls[syscallno].entry->arg6name, shm->previous_a6[childno], shm->a6[childno],
++			syscalls[syscallno].entry->arg6type, fd, mono);
++	CRESETFD
++	fprintf(fd, ") ");
++}
++
++/* This function is always called from a fuzzing child. */
++void output_syscall_prefix(const unsigned int childno, const unsigned int syscallno)
++{
++	FILE *log_handle;
++	pid_t pid;
++
++	/* Exit if should not continue at all. */
++	if (logging == FALSE && quiet_level < MAX_LOGLEVEL)
++		return;
++	pid = getpid();
++
++	/* Find the log file handle */
++	log_handle = robust_find_logfile_handle();
++
++	/* do not output any ascii control symbols to files */
++	if ((logging == TRUE) && (log_handle != NULL))
++		output_syscall_prefix_to_fd(childno, pid, syscallno, log_handle, TRUE);
++
++	/* Output to stdout only if -q param is not specified */
++	if (quiet_level == MAX_LOGLEVEL)
++		output_syscall_prefix_to_fd(childno, pid, syscallno, stdout, monochrome);
++}
++
++static void output_syscall_postfix_err(unsigned long ret, int errno_saved, FILE *fd, bool mono)
++{
++	REDFD
++	fprintf(fd, "= %ld (%s)", ret, strerror(errno_saved));
++	CRESETFD
++	fprintf(fd, "\n");
++}
++
++static void output_syscall_postfix_success(unsigned long ret, FILE *fd, bool mono)
++{
++	GREENFD
++	if ((unsigned long)ret > 10000)
++		fprintf(fd, "= 0x%lx", ret);
++	else
++		fprintf(fd, "= %ld", ret);
++	CRESETFD
++	fprintf(fd, "\n");
++}
++
++void output_syscall_postfix(unsigned long ret, int errno_saved, bool err)
++{
++	FILE *log_handle;
++
++	/* Exit if should not continue at all. */
++	if (logging == FALSE && quiet_level < MAX_LOGLEVEL)
++		return;
++
++	/* Find the log file handle */
++	log_handle = robust_find_logfile_handle();
++
++	if (err) {
++		if ((logging == TRUE) && (log_handle != NULL))
++			output_syscall_postfix_err(ret, errno_saved, log_handle, TRUE);
++		if (quiet_level == MAX_LOGLEVEL)
++			output_syscall_postfix_err(ret, errno_saved, stdout, monochrome);
++	} else {
++		if ((logging == TRUE) && (log_handle != NULL))
++			output_syscall_postfix_success(ret, log_handle, TRUE);
++		if (quiet_level == MAX_LOGLEVEL)
++			output_syscall_postfix_success(ret, stdout, monochrome);
++	}
++}
+\ No newline at end of file
 -- 
 1.8.4
