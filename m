@@ -1,90 +1,177 @@
-From: Geert Uytterhoeven <geert@linux-m68k.org>
-Subject: Re: [uml-devel] BUG: soft lockup for a user mode linux image
-Date: Tue, 8 Oct 2013 22:07:39 +0200
-Message-ID: <CAMuHMdWs6Y7y12STJ+YXKJjxRF0k5yU9C9+0fiPPmq-GgeW-6Q@mail.gmail.com>
-References: <524C6643.2040209@gmx.de>
-	<CAFLxGvwiH7L4oAW8tw6FyeGczg+rKjUDCdkLKdegy9yX==2cMA@mail.gmail.com>
-	<524DBD5D.1040203@gmx.de>
-	<524DBFBB.1050002@nod.at>
-	<524DC278.3020106@gmx.de>
-	<524DC394.6030406@nod.at>
-	<524DC675.4020201@gmx.de>
-	<524E57BA.805@nod.at>
-	<52517109.90605@gmx.de>
-	<CAMuHMdXrU0e_6AxvdboMkDs+N+tSWD+b8ou92j28c0vsq2eQQA@mail.gmail.com>
-	<5251C334.3010604@gmx.de>
-	<CAMuHMdUo8dSd4s3089ZDEc485wL1sFxBKLeaExJuqNiQY+S-Lw@mail.gmail.com>
-	<5251CF94.5040101@gmx.de>
-Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+From: Ildar Muslukhov <ildarm@google.com>
+Subject: [PATCH 3/6] refactored output function
+Date: Tue,  8 Oct 2013 14:26:52 -0700
+Message-ID: <1381267615-9826-3-git-send-email-ildarm@google.com>
+References: <1381267615-9826-1-git-send-email-ildarm@google.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=mime-version:sender:in-reply-to:references:date:message-id:subject
-         :from:to:cc:content-type:content-transfer-encoding;
-        bh=AclGMv7IgyXW24KqzDHU0BXmTvROffWJ/8/yFY5PLro=;
-        b=zw7t/P1AUB90h2Tq1WYiAHwswiWKICn91L+Ns75D9n2nevpgBbE1JsBeQcunPcYTwc
-         NcKrngKa1s0TmtAKZi9xNL6/eYzfXgGsiSL/xBfjfiZ+W1NXmciEK6tgal2C+PGmYSP4
-         zI2iySiqA4n8uo1O612Rqf5n9/2k9BfmeUNuVnvFJkgizR4eZ2QOY1V+XLDGRXCDIWSg
-         ICtTkVX93aXD7n50iOm/OvkRa21IjVT7KjkiNcdUxupTlXtWBPaT1whv8XGwK8Yge4dk
-         ZGuC32UKFAD1oXHdOjJGlsGLfaBxHfVpAMsP4btttgm5DQDTihHFEo23sAS2bitkNWH/
-         mmZg==
-In-Reply-To: <5251CF94.5040101@gmx.de>
+        d=google.com; s=20120113;
+        h=from:to:cc:subject:date:message-id:in-reply-to:references;
+        bh=A3SSsu7xXlNf/o2trobm7xinpT5pzzaB+F1AeTMvbls=;
+        b=DYsx3gPUhkepiNdxQla612mfcstrEsB+fOy1+aGDX3qzLCI8qvrhcWPjtZcDhD2zKP
+         Uq40yFbyEvQIBCaY1knrzZUM7nvmK5pvLU+aA1X1mrdTKx54KeelDKHUocIGATpW6Vm/
+         WHp6n8EyJOtlR20N8C6Trb13ZS8Yv3h/pHU6DeiBWW/3XwLHc60LqQhPGDf2oTtyQZb/
+         oQeimFE/AI1GjgjdeqSlbNdGxcvqNPcyUfnd/TYifzx8OTfmJ+FZBcKFN6LnfHDcQcq6
+         pnz4qGI33rtPOX8fQ7nzyRnES9KzNkofp1Pu2nnZxZVEISutkvnUF+KHTuMhubrEz1Xa
+         UrjA==
+In-Reply-To: <1381267615-9826-1-git-send-email-ildarm@google.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: =?UTF-8?Q?Toralf_F=C3=B6rster?= <toralf.foerster@gmx.de>
-Cc: Richard Weinberger <richard@nod.at>, UML devel <user-mode-linux-devel@lists.sourceforge.net>, trinity@vger.kernel.org
+To: trinity@vger.kernel.org
+Cc: davej@redhat.com, Ildar Muslukhov <ildarm@google.com>
 
-On Sun, Oct 6, 2013 at 11:01 PM, Toralf F=C3=B6rster <toralf.foerster@g=
-mx.de> wrote:
->> Hmm, now pages_dirtied is zero, according to the backtrace, but the =
-BUG_ON()
->> asserts its strict positive?!?
->>
->> Can you please try the following instead of the BUG_ON():
->>
->> if (pause < 0) {
->>         printk("pages_dirtied =3D %lu\n", pages_dirtied);
->>         printk("task_ratelimit =3D %lu\n", task_ratelimit);
->>         printk("pause =3D %ld\n", pause);
->> }
->>
->> Gr{oetje,eeting}s,
->>
->>                         Geert
-> I tried it in different ways already - I'm completely unsuccessful in=
- getting any printk output.
-> As soon as the issue happens I do have a
->
-> BUG: soft lockup - CPU#0 stuck for 22s! [trinity-child0:1521]
->
-> at stderr of the UML and then no further input is accepted. With uml_=
-mconsole I'm however able
-> to run very basic commands like a crash dump, sysrq ond so on.
+Signed-off-by: Ildar Muslukhov <ildarm@google.com>
 
-You may get an idea of the magnitude of pages_dirtied by using a chain =
-of
-BUG_ON()s, like:
+---
+ log.c | 77 ++++++++++++++++++++++++++++++++++++++++++-------------------------
+ 1 file changed, 48 insertions(+), 29 deletions(-)
 
-BUG_ON(pages_dirtied > 2000000000);
-BUG_ON(pages_dirtied > 1000000000);
-BUG_ON(pages_dirtied > 100000000);
-BUG_ON(pages_dirtied > 10000000);
-BUG_ON(pages_dirtied > 1000000);
-
-Probably 1 million is already too much for normal operation?
-
-Gr{oetje,eeting}s,
-
-                        Geert
-
---
-Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-=
-m68k.org
-
-In personal conversations with technical people, I call myself a hacker=
-=2E But
-when I'm talking to journalists I just say "programmer" or something li=
-ke that.
-                                -- Linus Torvalds
+diff --git a/log.c b/log.c
+index 1298038..518dd81 100644
+--- a/log.c
++++ b/log.c
+@@ -10,7 +10,10 @@
+ #include "pids.h"
+ #include "log.h"
+ 
++#define BUFSIZE 1024
++
+ FILE *mainlogfile;
++bool logfiles_opened = FALSE;
+ 
+ void open_logfiles(void)
+ {
+@@ -36,6 +39,7 @@ void open_logfiles(void)
+ 		}
+ 	}
+ 	free(logfilename);
++	logfiles_opened = TRUE;
+ }
+ 
+ void close_logfiles(void)
+@@ -124,6 +128,25 @@ void synclogs(void)
+ 	fsync(fileno(mainlogfile));
+ }
+ 
++static FILE *robust_find_logfile_handle(void)
++{
++	unsigned int j;
++	FILE *handle = NULL;
++
++	if ((logging == TRUE) && (logfiles_opened)) {
++		handle = find_logfile_handle();
++		if (!handle) {
++			outputerr("## child logfile handle was null logging to main!\n");
++			(void)fflush(stdout);
++			for_each_pidslot(j)
++				shm->logfiles[j] = mainlogfile;
++			sleep(5);
++			handle = find_logfile_handle();
++		}
++	}
++	return handle;
++}
++
+ /*
+  * level defines whether it gets displayed to the screen with printf.
+  * (it always logs).
+@@ -139,8 +162,8 @@ void output(unsigned char level, const char *fmt, ...)
+ 	FILE *handle;
+ 	unsigned int len, i, j;
+ 	pid_t pid;
+-	char outputbuf[1024];
+-	char monobuf[1024];
++	char outputbuf[BUFSIZE];
++	char monobuf[BUFSIZE];
+ 	char *prefix = NULL;
+ 	char watchdog_prefix[]="[watchdog]";
+ 	char init_prefix[]="[init]";
+@@ -151,6 +174,7 @@ void output(unsigned char level, const char *fmt, ...)
+ 	if (logging == FALSE && level >= quiet_level)
+ 		return;
+ 
++	/* prefix preparation */
+ 	pid = getpid();
+ 	if (pid == watchdog_pid)
+ 		prefix = watchdog_prefix;
+@@ -167,6 +191,7 @@ void output(unsigned char level, const char *fmt, ...)
+ 		prefix = child_prefix;
+ 	}
+ 
++	/* formatting output */
+ 	va_start(args, fmt);
+ 	n = vsnprintf(outputbuf, sizeof(outputbuf), fmt, args);
+ 	va_end(args);
+@@ -176,49 +201,43 @@ void output(unsigned char level, const char *fmt, ...)
+ 		exit(EXIT_FAILURE);
+ 	}
+ 
++	/* stdout output if needed */
+ 	if (quiet_level > level) {
+ 		printf("%s %s", prefix, outputbuf);
+ 		(void)fflush(stdout);
+ 	}
+ 
++	/* go on with file logs only if enabled */
+ 	if (logging == FALSE)
+ 		return;
+ 
+-	handle = find_logfile_handle();
+-	if (!handle) {
+-		printf("## child logfile handle was null logging to main!\n");
+-		(void)fflush(stdout);
+-		for_each_pidslot(j)
+-			shm->logfiles[j] = mainlogfile;
+-		sleep(5);
++	handle = robust_find_logfile_handle();
++	if (!handle)
+ 		return;
+-	}
+ 
+ 	/* If we've specified monochrome, we can just dump the buffer into
+ 	 * the logfile as is, because there shouldn't be any ANSI codes
+ 	 * in the buffer to be stripped out. */
+-	if (monochrome == TRUE) {
+-		fprintf(handle, "%s %s", prefix, outputbuf);
+-		(void)fflush(handle);
+-		return;
+-	}
+-
+-	/* copy buffer, sans ANSI codes */
+-	len = strlen(outputbuf);
+-	for (i = 0, j = 0; i < len; i++) {
+-		if (outputbuf[i] == '') {
+-			if (outputbuf[i + 2] == '1')
+-				i += 6;	// ANSI_COLOUR
+-			else
+-				i += 3;	// ANSI_RESET
+-		} else {
+-			monobuf[j] = outputbuf[i];
+-			j++;
++	if (monochrome == FALSE) {
++		/* copy buffer, sans ANSI codes */
++		len = strlen(outputbuf);
++		for (i = 0, j = 0; (i < len) && (i + 2 < BUFSIZE) && (j < BUFSIZE); i++) {
++			if (outputbuf[i] == '') {
++				if (outputbuf[i + 2] == '1')
++					i += 6;	// ANSI_COLOUR
++				else
++					i += 3;	// ANSI_RESET
++			} else {
++				monobuf[j] = outputbuf[i];
++				j++;
++			}
+ 		}
++		monobuf[j] = '\0';
++		fprintf(handle, "%s %s", prefix, monobuf);
++	} else {
++		fprintf(handle, "%s %s", prefix, outputbuf);
+ 	}
+-	monobuf[j] = '\0';
+ 
+-	fprintf(handle, "%s %s", prefix, monobuf);
+ 	(void)fflush(handle);
+ }
+ 
+-- 
+1.8.4
