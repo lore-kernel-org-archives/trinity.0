@@ -1,7 +1,7 @@
 From: Anders Roxell <anders.roxell@linaro.org>
-Subject: [PATCH 2/3] scripts: change mkdir tmp to mktemp
-Date: Wed,  9 Oct 2013 12:56:25 +0200
-Message-ID: <1381316186-8562-3-git-send-email-anders.roxell@linaro.org>
+Subject: [PATCH 3/3] scripts: arch dependent to get the syscall_list
+Date: Wed,  9 Oct 2013 12:56:26 +0200
+Message-ID: <1381316186-8562-4-git-send-email-anders.roxell@linaro.org>
 References: <1381316186-8562-1-git-send-email-anders.roxell@linaro.org>
 Return-path: <trinity-owner@vger.kernel.org>
 In-Reply-To: <1381316186-8562-1-git-send-email-anders.roxell@linaro.org>
@@ -13,166 +13,96 @@ Content-Transfer-Encoding: 7bit
 To: davej@redhat.com
 Cc: trinity@vger.kernel.org, patches@linaro.org, Anders Roxell <anders.roxell@linaro.org>
 
+ARCH may be changed in the enviroment
+
 Signed-off-by: Anders Roxell <anders.roxell@linaro.org>
 ---
- scripts/find.sh                           | 10 ++++------
- scripts/test-all-syscalls-parallel.sh     |  8 +++-----
- scripts/test-all-syscalls-sequentially.sh |  9 +++------
- scripts/test-multi.sh                     | 12 +++++-------
- scripts/test-vm.sh                        |  8 +++-----
- 5 files changed, 18 insertions(+), 29 deletions(-)
+ scripts/find.sh                           | 10 +++++++++-
+ scripts/test-all-syscalls-parallel.sh     | 10 +++++++++-
+ scripts/test-all-syscalls-sequentially.sh | 10 +++++++++-
+ 3 files changed, 27 insertions(+), 3 deletions(-)
 
 diff --git a/scripts/find.sh b/scripts/find.sh
-index 5528210..3f10c58 100755
+index 3f10c58..717beb1 100755
 --- a/scripts/find.sh
 +++ b/scripts/find.sh
-@@ -6,6 +6,7 @@
- #
- 
+@@ -8,6 +8,14 @@
  TRINITY_PATH=${TRINITY_PATH:-.}
-+TRINITY_TMP=$(mktemp -d /tmp/trinity.XXXXXX)
+ TRINITY_TMP=$(mktemp -d /tmp/trinity.XXXXXX)
  
++if [ $ARCH = "arm" ]; then
++    $TRINITY_PATH/trinity -L | grep -v AVOID | \
++        awk '{ print $2 }' | sort -u> $TRINITY_TMP/syscall_list
++else
++    $TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | \
++        awk '{ print $4 }' | sort -u> $TRINITY_TMP/syscall_list
++fi
++
  check_tainted()
  {
-@@ -15,11 +16,8 @@ check_tainted()
-     fi
- }
+     if [ "$(cat /proc/sys/kernel/tainted)" != $TAINT ]; then
+@@ -27,7 +35,7 @@ while [ 1 ];
+ do
  
--if [ ! -d tmp ]; then
--  mkdir tmp
--fi
--chmod 755 tmp
--cd tmp
-+chmod 755 $TRINITY_TMP
-+cd $TRINITY_TMP
  
- TAINT=$(cat /proc/sys/kernel/tainted)
- 
-@@ -46,7 +44,7 @@ do
- 
-   check_tainted
- 
--  chmod 755 ../tmp
-+  chmod 755 $TRINITY_TMP
- 
- done
- 
+-for sc in $($TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | awk '{ print $4 }' | sort -u)
++for sc in $(cat $TRINITY_TMP/syscall_list)
+ do
+   mkdir -p tmp.$i
+   pushd tmp.$i
 diff --git a/scripts/test-all-syscalls-parallel.sh b/scripts/test-all-syscalls-parallel.sh
-index c713cce..312fd2a 100755
+index 312fd2a..e229702 100755
 --- a/scripts/test-all-syscalls-parallel.sh
 +++ b/scripts/test-all-syscalls-parallel.sh
-@@ -1,12 +1,10 @@
- #!/bin/bash
- 
+@@ -3,12 +3,20 @@
  TRINITY_PATH=${TRINITY_PATH:-.}
-+TRINITY_TMP=$(mktemp -d /tmp/trinity.XXXXXX)
+ TRINITY_TMP=$(mktemp -d /tmp/trinity.XXXXXX)
  
--if [ ! -d tmp ]; then
--  mkdir tmp
--fi
--chmod 755 tmp
--cd tmp
-+chmod 755 $TRINITY_TMP
-+cd $TRINITY_TMP
++if [ $ARCH = "arm" ]; then
++    $TRINITY_PATH/trinity -L | grep -v AVOID | \
++        awk '{ print $2 }' | sort -u> $TRINITY_TMP/syscall_list
++else
++    $TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | \
++        awk '{ print $4 }' | sort -u> $TRINITY_TMP/syscall_list
++fi
++
+ chmod 755 $TRINITY_TMP
+ cd $TRINITY_TMP
  
  while [ 1 ];
  do
+-  for syscall in $($TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | awk '{ print $4 }' | sort -u)
++  for syscall in $(cat $TRINITY_TMP/syscall_list)
+   do
+ 	MALLOC_CHECK_=2 $TRINITY_PATH/trinity -q -c $syscall -D &
+   done
 diff --git a/scripts/test-all-syscalls-sequentially.sh b/scripts/test-all-syscalls-sequentially.sh
-index 6d79db4..2b726fc 100755
+index 2b726fc..1b56a0c 100755
 --- a/scripts/test-all-syscalls-sequentially.sh
 +++ b/scripts/test-all-syscalls-sequentially.sh
-@@ -4,6 +4,7 @@
- # causing trinity to segfault.
- 
+@@ -6,6 +6,14 @@
  TRINITY_PATH=${TRINITY_PATH:-.}
-+TRINITY_TMP=$(mktemp -d /tmp/trinity.XXXXXX)
+ TRINITY_TMP=$(mktemp -d /tmp/trinity.XXXXXX)
  
++if [ $ARCH = "arm" ]; then
++    $TRINITY_PATH/trinity -L | grep -v AVOID | \
++        awk '{ print $2 }' | sort -u> $TRINITY_TMP/syscall_list
++else
++    $TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | \
++        awk '{ print $4 }' | sort -u> $TRINITY_TMP/syscall_list
++fi
++
  check_tainted()
  {
-@@ -13,18 +14,14 @@ check_tainted()
-     fi
- }
- 
--if [ ! -d tmp ]; then
--  mkdir tmp
--fi
--
- TAINT=$(cat /proc/sys/kernel/tainted)
+     if [ "$(cat /proc/sys/kernel/tainted)" != $TAINT ]; then
+@@ -18,7 +26,7 @@ TAINT=$(cat /proc/sys/kernel/tainted)
  
  while [ 1 ]
  do
- for syscall in $($TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | awk '{ print $4 }' | sort -u)
+-for syscall in $($TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | awk '{ print $4 }' | sort -u)
++for syscall in $(cat $TRINITY_TMP/syscall_list)
  do
--	chmod 755 tmp
--	pushd tmp
-+	chmod 755 $TRINITY_TMP
-+	pushd $TRINITY_TMP
- 
- 	if [ ! -f $TRINITY_PATH/trinity ]; then
- 		echo lost!
-diff --git a/scripts/test-multi.sh b/scripts/test-multi.sh
-index 993e124..0b2a629 100755
---- a/scripts/test-multi.sh
-+++ b/scripts/test-multi.sh
-@@ -1,6 +1,7 @@
- #!/bin/bash
- 
- TRINITY_PATH=${TRINITY_PATH:-.}
-+TRINITY_TMP=$(mktemp -d /tmp/trinity.XXXXXX)
- 
- check_tainted()
- {
-@@ -10,11 +11,8 @@ check_tainted()
-     fi
- }
- 
--if [ ! -d tmp ]; then
--  mkdir tmp
--fi
--chmod 755 tmp
--cd tmp
-+chmod 755 $TRINITY_TMP
-+cd $TRINITY_TMP
- 
- TAINT=$(cat /proc/sys/kernel/tainted)
- 
-@@ -29,7 +27,7 @@ do
- 
-   for i in `seq 1 $NR_PROCESSES`
-   do
--    chmod 755 ../tmp
-+    chmod 755 ../$TRINITY_TMP
-     if [ -d tmp.$i ]; then
-       chmod 755 tmp.$i
-       rm -rf tmp.$i
-@@ -55,7 +53,7 @@ do
-   sleep 1
-   check_tainted
- 
--  chmod 755 ../tmp
-+  chmod 755 ../$TRINITY_TMP
- 
-   for i in `seq 1 $NR_PROCESSES`
-   do
-diff --git a/scripts/test-vm.sh b/scripts/test-vm.sh
-index 6b75e8d..6804c0e 100755
---- a/scripts/test-vm.sh
-+++ b/scripts/test-vm.sh
-@@ -1,12 +1,10 @@
- #!/bin/bash
- 
- TRINITY_PATH=${TRINITY_PATH:-.}
-+TRINITY_TMP=$(mktemp -d /tmp/trinity.XXXXXX)
- 
--if [ ! -d tmp ]; then
--  mkdir tmp
--fi
--chmod 755 tmp
--cd tmp
-+chmod 755 $TRINITY_TMP
-+cd $TRINITY_TMP
- 
- NR_CPUS=`grep ^processor /proc/cpuinfo | /usr/bin/wc -l`
- NR_PROCESSES=$(($NR_CPUS * 2))
+ 	chmod 755 $TRINITY_TMP
+ 	pushd $TRINITY_TMP
 -- 
 1.8.1.2
