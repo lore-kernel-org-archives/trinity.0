@@ -1,33 +1,43 @@
 From: Dave Jones <davej@redhat.com>
-Subject: Re: [PATCHv2 3/3] tables.c: change the output format of -L
-Date: Thu, 10 Oct 2013 13:20:23 -0400
-Message-ID: <20131010172023.GA1231@redhat.com>
-References: <1381316186-8562-1-git-send-email-anders.roxell@linaro.org>
- <1381394475-24803-1-git-send-email-anders.roxell@linaro.org>
+Subject: Re: [PATCH 3/6] refactored output function
+Date: Thu, 10 Oct 2013 14:20:37 -0400
+Message-ID: <20131010182037.GA7939@redhat.com>
+References: <1381267615-9826-1-git-send-email-ildarm@google.com>
+ <1381267615-9826-3-git-send-email-ildarm@google.com>
 Mime-Version: 1.0
+Content-Transfer-Encoding: 8BIT
 Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <1381394475-24803-1-git-send-email-anders.roxell@linaro.org>
+In-Reply-To: <1381267615-9826-3-git-send-email-ildarm@google.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Anders Roxell <anders.roxell@linaro.org>
-Cc: trinity@vger.kernel.org, patches@linaro.org
+content-type: text/plain
+To: Ildar Muslukhov <ildarm@google.com>
+Cc: trinity@vger.kernel.org
 
-On Thu, Oct 10, 2013 at 10:41:15AM +0200, Anders Roxell wrote:
- > So the scripts can works for both biarch and !biarch
- > 
- > Signed-off-by: Anders Roxell <anders.roxell@linaro.org>
- > ---
- >  scripts/find.sh                           |  2 +-
- >  scripts/test-all-syscalls-parallel.sh     |  2 +-
- >  scripts/test-all-syscalls-sequentially.sh |  2 +-
- >  tables.c                                  | 10 +++++-----
- >  4 files changed, 8 insertions(+), 8 deletions(-)
+Since applying this patch, coverity is picking up an out of bounds write.
+It looks like it can't happen, but I'm wondering why this code was
+done this way..
 
-applied, with some tweaks to fit on top of Ildar's recent output() changes.
+hand-editted diff for clarity:
 
-thanks,
+ >  	/* copy buffer, sans ANSI codes */
+ >  	len = strlen(outputbuf);
+ > -	for (i = 0, j = 0; i < len; i++) {
+ > +	for (i = 0, j = 0; (i < len) && (i + 2 < BUFSIZE) && (j < BUFSIZE); i++) {
+ >  		if (outputbuf[i] == '') {
+ >  			if (outputbuf[i + 2] == '1')
+ >  				i += 6;	// ANSI_COLOUR
+ >  			else
+ >  				i += 3;	// ANSI_RESET
+ >  		} else {
+ >  			monobuf[j] = outputbuf[i];
+ >  			j++;
+ >    		}
+ >  	}
+ >  	monobuf[j] = '\0';
+
+What's the intent behind this ?
+It seems redundant, as everything seems to work fine without this change.
 
 	Dave
