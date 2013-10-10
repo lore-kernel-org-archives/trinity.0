@@ -1,71 +1,102 @@
 From: Anders Roxell <anders.roxell@linaro.org>
-Subject: Re: [PATCH 3/3] scripts: arch dependent to get the syscall_list
-Date: Thu, 10 Oct 2013 10:45:05 +0200
-Message-ID: <20131010084505.GA15491@nexon.se>
+Subject: [PATCHv2 3/3] tables.c: change the output format of -L
+Date: Thu, 10 Oct 2013 10:41:15 +0200
+Message-ID: <1381394475-24803-1-git-send-email-anders.roxell@linaro.org>
 References: <1381316186-8562-1-git-send-email-anders.roxell@linaro.org>
- <1381316186-8562-4-git-send-email-anders.roxell@linaro.org>
- <20131009164126.GD2821@redhat.com>
-Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20131009164126.GD2821@redhat.com>
+In-Reply-To: <1381316186-8562-1-git-send-email-anders.roxell@linaro.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Dave Jones <davej@redhat.com>
-Cc: trinity@vger.kernel.org, patches@linaro.org
+To: davej@redhat.com
+Cc: trinity@vger.kernel.org, patches@linaro.org, Anders Roxell <anders.roxell@linaro.org>
 
-On 2013-10-09 12:41, Dave Jones wrote:
-> On Wed, Oct 09, 2013 at 12:56:26PM +0200, Anders Roxell wrote:
->  > ARCH may be changed in the enviroment
->  > 
->  > Signed-off-by: Anders Roxell <anders.roxell@linaro.org>
->  > ---
->  >  scripts/find.sh                           | 10 +++++++++-
->  >  scripts/test-all-syscalls-parallel.sh     | 10 +++++++++-
->  >  scripts/test-all-syscalls-sequentially.sh | 10 +++++++++-
->  >  3 files changed, 27 insertions(+), 3 deletions(-)
->  > 
->  > diff --git a/scripts/find.sh b/scripts/find.sh
->  > index 3f10c58..717beb1 100755
->  > --- a/scripts/find.sh
->  > +++ b/scripts/find.sh
->  > @@ -8,6 +8,14 @@
->  >  TRINITY_PATH=${TRINITY_PATH:-.}
->  >  TRINITY_TMP=$(mktemp -d /tmp/trinity.XXXXXX)
->  >  
->  > +if [ $ARCH = "arm" ]; then
->  > +    $TRINITY_PATH/trinity -L | grep -v AVOID | \
->  > +        awk '{ print $2 }' | sort -u> $TRINITY_TMP/syscall_list
->  > +else
->  > +    $TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | \
->  > +        awk '{ print $4 }' | sort -u> $TRINITY_TMP/syscall_list
->  > +fi
->  
-> Ugh. How about we just change the format of the output of -L so it's
-> more similar on both uniarch and biarch ?
-> 
-> Changing to to be..
-> 
-> on biarch=true:
-> 
-> entrypoint 0 restart_syscall [32-bit] : Enabled AVOID
-> entrypoint 1 exit [32-bit] : Enabled AVOID
-> ..
-> entrypoint 312 kcmp [64-bit]
-> entrypoint 313 finit_module [64-bit]
-> 
-> 
-> And then the !biarch case would just lack the *-bit tags, allowing the awk to
-> pluck out column 2 regardless of arch.
-> 
-> Does that sound better ?
-That sound great!
+So the scripts can works for both biarch and !biarch
 
-I will redo and send patchv2.
+Signed-off-by: Anders Roxell <anders.roxell@linaro.org>
+---
+ scripts/find.sh                           |  2 +-
+ scripts/test-all-syscalls-parallel.sh     |  2 +-
+ scripts/test-all-syscalls-sequentially.sh |  2 +-
+ tables.c                                  | 10 +++++-----
+ 4 files changed, 8 insertions(+), 8 deletions(-)
 
-    Anders
-> 
-> 	Dave
-> 
+diff --git a/scripts/find.sh b/scripts/find.sh
+index 3f10c58..4c970c1 100755
+--- a/scripts/find.sh
++++ b/scripts/find.sh
+@@ -27,7 +27,7 @@ while [ 1 ];
+ do
+ 
+ 
+-for sc in $($TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | awk '{ print $4 }' | sort -u)
++for sc in $($TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | awk '{ print $3 }' | sort -u)
+ do
+   mkdir -p tmp.$i
+   pushd tmp.$i
+diff --git a/scripts/test-all-syscalls-parallel.sh b/scripts/test-all-syscalls-parallel.sh
+index 312fd2a..7206364 100755
+--- a/scripts/test-all-syscalls-parallel.sh
++++ b/scripts/test-all-syscalls-parallel.sh
+@@ -8,7 +8,7 @@ cd $TRINITY_TMP
+ 
+ while [ 1 ];
+ do
+-  for syscall in $($TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | awk '{ print $4 }' | sort -u)
++  for syscall in $($TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | awk '{ print $3 }' | sort -u)
+   do
+ 	MALLOC_CHECK_=2 $TRINITY_PATH/trinity -q -c $syscall -D &
+   done
+diff --git a/scripts/test-all-syscalls-sequentially.sh b/scripts/test-all-syscalls-sequentially.sh
+index 2b726fc..14fb4c3 100755
+--- a/scripts/test-all-syscalls-sequentially.sh
++++ b/scripts/test-all-syscalls-sequentially.sh
+@@ -18,7 +18,7 @@ TAINT=$(cat /proc/sys/kernel/tainted)
+ 
+ while [ 1 ]
+ do
+-for syscall in $($TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | awk '{ print $4 }' | sort -u)
++for syscall in $($TRINITY_PATH/trinity -L | grep entrypoint | grep -v AVOID | awk '{ print $3 }' | sort -u)
+ do
+ 	chmod 755 $TRINITY_TMP
+ 	pushd $TRINITY_TMP
+diff --git a/tables.c b/tables.c
+index 618d742..b5c06fa 100644
+--- a/tables.c
++++ b/tables.c
+@@ -527,18 +527,18 @@ void dump_syscall_tables(void)
+ 	unsigned int i;
+ 
+ 	if (biarch == TRUE) {
+-		printf("32-bit syscalls: %d\n", max_nr_32bit_syscalls);
+-		printf("64-bit syscalls: %d\n", max_nr_64bit_syscalls);
++		printf("syscalls: %d [32-bit] \n", max_nr_32bit_syscalls);
++		printf("syscalls: %d [64-bit] \n", max_nr_64bit_syscalls);
+ 
+ 		for_each_32bit_syscall(i) {
+-			printf("32-bit entrypoint %d %s : ", syscalls_32bit[i].entry->number, syscalls_32bit[i].entry->name);
++			printf("entrypoint %d %s : [32-bit] ", syscalls_32bit[i].entry->number, syscalls_32bit[i].entry->name);
+ 			show_state(syscalls_32bit[i].entry->flags & ACTIVE);
+ 			if (syscalls_32bit[i].entry->flags & AVOID_SYSCALL)
+ 				printf(" AVOID");
+ 			printf("\n");
+ 		}
+ 		for_each_64bit_syscall(i) {
+-			printf("64-bit entrypoint %d %s : ", syscalls_64bit[i].entry->number, syscalls_64bit[i].entry->name);
++			printf("entrypoint %d %s : [64-bit] ", syscalls_64bit[i].entry->number, syscalls_64bit[i].entry->name);
+ 			show_state(syscalls_64bit[i].entry->flags & ACTIVE);
+ 			if (syscalls_64bit[i].entry->flags & AVOID_SYSCALL)
+ 				printf(" AVOID");
+@@ -547,7 +547,7 @@ void dump_syscall_tables(void)
+ 	} else {
+ 		printf("syscalls: %d\n", max_nr_syscalls);
+ 		for_each_syscall(i) {
+-			printf("%d %s : ", syscalls[i].entry->number, syscalls[i].entry->name);
++			printf("entrypoint %d %s : ", syscalls[i].entry->number, syscalls[i].entry->name);
+ 			show_state(syscalls[i].entry->flags & ACTIVE);
+ 			if (syscalls[i].entry->flags & AVOID_SYSCALL)
+ 				printf(" AVOID");
+-- 
+1.8.1.2
