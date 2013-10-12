@@ -1,49 +1,105 @@
-From: Will Deacon <will.deacon@arm.com>
-Subject: Re: [PATCH] wire up support for the Alpha architecture
-Date: Fri, 11 Oct 2013 12:04:20 +0100
-Message-ID: <20131011110419.GG14732@mudshark.cambridge.arm.com>
-References: <alpine.DEB.2.10.1309101335200.30015@vincent-weaver-1.um.maine.edu>
- <20131010232132.GA27157@redhat.com>
- <alpine.DEB.2.10.1310102235240.11534@vincent-weaver-1.um.maine.edu>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
+Subject: Fwd: + mm-page-writebackc-fix-bdi-max-pause-calculation.patch added
+ to -mm tree
+Date: Sat, 12 Oct 2013 19:35:51 +0200
+Message-ID: <52598877.2070000@gmx.de>
+References: <52584916.HqtGdzJq89jlfUHb%akpm@linux-foundation.org>
 Mime-Version: 1.0
+Content-Type: multipart/mixed;
+ boundary="------------000205000405060206040302"
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.10.1310102235240.11534@vincent-weaver-1.um.maine.edu>
+In-Reply-To: <52584916.HqtGdzJq89jlfUHb%akpm@linux-foundation.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
+To: trinity@vger.kernel.org
+
+This is a multi-part message in MIME format.
+--------------000205000405060206040302
+Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 7bit
-To: Vince Weaver <vincent.weaver@maine.edu>
-Cc: Dave Jones <davej@redhat.com>, "trinity@vger.kernel.org" <trinity@vger.kernel.org>
 
-On Fri, Oct 11, 2013 at 03:38:27AM +0100, Vince Weaver wrote:
-> On Thu, 10 Oct 2013, Dave Jones wrote:
-> 
-> >  > diff --git a/include/arch-syscalls.h b/include/arch-syscalls.h
-> >  > index 509fd53..7824c13 100644
-> >  > --- a/include/arch-syscalls.h
-> >  > +++ b/include/arch-syscalls.h
-> >  > @@ -32,5 +32,8 @@
-> >  >  #ifdef __sh__
-> >  >  #include "syscalls-sh.h"
-> >  >  #endif
-> >  > +#ifdef __alpha__
-> >  > +#include "syscalls-alpha.h"
-> >  > +#endif
-> >  >  
-> >  
-> > I only just realised... syscalls-alpha.h is missing from this patch.
-> > 
-> 
-> You're right, the patch was originally against perf_fuzzer which doesn't 
-> need the various syscall includes.
-> 
-> I've cc'd Will Deacon, the original author, in case he's not on this list.
+jusr fyi - issue found with trinity
 
-I'll try and find some time to generate that file.
 
-> I wish I still had access to some actual Alpha hardware.
+-------- Original Message --------
+Subject: + mm-page-writebackc-fix-bdi-max-pause-calculation.patch added
+to -mm tree
+Date: Fri, 11 Oct 2013 11:53:10 -0700
+From: akpm@linux-foundation.org
+To: mm-commits@vger.kernel.org, toralf.foerster@gmx.de,
+stable@vger.kernel.org, fengguang.wu@intel.com
 
-You can get some off ebay, but you'll probably be bidding against me :)
 
-Will
+
+
+--------------000205000405060206040302
+Content-Type: application/octet-stream;
+ name="Attached Message Part"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment;
+ filename="Attached Message Part"
+
+U3ViamVjdDogKyBtbS1wYWdlLXdyaXRlYmFja2MtZml4LWJkaS1tYXgtcGF1c2UtY2FsY3Vs
+YXRpb24ucGF0Y2ggYWRkZWQgdG8gLW1tIHRyZWUKVG86IGZlbmdndWFuZy53dUBpbnRlbC5j
+b20sc3RhYmxlQHZnZXIua2VybmVsLm9yZyx0b3JhbGYuZm9lcnN0ZXJAZ214LmRlCkZyb206
+IGFrcG1AbGludXgtZm91bmRhdGlvbi5vcmcKRGF0ZTogRnJpLCAxMSBPY3QgMjAxMyAxMTo1
+MzoxMCAtMDcwMAoKClRoZSBwYXRjaCB0aXRsZWQKICAgICBTdWJqZWN0OiBtbS9wYWdlLXdy
+aXRlYmFjay5jOiBmaXggYmRpIG1heCBwYXVzZSBjYWxjdWxhdGlvbgpoYXMgYmVlbiBhZGRl
+ZCB0byB0aGUgLW1tIHRyZWUuICBJdHMgZmlsZW5hbWUgaXMKICAgICBtbS1wYWdlLXdyaXRl
+YmFja2MtZml4LWJkaS1tYXgtcGF1c2UtY2FsY3VsYXRpb24ucGF0Y2gKClRoaXMgcGF0Y2gg
+c2hvdWxkIHNvb24gYXBwZWFyIGF0CiAgICBodHRwOi8vb3psYWJzLm9yZy9+YWtwbS9tbW90
+cy9icm9rZW4tb3V0L21tLXBhZ2Utd3JpdGViYWNrYy1maXgtYmRpLW1heC1wYXVzZS1jYWxj
+dWxhdGlvbi5wYXRjaAphbmQgbGF0ZXIgYXQKICAgIGh0dHA6Ly9vemxhYnMub3JnL35ha3Bt
+L21tb3RtL2Jyb2tlbi1vdXQvbW0tcGFnZS13cml0ZWJhY2tjLWZpeC1iZGktbWF4LXBhdXNl
+LWNhbGN1bGF0aW9uLnBhdGNoCgpCZWZvcmUgeW91IGp1c3QgZ28gYW5kIGhpdCAicmVwbHki
+LCBwbGVhc2U6CiAgIGEpIENvbnNpZGVyIHdobyBlbHNlIHNob3VsZCBiZSBjYydlZAogICBi
+KSBQcmVmZXIgdG8gY2MgYSBzdWl0YWJsZSBtYWlsaW5nIGxpc3QgYXMgd2VsbAogICBjKSBJ
+ZGVhbGx5OiBmaW5kIHRoZSBvcmlnaW5hbCBwYXRjaCBvbiB0aGUgbWFpbGluZyBsaXN0IGFu
+ZCBkbyBhCiAgICAgIHJlcGx5LXRvLWFsbCB0byB0aGF0LCBhZGRpbmcgc3VpdGFibGUgYWRk
+aXRpb25hbCBjYydzCgoqKiogUmVtZW1iZXIgdG8gdXNlIERvY3VtZW50YXRpb24vU3VibWl0
+Q2hlY2tsaXN0IHdoZW4gdGVzdGluZyB5b3VyIGNvZGUgKioqCgpUaGUgLW1tIHRyZWUgaXMg
+aW5jbHVkZWQgaW50byBsaW51eC1uZXh0IGFuZCBpcyB1cGRhdGVkCnRoZXJlIGV2ZXJ5IDMt
+NCB3b3JraW5nIGRheXMKCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLQpGcm9tOiBGZW5nZ3VhbmcgV3UgPGZlbmdndWFuZy53dUBpbnRl
+bC5jb20+ClN1YmplY3Q6IG1tL3BhZ2Utd3JpdGViYWNrLmM6IGZpeCBiZGkgbWF4IHBhdXNl
+IGNhbGN1bGF0aW9uCgpTaWduZWQtb2ZmLWJ5OiBGZW5nZ3VhbmcgV3UgPGZlbmdndWFuZy53
+dUBpbnRlbC5jb20+ClJlcG9ydGVkLWJ5OiBUb3JhbGYgRvZyc3RlciA8dG9yYWxmLmZvZXJz
+dGVyQGdteC5kZT4KVGVzdGVkLWJ5OiBUb3JhbGYgRvZyc3RlciA8dG9yYWxmLmZvZXJzdGVy
+QGdteC5kZT4KQ2M6IDxzdGFibGVAdmdlci5rZXJuZWwub3JnPgpTaWduZWQtb2ZmLWJ5OiBB
+bmRyZXcgTW9ydG9uIDxha3BtQGxpbnV4LWZvdW5kYXRpb24ub3JnPgotLS0KCiBtbS9wYWdl
+LXdyaXRlYmFjay5jIHwgICAxMCArKysrKy0tLS0tCiAxIGZpbGUgY2hhbmdlZCwgNSBpbnNl
+cnRpb25zKCspLCA1IGRlbGV0aW9ucygtKQoKZGlmZiAtcHVOIG1tL3BhZ2Utd3JpdGViYWNr
+LmN+bW0tcGFnZS13cml0ZWJhY2tjLWZpeC1iZGktbWF4LXBhdXNlLWNhbGN1bGF0aW9uIG1t
+L3BhZ2Utd3JpdGViYWNrLmMKLS0tIGEvbW0vcGFnZS13cml0ZWJhY2suY35tbS1wYWdlLXdy
+aXRlYmFja2MtZml4LWJkaS1tYXgtcGF1c2UtY2FsY3VsYXRpb24KKysrIGEvbW0vcGFnZS13
+cml0ZWJhY2suYwpAQCAtMTIxMCwxMSArMTIxMCwxMSBAQCBzdGF0aWMgdW5zaWduZWQgbG9u
+ZyBkaXJ0eV9wb2xsX2ludGVydmFsCiAJcmV0dXJuIDE7CiB9CiAKLXN0YXRpYyBsb25nIGJk
+aV9tYXhfcGF1c2Uoc3RydWN0IGJhY2tpbmdfZGV2X2luZm8gKmJkaSwKLQkJCSAgdW5zaWdu
+ZWQgbG9uZyBiZGlfZGlydHkpCitzdGF0aWMgdW5zaWduZWQgbG9uZyBiZGlfbWF4X3BhdXNl
+KHN0cnVjdCBiYWNraW5nX2Rldl9pbmZvICpiZGksCisJCQkJICAgdW5zaWduZWQgbG9uZyBi
+ZGlfZGlydHkpCiB7Ci0JbG9uZyBidyA9IGJkaS0+YXZnX3dyaXRlX2JhbmR3aWR0aDsKLQls
+b25nIHQ7CisJdW5zaWduZWQgbG9uZyBidyA9IGJkaS0+YXZnX3dyaXRlX2JhbmR3aWR0aDsK
+Kwl1bnNpZ25lZCBsb25nIHQ7CiAKIAkvKgogCSAqIExpbWl0IHBhdXNlIHRpbWUgZm9yIHNt
+YWxsIG1lbW9yeSBzeXN0ZW1zLiBJZiBzbGVlcGluZyBmb3IgdG9vIGxvbmcKQEAgLTEyMjYs
+NyArMTIyNiw3IEBAIHN0YXRpYyBsb25nIGJkaV9tYXhfcGF1c2Uoc3RydWN0IGJhY2tpbmcK
+IAl0ID0gYmRpX2RpcnR5IC8gKDEgKyBidyAvIHJvdW5kdXBfcG93X29mX3R3bygxICsgSFog
+LyA4KSk7CiAJdCsrOwogCi0JcmV0dXJuIG1pbl90KGxvbmcsIHQsIE1BWF9QQVVTRSk7CisJ
+cmV0dXJuIG1pbl90KHVuc2lnbmVkIGxvbmcsIHQsIE1BWF9QQVVTRSk7CiB9CiAKIHN0YXRp
+YyBsb25nIGJkaV9taW5fcGF1c2Uoc3RydWN0IGJhY2tpbmdfZGV2X2luZm8gKmJkaSwKXwoK
+UGF0Y2hlcyBjdXJyZW50bHkgaW4gLW1tIHdoaWNoIG1pZ2h0IGJlIGZyb20gZmVuZ2d1YW5n
+Lnd1QGludGVsLmNvbSBhcmUKCm9yaWdpbi5wYXRjaAptbS1yZWFkYWhlYWRjLXJldHVybi10
+aGUtdmFsdWUtd2hpY2gtZm9yY2VfcGFnZV9jYWNoZV9yZWFkYWhlYWQtcmV0dXJucy5wYXRj
+aApzbWFwcy1zaG93LXZtX3NvZnRkaXJ0eS1mbGFnLWluLXZtZmxhZ3MtbGluZS5wYXRjaApz
+bWFwcy1zaG93LXZtX3NvZnRkaXJ0eS1mbGFnLWluLXZtZmxhZ3MtbGluZS1maXgucGF0Y2gK
+cGFnZS10eXBlc2Mtc3VwcG9ydC1rcGZfc29mdGRpcnR5LWJpdC5wYXRjaAp3cml0ZWJhY2st
+ZG8tbm90LXN5bmMtZGF0YS1kaXJ0aWVkLWFmdGVyLXN5bmMtc3RhcnQucGF0Y2gKd3JpdGVi
+YWNrLWRvLW5vdC1zeW5jLWRhdGEtZGlydGllZC1hZnRlci1zeW5jLXN0YXJ0LWZpeC5wYXRj
+aAp3cml0ZWJhY2stZG8tbm90LXN5bmMtZGF0YS1kaXJ0aWVkLWFmdGVyLXN5bmMtc3RhcnQt
+Zml4LTIucGF0Y2gKbW0tcGFnZS13cml0ZWJhY2tjLWZpeC1iZGktbWF4LXBhdXNlLWNhbGN1
+bGF0aW9uLnBhdGNoCnN3YXAtYWRkLWEtc2ltcGxlLWRldGVjdG9yLWZvci1pbmFwcHJvcHJp
+YXRlLXN3YXBpbi1yZWFkYWhlYWQucGF0Y2gKc3dhcC1hZGQtYS1zaW1wbGUtZGV0ZWN0b3It
+Zm9yLWluYXBwcm9wcmlhdGUtc3dhcGluLXJlYWRhaGVhZC1maXgucGF0Y2gKbGludXgtbmV4
+dC5wYXRjaApkZWJ1Z2dpbmcta2VlcC10cmFjay1vZi1wYWdlLW93bmVycy1maXgtMi1maXgt
+Zml4LWZpeC5wYXRjaApkZWJ1Z2dpbmcta2VlcC10cmFjay1vZi1wYWdlLW93bmVyLW5vdy1k
+ZXBlbmRzLW9uLXN0YWNrdHJhY2Vfc3VwcG9ydC5wYXRjaAoKCg==
+--------------000205000405060206040302--
