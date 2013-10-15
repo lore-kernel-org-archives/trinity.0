@@ -1,45 +1,64 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: [PATCH] wire up support for the Alpha architecture
-Date: Mon, 14 Oct 2013 11:46:58 -0400
-Message-ID: <20131014154658.GB9525@redhat.com>
-References: <alpine.DEB.2.10.1309101335200.30015@vincent-weaver-1.um.maine.edu>
- <20131010232132.GA27157@redhat.com>
- <alpine.DEB.2.10.1310102235240.11534@vincent-weaver-1.um.maine.edu>
- <20131011110419.GG14732@mudshark.cambridge.arm.com>
- <20131014150952.GH10491@mudshark.cambridge.arm.com>
- <20131014153916.GA8779@redhat.com>
- <20131014154338.GL10491@mudshark.cambridge.arm.com>
+From: Ildar Muslukhov <ildarm@google.com>
+Subject: Re: [PATCH 3/6] refactored output function
+Date: Tue, 15 Oct 2013 10:07:23 -0700
+Message-ID: <CAEGbLtvbREAxgQJL1bqMB-9NE3r=AkVEuT85XHFs3EQb7xJNfg@mail.gmail.com>
+References: <1381267615-9826-1-git-send-email-ildarm@google.com>
+	<1381267615-9826-3-git-send-email-ildarm@google.com>
+	<20131010182037.GA7939@redhat.com>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20131014154338.GL10491@mudshark.cambridge.arm.com>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20120113;
+        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
+         :cc:content-type;
+        bh=T+mt9U3/+rRgJEf52p0ABvcc6/p36ynXxRuhgfXI+ok=;
+        b=jSNwwMtz9RrHYj31a5p704sMBToxrcswAIhiPidIX9Xifjf9uzE9ImGJ7xGHwTn9YB
+         XdWSei+JAk+0ObxijTvmFNg939Y52AyFJTlGIqrNrOIKaSWU7oUgm5lysh5UmeaLB1Pl
+         W1v2wGPuEikgZvAtOJq0cJxqNTiZFJLsk3JkTV8jA6Dl9iZxw79QtwQmDPuknZ+bpaAS
+         not+mwm+TDI7m8YEWhClg1G6kSpUVG1JoHIJyvAQKhaiGxyLFTozgwrJtZjqvQMZoHLo
+         389qwn1PNSy75BhqcmazGuqlEaG2oj1OJLDSW4dVXOCmJaktV8DBAcEbm0NT5U4Alfd9
+         99sA==
+In-Reply-To: <20131010182037.GA7939@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Will Deacon <will.deacon@arm.com>
-Cc: Vince Weaver <vincent.weaver@maine.edu>, "trinity@vger.kernel.org" <trinity@vger.kernel.org>
+To: Dave Jones <davej@redhat.com>
+Cc: trinity@vger.kernel.org
 
-On Mon, Oct 14, 2013 at 04:43:39PM +0100, Will Deacon wrote:
- > On Mon, Oct 14, 2013 at 04:39:16PM +0100, Dave Jones wrote:
- > > On Mon, Oct 14, 2013 at 04:09:52PM +0100, Will Deacon wrote:
- > > 
- > >  > Crikey, Alpha's syscall table is a right mess.
- > > 
- > > I don't know anything about alpha, but does the kernel actually
- > > implement those OSF syscalls ? If not, it's unlikely we're going to
- > > implement them in trinity, so we could probably do the same thing we did on ia64, and
- > > 
- > > #define SYSCALL_OFFSET 300 and skip all those ni_syscall entries.
- > > 
- > > Or am I missing something ?
- > 
- > Well, fork() is still syscall number 2, for example. I don't think we can
- > tidy this up with a simple offset unfortunately :(
+Sorry, just noticed this one.
 
-Ah, I missed that. Now I see why you said it was a mess. Ok, I'll apply your patch as is.
+I added it just for robustness in future, as the buffered output was
+also working till the point when it got overflown. This way buffer
+won't be overflown.
 
-thanks,
+-Ildar
 
-	Dave
-
+On Thu, Oct 10, 2013 at 11:20 AM, Dave Jones <davej@redhat.com> wrote:
+> Since applying this patch, coverity is picking up an out of bounds write.
+> It looks like it can't happen, but I'm wondering why this code was
+> done this way..
+>
+> hand-editted diff for clarity:
+>
+>  >      /* copy buffer, sans ANSI codes */
+>  >      len = strlen(outputbuf);
+>  > -    for (i = 0, j = 0; i < len; i++) {
+>  > +    for (i = 0, j = 0; (i < len) && (i + 2 < BUFSIZE) && (j < BUFSIZE); i++) {
+>  >              if (outputbuf[i] == ' ') {
+>  >                      if (outputbuf[i + 2] == '1')
+>  >                              i += 6; // ANSI_COLOUR
+>  >                      else
+>  >                              i += 3; // ANSI_RESET
+>  >              } else {
+>  >                      monobuf[j] = outputbuf[i];
+>  >                      j++;
+>  >              }
+>  >      }
+>  >      monobuf[j] = '\0';
+>
+> What's the intent behind this ?
+> It seems redundant, as everything seems to work fine without this change.
+>
+>         Dave
+>
