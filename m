@@ -1,64 +1,37 @@
-From: Ildar Muslukhov <ildarm@google.com>
-Subject: Re: [PATCH 3/6] refactored output function
-Date: Tue, 15 Oct 2013 10:07:23 -0700
-Message-ID: <CAEGbLtvbREAxgQJL1bqMB-9NE3r=AkVEuT85XHFs3EQb7xJNfg@mail.gmail.com>
-References: <1381267615-9826-1-git-send-email-ildarm@google.com>
-	<1381267615-9826-3-git-send-email-ildarm@google.com>
-	<20131010182037.GA7939@redhat.com>
-Mime-Version: 1.0
+From: Mikko Rapeli <mikko.rapeli@iki.fi>
+Subject: [PATCH 02/12] configure.sh: use gcc as default compiler
+Date: Wed, 16 Oct 2013 13:43:20 +0300
+Message-ID: <1381920210-23329-2-git-send-email-mikko.rapeli@iki.fi>
+References: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20120113;
-        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
-         :cc:content-type;
-        bh=T+mt9U3/+rRgJEf52p0ABvcc6/p36ynXxRuhgfXI+ok=;
-        b=jSNwwMtz9RrHYj31a5p704sMBToxrcswAIhiPidIX9Xifjf9uzE9ImGJ7xGHwTn9YB
-         XdWSei+JAk+0ObxijTvmFNg939Y52AyFJTlGIqrNrOIKaSWU7oUgm5lysh5UmeaLB1Pl
-         W1v2wGPuEikgZvAtOJq0cJxqNTiZFJLsk3JkTV8jA6Dl9iZxw79QtwQmDPuknZ+bpaAS
-         not+mwm+TDI7m8YEWhClg1G6kSpUVG1JoHIJyvAQKhaiGxyLFTozgwrJtZjqvQMZoHLo
-         389qwn1PNSy75BhqcmazGuqlEaG2oj1OJLDSW4dVXOCmJaktV8DBAcEbm0NT5U4Alfd9
-         99sA==
-In-Reply-To: <20131010182037.GA7939@redhat.com>
+In-Reply-To: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Dave Jones <davej@redhat.com>
-Cc: trinity@vger.kernel.org
+To: trinity@vger.kernel.org
+Cc: mikko.rapeli@iki.fi
 
-Sorry, just noticed this one.
+Cross compilers might not have cc symlink but do have gcc.
 
-I added it just for robustness in future, as the buffered output was
-also working till the point when it got overflown. This way buffer
-won't be overflown.
+Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
+---
+ configure.sh |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
--Ildar
-
-On Thu, Oct 10, 2013 at 11:20 AM, Dave Jones <davej@redhat.com> wrote:
-> Since applying this patch, coverity is picking up an out of bounds write.
-> It looks like it can't happen, but I'm wondering why this code was
-> done this way..
->
-> hand-editted diff for clarity:
->
->  >      /* copy buffer, sans ANSI codes */
->  >      len = strlen(outputbuf);
->  > -    for (i = 0, j = 0; i < len; i++) {
->  > +    for (i = 0, j = 0; (i < len) && (i + 2 < BUFSIZE) && (j < BUFSIZE); i++) {
->  >              if (outputbuf[i] == ' ') {
->  >                      if (outputbuf[i + 2] == '1')
->  >                              i += 6; // ANSI_COLOUR
->  >                      else
->  >                              i += 3; // ANSI_RESET
->  >              } else {
->  >                      monobuf[j] = outputbuf[i];
->  >                      j++;
->  >              }
->  >      }
->  >      monobuf[j] = '\0';
->
-> What's the intent behind this ?
-> It seems redundant, as everything seems to work fine without this change.
->
->         Dave
->
+diff --git a/configure.sh b/configure.sh
+index d7f16cb..c1a5ad2 100755
+--- a/configure.sh
++++ b/configure.sh
+@@ -10,7 +10,7 @@ fi
+ 
+ MISSING_DEFS=0
+ 
+-[ -z "$CC" ] && CC=cc
++[ -z "$CC" ] && CC=gcc
+ 
+ CC=${CROSS_COMPILE}${CC}
+ 
+-- 
+1.7.9.5
