@@ -1,7 +1,7 @@
 From: Mikko Rapeli <mikko.rapeli@iki.fi>
-Subject: [PATCH 07/12] Makefile: support sysroot for libs and includes
-Date: Wed, 16 Oct 2013 13:43:25 +0300
-Message-ID: <1381920210-23329-7-git-send-email-mikko.rapeli@iki.fi>
+Subject: [PATCH 09/12] net/irda_setsockopt.c: workaround for old irda headers
+Date: Wed, 16 Oct 2013 13:43:27 +0300
+Message-ID: <1381920210-23329-9-git-send-email-mikko.rapeli@iki.fi>
 References: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
 Return-path: <trinity-owner@vger.kernel.org>
 In-Reply-To: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
@@ -13,29 +13,24 @@ Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
 Cc: mikko.rapeli@iki.fi
 
-Helps with cross compilation when correct lib and include files
-are used.
-
 Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
 ---
- Makefile |    5 ++++-
- 1 file changed, 4 insertions(+), 1 deletion(-)
+ net/irda_setsockopt.c |    4 ++++
+ 1 file changed, 4 insertions(+)
 
-diff --git a/Makefile b/Makefile
-index eb7ac9a..037a04e 100644
---- a/Makefile
-+++ b/Makefile
-@@ -7,7 +7,10 @@ CC := gcc
- CC := $(CROSS_COMPILE)$(CC)
- LD := $(CROSS_COMPILE)$(LD)
- 
--CFLAGS = -Wall -W -g -O2 -I. -Iinclude/ -Wimplicit -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE
-+CFLAGS := -Wall -W -g -O2 -I. -Iinclude/ -Wimplicit -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE
-+ifneq ($(SYSROOT),)
-+CFLAGS += --sysroot=$(SYSROOT)
-+endif
- #CFLAGS += $(shell if $(CC) -m32 -S -o /dev/null -xc /dev/null >/dev/null 2>&1; then echo "-m32"; fi)
- CFLAGS += -Wdeclaration-after-statement
- CFLAGS += -Wformat=2
+diff --git a/net/irda_setsockopt.c b/net/irda_setsockopt.c
+index e6255b2..692ef52 100644
+--- a/net/irda_setsockopt.c
++++ b/net/irda_setsockopt.c
+@@ -1,5 +1,9 @@
+ #include <stdlib.h>
+ #include <sys/socket.h> /* old irda.h is broken */
++
++/* old irda.h does not include something which defines sa_family_t */
++#include <netinet/in.h>
++
+ #include <linux/irda.h>
+ #include "net.h"
+ #include "maps.h"	// page_rand
 -- 
 1.7.9.5
