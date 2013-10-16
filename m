@@ -1,7 +1,7 @@
 From: Mikko Rapeli <mikko.rapeli@iki.fi>
-Subject: [PATCH 09/12] net/irda_setsockopt.c: workaround for old irda headers
-Date: Wed, 16 Oct 2013 13:43:27 +0300
-Message-ID: <1381920210-23329-9-git-send-email-mikko.rapeli@iki.fi>
+Subject: [PATCH 11/12] net/netlink_setsockopt.c: workaround for old headers
+Date: Wed, 16 Oct 2013 13:43:29 +0300
+Message-ID: <1381920210-23329-11-git-send-email-mikko.rapeli@iki.fi>
 References: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
 Return-path: <trinity-owner@vger.kernel.org>
 In-Reply-To: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
@@ -15,21 +15,21 @@ Cc: mikko.rapeli@iki.fi
 
 Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
 ---
- net/irda_setsockopt.c |    4 ++++
+ net/netlink_setsockopt.c |    4 ++++
  1 file changed, 4 insertions(+)
 
-diff --git a/net/irda_setsockopt.c b/net/irda_setsockopt.c
-index e6255b2..692ef52 100644
---- a/net/irda_setsockopt.c
-+++ b/net/irda_setsockopt.c
+diff --git a/net/netlink_setsockopt.c b/net/netlink_setsockopt.c
+index 549c3f0..76e458f 100644
+--- a/net/netlink_setsockopt.c
++++ b/net/netlink_setsockopt.c
 @@ -1,5 +1,9 @@
  #include <stdlib.h>
- #include <sys/socket.h> /* old irda.h is broken */
+ #include <sys/socket.h> /* old netlink.h is broken */
 +
-+/* old irda.h does not include something which defines sa_family_t */
++/* For sa_family_t needed by <linux/netlink.h> */
 +#include <netinet/in.h>
 +
- #include <linux/irda.h>
+ #include <linux/netlink.h>
  #include "net.h"
  #include "maps.h"	// page_rand
 -- 
