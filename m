@@ -1,37 +1,38 @@
 From: Mikko Rapeli <mikko.rapeli@iki.fi>
-Subject: [PATCH 02/12] configure.sh: use gcc as default compiler
-Date: Wed, 16 Oct 2013 13:43:20 +0300
-Message-ID: <1381920210-23329-2-git-send-email-mikko.rapeli@iki.fi>
-References: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
+Subject: [PATCH 01/12] configure.sh: use colors only with terminal
+Date: Wed, 16 Oct 2013 13:43:19 +0300
+Message-ID: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
 Cc: mikko.rapeli@iki.fi
 
-Cross compilers might not have cc symlink but do have gcc.
+The color codes mess up less and log files.
 
 Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
 ---
- configure.sh |    2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ configure.sh |    8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
 
 diff --git a/configure.sh b/configure.sh
-index d7f16cb..c1a5ad2 100755
+index 3b3823f..d7f16cb 100755
 --- a/configure.sh
 +++ b/configure.sh
-@@ -10,7 +10,7 @@ fi
+@@ -2,9 +2,11 @@
+ 
+ DEVEL=0
+ 
+-RED="[1;31m"
+-GREEN="[1;32m"
+-COL_RESET="[0;m"
++if [ -t 1 ]; then
++	RED="[1;31m"
++	GREEN="[1;32m"
++	COL_RESET="[0;m"
++fi
  
  MISSING_DEFS=0
- 
--[ -z "$CC" ] && CC=cc
-+[ -z "$CC" ] && CC=gcc
- 
- CC=${CROSS_COMPILE}${CC}
  
 -- 
 1.7.9.5
