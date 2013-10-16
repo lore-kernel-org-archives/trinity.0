@@ -1,7 +1,7 @@
 From: Mikko Rapeli <mikko.rapeli@iki.fi>
-Subject: [PATCH 11/12] net/netlink_setsockopt.c: workaround for old headers
-Date: Wed, 16 Oct 2013 13:43:29 +0300
-Message-ID: <1381920210-23329-11-git-send-email-mikko.rapeli@iki.fi>
+Subject: [PATCH 12/12] Makefile: install depends on trinity target
+Date: Wed, 16 Oct 2013 13:43:30 +0300
+Message-ID: <1381920210-23329-12-git-send-email-mikko.rapeli@iki.fi>
 References: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
 Return-path: <trinity-owner@vger.kernel.org>
 In-Reply-To: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
@@ -13,24 +13,25 @@ Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
 Cc: mikko.rapeli@iki.fi
 
+After this 'make install' just works.
+
 Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
 ---
- net/netlink_setsockopt.c |    4 ++++
- 1 file changed, 4 insertions(+)
+ Makefile |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/net/netlink_setsockopt.c b/net/netlink_setsockopt.c
-index 549c3f0..76e458f 100644
---- a/net/netlink_setsockopt.c
-+++ b/net/netlink_setsockopt.c
-@@ -1,5 +1,9 @@
- #include <stdlib.h>
- #include <sys/socket.h> /* old netlink.h is broken */
-+
-+/* For sa_family_t needed by <linux/netlink.h> */
-+#include <netinet/in.h>
-+
- #include <linux/netlink.h>
- #include "net.h"
- #include "maps.h"	// page_rand
+diff --git a/Makefile b/Makefile
+index 037a04e..b0bdb36 100644
+--- a/Makefile
++++ b/Makefile
+@@ -107,7 +107,7 @@ tarball:
+ 	git prune-packed
+ 	git archive --format=tar.gz --prefix=trinity-$(VERSION)/ HEAD > trinity-$(VERSION).tgz
+ 
+-install:
++install: trinity
+ 	install -d -m 755 $(INSTALL_PREFIX)/bin
+ 	install trinity $(INSTALL_PREFIX)/bin
+ 
 -- 
 1.7.9.5
