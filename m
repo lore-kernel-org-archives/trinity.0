@@ -1,7 +1,7 @@
 From: Mikko Rapeli <mikko.rapeli@iki.fi>
-Subject: [PATCH 08/12] Define IP_MULTICAST_ALL if header files don't have it
-Date: Wed, 16 Oct 2013 13:43:26 +0300
-Message-ID: <1381920210-23329-8-git-send-email-mikko.rapeli@iki.fi>
+Subject: [PATCH 07/12] Makefile: support sysroot for libs and includes
+Date: Wed, 16 Oct 2013 13:43:25 +0300
+Message-ID: <1381920210-23329-7-git-send-email-mikko.rapeli@iki.fi>
 References: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
 Return-path: <trinity-owner@vger.kernel.org>
 In-Reply-To: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
@@ -13,29 +13,29 @@ Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
 Cc: mikko.rapeli@iki.fi
 
-Older systems have it defined in <linux/in.h> which conflicts with
-<netinet/in.h>.
+Helps with cross compilation when correct lib and include files
+are used.
 
 Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
 ---
- net/ip_setsockopt.c |    5 +++++
- 1 file changed, 5 insertions(+)
+ Makefile |    5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
 
-diff --git a/net/ip_setsockopt.c b/net/ip_setsockopt.c
-index 3d7c126..af4b873 100644
---- a/net/ip_setsockopt.c
-+++ b/net/ip_setsockopt.c
-@@ -12,6 +12,11 @@
- #include "random.h"
- #include "trinity.h"	// ARRAY_SIZE
+diff --git a/Makefile b/Makefile
+index eb7ac9a..037a04e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -7,7 +7,10 @@ CC := gcc
+ CC := $(CROSS_COMPILE)$(CC)
+ LD := $(CROSS_COMPILE)$(LD)
  
-+/* workaround for <linux/in.h> vs. <netinet/in.h> */
-+#ifndef IP_MULTICAST_ALL
-+#define IP_MULTICAST_ALL 49
-+#endif
-+
- #define NR_SOL_IP_OPTS ARRAY_SIZE(ip_opts)
- static const unsigned int ip_opts[] = { IP_TOS, IP_TTL, IP_HDRINCL, IP_OPTIONS,
- 	IP_ROUTER_ALERT, IP_RECVOPTS, IP_RETOPTS, IP_PKTINFO,
+-CFLAGS = -Wall -W -g -O2 -I. -Iinclude/ -Wimplicit -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE
++CFLAGS := -Wall -W -g -O2 -I. -Iinclude/ -Wimplicit -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE
++ifneq ($(SYSROOT),)
++CFLAGS += --sysroot=$(SYSROOT)
++endif
+ #CFLAGS += $(shell if $(CC) -m32 -S -o /dev/null -xc /dev/null >/dev/null 2>&1; then echo "-m32"; fi)
+ CFLAGS += -Wdeclaration-after-statement
+ CFLAGS += -Wformat=2
 -- 
 1.7.9.5
