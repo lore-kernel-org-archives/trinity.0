@@ -1,37 +1,24 @@
-From: Mikko Rapeli <mikko.rapeli@iki.fi>
-Subject: [PATCH 12/12] Makefile: install depends on trinity target
-Date: Wed, 16 Oct 2013 13:43:30 +0300
-Message-ID: <1381920210-23329-12-git-send-email-mikko.rapeli@iki.fi>
+From: Michael Ellerman <michael@ellerman.id.au>
+Subject: Re: [PATCH 02/12] configure.sh: use gcc as default compiler
+Date: Thu, 17 Oct 2013 15:23:50 +1100
+Message-ID: <1381983830.11189.0.camel@concordia>
 References: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
+	 <1381920210-23329-2-git-send-email-mikko.rapeli@iki.fi>
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
+In-Reply-To: <1381920210-23329-2-git-send-email-mikko.rapeli@iki.fi>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
-Cc: mikko.rapeli@iki.fi
+To: Mikko Rapeli <mikko.rapeli@iki.fi>
+Cc: trinity@vger.kernel.org
 
-After this 'make install' just works.
+On Wed, 2013-10-16 at 13:43 +0300, Mikko Rapeli wrote:
+> Cross compilers might not have cc symlink but do have gcc.
 
-Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
----
- Makefile |    2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+It's trivial to create a symlink from foo-cc to foo-gcc, and any decent
+cross compiler script will do that for you.
 
-diff --git a/Makefile b/Makefile
-index 037a04e..b0bdb36 100644
---- a/Makefile
-+++ b/Makefile
-@@ -107,7 +107,7 @@ tarball:
- 	git prune-packed
- 	git archive --format=tar.gz --prefix=trinity-$(VERSION)/ HEAD > trinity-$(VERSION).tgz
- 
--install:
-+install: trinity
- 	install -d -m 755 $(INSTALL_PREFIX)/bin
- 	install trinity $(INSTALL_PREFIX)/bin
- 
--- 
-1.7.9.5
+cheers
+
