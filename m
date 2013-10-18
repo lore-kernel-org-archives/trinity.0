@@ -1,39 +1,42 @@
 From: Dave Jones <davej@redhat.com>
-Subject: Re: compile error on 32 bit Gentoo Linux
-Date: Fri, 18 Oct 2013 13:50:03 -0400
-Message-ID: <20131018175003.GA24271@redhat.com>
-References: <52610500.1050108@gmx.de>
+Subject: Re: [PATCH 04/12] configure.sh: show error output when something is
+ not found
+Date: Fri, 18 Oct 2013 14:00:19 -0400
+Message-ID: <20131018180019.GA26183@redhat.com>
+References: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
+ <1381920210-23329-4-git-send-email-mikko.rapeli@iki.fi>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <52610500.1050108@gmx.de>
+In-Reply-To: <1381920210-23329-4-git-send-email-mikko.rapeli@iki.fi>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="utf-8"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
+To: Mikko Rapeli <mikko.rapeli@iki.fi>
 Cc: trinity@vger.kernel.org
 
-On Fri, Oct 18, 2013 at 11:53:04AM +0200, Toralf F=C3=B6rster wrote:
- > I do get since today (yesterday it was ok):
+On Wed, Oct 16, 2013 at 01:43:22PM +0300, Mikko Rapeli wrote:
+ > It can be a configuration or ortherwise important warning/error.
  >=20
- >=20
- >   CC    net/ether.o
- > <command-line>:0:0: warning: "_FORTIFY_SOURCE" redefined [enabled by=
- default]
- > net/ether.c:1:0: note: this is the location of the previous definiti=
-on
- >   CC    net/icmp6_setsockopt.o
- > net/ether.c:25:2: error: =E2=80=98ETH_P_802_3_MIN=E2=80=99 undeclare=
-d here (not in a function)
- > make: *** [net/ether.o] Error 1
- > make: *** Waiting for unfinished jobs....
- > <command-line>:0:0: warning: "_FORTIFY_SOURCE" redefined [enabled by=
- default]
- > net/icmp6_setsockopt.c:1:0: note: this is the location of the previo=
-us definition
- >  * ERROR: dev-util/trinity-9999::toralf failed (compile phase):
+ > Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
+=20
+I don't like this one, because in most cases, these aren't important.
+On some machines, we even expect some of them to fail. Example, on a Fe=
+dora 19
+system we run this test, which we expect to fail..
 
-Should be fixed now. Thanks.
+
+[*] Checking if glibc headers provide termios2..  [NO]=20
+/home/davej/tmp/tmp.U0xuPLOakW.c: In function =E2=80=98main=E2=80=99:
+/home/davej/tmp/tmp.U0xuPLOakW.c:7:18: error: storage size of =E2=80=98=
+test=E2=80=99 isn=E2=80=99t known
+  struct termios2 test;
+                  ^
+
+Printing out an 'error' when there's nothing actually wrong seems alarm=
+ist.
+Especially when we do the right thing, and include the right header aft=
+erwards.
 
 	Dave
