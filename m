@@ -1,50 +1,94 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: [PATCH 04/12] configure.sh: show error output when something is
- not found
-Date: Fri, 18 Oct 2013 14:07:17 -0400
-Message-ID: <20131018180717.GA29546@redhat.com>
-References: <1381920210-23329-1-git-send-email-mikko.rapeli@iki.fi>
- <1381920210-23329-4-git-send-email-mikko.rapeli@iki.fi>
- <20131018180019.GA26183@redhat.com>
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] compat.h: Add if_ether.h symbols for older kernels.
+Date: Fri, 18 Oct 2013 19:35:34 -0700
+Message-ID: <1382150134-29099-1-git-send-email-vlee@freedesktop.org>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20131018180019.GA26183@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="utf-8"
-To: Mikko Rapeli <mikko.rapeli@iki.fi>
-Cc: trinity@vger.kernel.org
+To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
-On Fri, Oct 18, 2013 at 02:00:19PM -0400, Dave Jones wrote:
- > On Wed, Oct 16, 2013 at 01:43:22PM +0300, Mikko Rapeli wrote:
- >  > It can be a configuration or ortherwise important warning/error.
- >  >=20
- >  > Signed-off-by: Mikko Rapeli <mikko.rapeli@iki.fi>
- > =20
- > I don't like this one, because in most cases, these aren't important=
-=2E
- > On some machines, we even expect some of them to fail. Example, on a=
- Fedora 19
- > system we run this test, which we expect to fail..
- >=20
- >=20
- > [*] Checking if glibc headers provide termios2..  [NO]=20
- > /home/davej/tmp/tmp.U0xuPLOakW.c: In function =E2=80=98main=E2=80=99=
-:
- > /home/davej/tmp/tmp.U0xuPLOakW.c:7:18: error: storage size of =E2=80=
-=98test=E2=80=99 isn=E2=80=99t known
- >   struct termios2 test;
- >                   ^
- >=20
- > Printing out an 'error' when there's nothing actually wrong seems al=
-armist.
- > Especially when we do the right thing, and include the right header =
-afterwards.
+=46rom: Vinson Lee <vlee@twitter.com>
 
-[PATCH 05/12] configure.sh: support cross compilation with sysroot=20
-will need rebasing without this. I applied and pushed out everything el=
-se.
+This patch fixes these build errors on CentOS 6.
 
-	Dave
+  CC	net/ether.o
+net/ether.c:12: error: =E2=80=98ETH_P_BATMAN=E2=80=99 undeclared here (=
+not in a function)
+net/ether.c:19: error: =E2=80=98ETH_P_LINK_CTL=E2=80=99 undeclared here=
+ (not in a function)
+net/ether.c:21: error: =E2=80=98ETH_P_8021AD=E2=80=99 undeclared here (=
+not in a function)
+net/ether.c:21: error: =E2=80=98ETH_P_802_EX1=E2=80=99 undeclared here =
+(not in a function)
+net/ether.c:22: error: =E2=80=98ETH_P_8021AH=E2=80=99 undeclared here (=
+not in a function)
+net/ether.c:22: error: =E2=80=98ETH_P_MVRP=E2=80=99 undeclared here (no=
+t in a function)
+net/ether.c:23: error: =E2=80=98ETH_P_QINQ1=E2=80=99 undeclared here (n=
+ot in a function)
+net/ether.c:24: error: =E2=80=98ETH_P_QINQ2=E2=80=99 undeclared here (n=
+ot in a function)
+net/ether.c:24: error: =E2=80=98ETH_P_QINQ3=E2=80=99 undeclared here (n=
+ot in a function)
+net/ether.c:31: error: =E2=80=98ETH_P_CANFD=E2=80=99 undeclared here (n=
+ot in a function)
+net/ether.c:34: error: =E2=80=98ETH_P_CAIF=E2=80=99 undeclared here (no=
+t in a function)
+
+Signed-off-by: Vinson Lee <vlee@twitter.com>
+---
+ include/compat.h |   33 +++++++++++++++++++++++++++++++++
+ 1 files changed, 33 insertions(+), 0 deletions(-)
+
+diff --git a/include/compat.h b/include/compat.h
+index 05b0686..2b8c285 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -790,8 +790,41 @@ struct kvm_get_htab_fd {
+ #endif
+=20
+ /* if_ether.h */
++#ifndef ETH_P_BATMAN
++#define ETH_P_BATMAN	0x4305
++#endif
++#ifndef ETH_P_LINK_CTL
++#define ETH_P_LINK_CTL	0x886c
++#endif
++#ifndef ETH_P_8021AD
++#define ETH_P_8021AD	0x88A8
++#endif
++#ifndef ETH_P_802_EX1
++#define ETH_P_802_EX1	0x88B5
++#endif
++#ifndef ETH_P_8021AH
++#define ETH_P_8021AH	0x88E7
++#endif
++#ifndef ETH_P_MVRP
++#define ETH_P_MVRP	0x88F5
++#endif
++#ifndef ETH_P_QINQ1
++#define ETH_P_QINQ1	0x9100
++#endif
++#ifndef ETH_P_QINQ2
++#define ETH_P_QINQ2	0x9200
++#endif
++#ifndef ETH_P_QINQ3
++#define ETH_P_QINQ3	0x9300
++#endif
+ #ifndef ETH_P_802_3_MIN
+ #define ETH_P_802_3_MIN	0x0600
+ #endif
++#ifndef ETH_P_CANFD
++#define ETH_P_CANFD	0x000D
++#endif
++#ifndef ETH_P_CAIF
++#define ETH_P_CAIF	0x00F7
++#endif
+=20
+ #endif	/* _TRINITY_COMPAT_H */
+--=20
+1.7.1
