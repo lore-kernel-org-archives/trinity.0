@@ -1,19 +1,19 @@
 From: Cyrill Gorcunov <gorcunov@openvz.org>
-Subject: [RFC 2/6] net: protocols -- Use ARRAY_SIZE helper
-Date: Wed, 30 Oct 2013 16:15:42 +0400
-Message-ID: <1383135346-31463-3-git-send-email-gorcunov@openvz.org>
+Subject: [RFC 4/6] net: protocols -- Move protocol function declarations to protocols.h
+Date: Wed, 30 Oct 2013 16:15:44 +0400
+Message-ID: <1383135346-31463-5-git-send-email-gorcunov@openvz.org>
 References: <1383135346-31463-1-git-send-email-gorcunov@openvz.org>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=sender:from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=+uHDUkXaGD5VuEiYuRRm3qQe5nIfn6bFaZ9KnmCHrVI=;
-        b=zO7nPj19SF3ivLvQpE4mjhlRSZcKWnOuxXi7usd0DaBOxwlp9VsZ2X/XAUEOSWgESL
-         on7426b5A0LNbJsn4kRQBxLGDao4DKjtk8goJnTR445X/OJJD8AG9ILKzAWEbu2nbHj4
-         asv+czWtwl+sv9bpA4Ekiph/V7XRIeZ1WgyWPnzOkX7O2iawIcq4LBuoLS4ve3lQvoY8
-         61rHAHuplWce4hWIJSB6bWy78/oSZ8YCHBggNc+H2SSsZ2c+Yd/u6rGku0lY1TTpS96L
-         NkRzzxFoGjiu7cYTOZIHgEj+u+DP7GXxAN4nXmI97jq/H0fxXKOl5Waa1sYobMJEi7I2
-         xxcQ==
+        bh=VcFnzejU2NwVo267ZLo/DpguTplIbZjQO6OBb2P09QY=;
+        b=0Wxggfpoy+5R6JOeIYIShXrxk+ypTdtTtE7dWQhF8Y5zmEuvhveXyf82tTK4LL0UkY
+         PtcshO0MvWhBAgwlkgRLLilYwXH97F9WZMji6BfN4LwFaa+lCu/ki2Yxyt2E1QwpI01e
+         KpPO5vVNWOW9ru2mfsPUMjd+k1txjY/V3tfmxpjIoltzikzegfFIsCOFyPkbY/2Hyh92
+         JF1b15KrHeYqAQd06EGaV7m2YlKdy+QzVd8pCbNwlCwncbHLrD3Cw4QotdXkYGpeXVlr
+         WddgvWv/9uke9sF/a2zyCO0+A5g5L97VvPDol/wUe+zmihGn75vd2Kco4J2sW0kfGdyg
+         QBrQ==
 In-Reply-To: <1383135346-31463-1-git-send-email-gorcunov@openvz.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
@@ -23,42 +23,79 @@ Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
 Cc: Dave Jones <davej@redhat.com>, Vladimir Davydov <vdavydov@parallels.com>, Cyrill Gorcunov <gorcunov@openvz.org>
 
-We're looking up over @protocols array so use appropriate
-helper here instead of TRINITY_PF_MAX constant.
+This allows to isolate functions and include the header only where needed.
 
 Signed-off-by: Cyrill Gorcunov <gorcunov@openvz.org>
 ---
- net/protocols.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+ include/net.h       | 2 --
+ include/protocols.h | 7 +++++++
+ net/protocols.c     | 1 +
+ sockets.c           | 1 +
+ trinity.c           | 1 +
+ 5 files changed, 10 insertions(+), 2 deletions(-)
+ create mode 100644 include/protocols.h
 
+diff --git a/include/net.h b/include/net.h
+index 4e43546..ae99c61 100644
+--- a/include/net.h
++++ b/include/net.h
+@@ -9,8 +9,6 @@ void generate_sockaddr(unsigned long *addr, unsigned long *addrlen, int pf);
+ 
+ /* protocol decoding */
+ extern unsigned int specific_proto;
+-const char * get_proto_name(unsigned int proto);
+-void find_specific_proto(const char *protoarg);
+ 
+ 
+ /* glibc headers might be older than the kernel, so chances are we know
+diff --git a/include/protocols.h b/include/protocols.h
+new file mode 100644
+index 0000000..e423a3a
+--- /dev/null
++++ b/include/protocols.h
+@@ -0,0 +1,7 @@
++#ifndef _PROTOCOLS_H
++#define _PROTOCOLS_H 1
++
++extern const char * get_proto_name(unsigned int proto);
++extern void find_specific_proto(const char *protoarg);
++
++#endif /* _PROTOCOLS_H */
 diff --git a/net/protocols.c b/net/protocols.c
-index 891acfe..c4a4ae2 100644
+index 4331351..c279476 100644
 --- a/net/protocols.c
 +++ b/net/protocols.c
-@@ -62,7 +62,7 @@ const char * get_proto_name(unsigned int proto)
- {
- 	unsigned int i;
+@@ -5,6 +5,7 @@
  
--	for (i = 0; i < TRINITY_PF_MAX; i++)
-+	for (i = 0; i < ARRAY_SIZE(protocols); i++)
- 		if (protocols[i].proto == proto)
- 			return protocols[i].name;
- 	return NULL;
-@@ -83,13 +83,13 @@ void find_specific_proto(const char *protoarg)
- 		}
- 	} else {
- 		/* we were passed a numeric arg. */
--		for (i = 0; i < TRINITY_PF_MAX; i++) {
-+		for (i = 0; i < ARRAY_SIZE(protocols); i++) {
- 			if (specific_proto == protocols[i].proto)
- 				break;
- 		}
- 	}
+ #include "trinity.h"
+ #include "constants.h"
++#include "protocols.h"
+ #include "net.h"
+ #include "log.h"
  
--	if (i > TRINITY_PF_MAX) {
-+	if (i > ARRAY_SIZE(protocols)) {
- 		outputerr("Protocol unknown. Pass a numeric value [0-%d] or one of ", TRINITY_PF_MAX);
- 		for (i = 0; i < ARRAY_SIZE(protocols); i++)
- 			outputerr("%s ", protocols[i].name);
+diff --git a/sockets.c b/sockets.c
+index 590c814..fba3aa9 100644
+--- a/sockets.c
++++ b/sockets.c
+@@ -15,6 +15,7 @@
+ #include "log.h"
+ #include "params.h"	// victim_path, verbose, do_specific_proto
+ #include "random.h"
++#include "protocols.h"
+ 
+ unsigned int nr_sockets = 0;
+ 
+diff --git a/trinity.c b/trinity.c
+index 941c98b..d5b6041 100644
+--- a/trinity.c
++++ b/trinity.c
+@@ -32,6 +32,7 @@
+ #include "syscall.h"
+ #include "tables.h"
+ #include "ioctls.h"
++#include "protocols.h"
+ #include "config.h"	// for VERSION
+ 
+ char *progname = NULL;
 -- 
 1.8.3.1
