@@ -1,34 +1,88 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: kernel: sock: sock_set_timeout: `trinity-main' (pid 1349) tries
- to set negative timeout
-Date: Sat, 2 Nov 2013 17:28:53 -0400
-Message-ID: <20131102212853.GA17724@redhat.com>
-References: <527554F0.4070706@gmx.de>
+From: Vince Weaver <vincent.weaver@maine.edu>
+Subject: [patch] perf_event_open: vary pid and cpu values more
+Date: Wed, 6 Nov 2013 15:49:06 -0500 (EST)
+Message-ID: <alpine.DEB.2.10.1311061546560.27137@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <527554F0.4070706@gmx.de>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
-Cc: trinity@vger.kernel.org
+Content-Type: TEXT/PLAIN; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: trinity@vger.kernel.org
 
-On Sat, Nov 02, 2013 at 08:39:28PM +0100, Toralf F=F6rster wrote:
- > I'm observing such syslog messages in a user mode linux image and do=
- wonder why trinity-main
- > does such unusal things (and not the child which I'd expect of cours=
-e) :
- >=20
- >=20
- > Nov  2 19:14:25 trinity kernel: sock: sock_set_timeout: `trinity-mai=
-n' (pid 1349) tries to set negative timeout
- > Nov  2 19:14:25 trinity kernel: sock: sock_set_timeout: `trinity-mai=
-n' (pid 1349) tries to set negative timeout
 
-The main process periodically does setsockopt calls on all the open soc=
-kets
-that children inherit.
+While digging through long execution traces working on the ftrace
+bug I noticed we weren't really varying the "cpu" or "pid" values
+very much.  This attempts to add a bit more variety.
 
-	Dave
+Signed-off-by: Vince Weaver <vincent.weaver@maine.edu>
+
+diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
+index 87a0522..2ff004e 100644
+--- a/syscalls/perf_event_open.c
++++ b/syscalls/perf_event_open.c
+@@ -6,6 +6,7 @@
+ 
+ #include <stdlib.h>
+ #include <string.h>
++#include <unistd.h>
+ #include <sys/types.h>
+ #include <dirent.h>
+ #include <errno.h>
+@@ -1144,10 +1145,20 @@ void sanitise_perf_event_open(int childno)
+ 	memset(page_rand, 0, sizeof(struct perf_event_attr));
+ 
+ 	/* cpu */
+-	/* requires ROOT to select CPU if paranoid level not 0 */
++	/* requires ROOT to select specific CPU if pid==-1 (all processes) */
+ 	/* -1 means all CPUs */
+-	//shm->a3[childno] = cpu;
+-	// the default get_cpu() is good enough here
++
++	switch(rand() % 2) {
++	case 0:
++		/* Any CPU */
++		shm->a3[childno] = -1;
++		break;
++	case 1:
++		/* Default to the get_cpu() value */
++		/* set by ARG_CPU                 */
++	default:
++		break;
++	}
+ 
+ 	/* group_fd */
+ 	/* should usually be -1 or another perf_event fd         */
+@@ -1187,18 +1198,28 @@ void sanitise_perf_event_open(int childno)
+ 
+ 	/* pid */
+ 	/* requires ROOT to select pid that doesn't belong to us */
+-	/* pid of 0 means current process */
+-	/* pid of -1 means all processes  */
+ 
+ 	if (flags & PERF_FLAG_PID_CGROUP) {
+ 		/* In theory in this case we should pass in */
+ 		/* a file descriptor from /dev/cgroup       */
+ 		pid = get_random_fd();
+ 	} else {
+-		if (rand_bool()) {
++		switch(rand() % 4) {
++		case 0:	/* use current thread */
+ 			pid = 0;
+-		} else {
++			break;
++		case 1: /* get an arbitrary pid */
+ 			pid = get_pid();
++			break;
++		case 2:	/* measure *all* pids.  Might require root */
++			pid = -1;
++			break;
++		case 3: /* measure our actual pid */
++			pid=getpid();
++			break;
++		default:
++			pid = 0;
++			break;
+ 		}
+ 	}
+ 	shm->a2[childno] = pid;
