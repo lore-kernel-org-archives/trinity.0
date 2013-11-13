@@ -1,88 +1,64 @@
-From: Vince Weaver <vincent.weaver@maine.edu>
-Subject: [patch] perf_event_open: vary pid and cpu values more
-Date: Wed, 6 Nov 2013 15:49:06 -0500 (EST)
-Message-ID: <alpine.DEB.2.10.1311061546560.27137@vincent-weaver-1.um.maine.edu>
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] Fix unused variable build errors.
+Date: Wed, 13 Nov 2013 11:17:27 -0800
+Message-ID: <1384370247-21352-1-git-send-email-vlee@freedesktop.org>
 Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: TEXT/PLAIN; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
 To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
+=46rom: Vinson Lee <vlee@twitter.com>
 
-While digging through long execution traces working on the ftrace
-bug I noticed we weren't really varying the "cpu" or "pid" values
-very much.  This attempts to add a bit more variety.
+This patch fixes these build errors on CentOS 6.
 
-Signed-off-by: Vince Weaver <vincent.weaver@maine.edu>
+  CC	net/caif_setsockopt.o
+cc1: warnings being treated as errors
+net/caif_setsockopt.c: In function =E2=80=98caif_setsockopt=E2=80=99:
+net/caif_setsockopt.c:20: error: unused variable =E2=80=98val=E2=80=99
 
-diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
-index 87a0522..2ff004e 100644
---- a/syscalls/perf_event_open.c
-+++ b/syscalls/perf_event_open.c
-@@ -6,6 +6,7 @@
- 
- #include <stdlib.h>
- #include <string.h>
-+#include <unistd.h>
- #include <sys/types.h>
- #include <dirent.h>
- #include <errno.h>
-@@ -1144,10 +1145,20 @@ void sanitise_perf_event_open(int childno)
- 	memset(page_rand, 0, sizeof(struct perf_event_attr));
- 
- 	/* cpu */
--	/* requires ROOT to select CPU if paranoid level not 0 */
-+	/* requires ROOT to select specific CPU if pid==-1 (all processes) */
- 	/* -1 means all CPUs */
--	//shm->a3[childno] = cpu;
--	// the default get_cpu() is good enough here
-+
-+	switch(rand() % 2) {
-+	case 0:
-+		/* Any CPU */
-+		shm->a3[childno] = -1;
-+		break;
-+	case 1:
-+		/* Default to the get_cpu() value */
-+		/* set by ARG_CPU                 */
-+	default:
-+		break;
-+	}
- 
- 	/* group_fd */
- 	/* should usually be -1 or another perf_event fd         */
-@@ -1187,18 +1198,28 @@ void sanitise_perf_event_open(int childno)
- 
- 	/* pid */
- 	/* requires ROOT to select pid that doesn't belong to us */
--	/* pid of 0 means current process */
--	/* pid of -1 means all processes  */
- 
- 	if (flags & PERF_FLAG_PID_CGROUP) {
- 		/* In theory in this case we should pass in */
- 		/* a file descriptor from /dev/cgroup       */
- 		pid = get_random_fd();
- 	} else {
--		if (rand_bool()) {
-+		switch(rand() % 4) {
-+		case 0:	/* use current thread */
- 			pid = 0;
--		} else {
-+			break;
-+		case 1: /* get an arbitrary pid */
- 			pid = get_pid();
-+			break;
-+		case 2:	/* measure *all* pids.  Might require root */
-+			pid = -1;
-+			break;
-+		case 3: /* measure our actual pid */
-+			pid=getpid();
-+			break;
-+		default:
-+			pid = 0;
-+			break;
- 		}
- 	}
- 	shm->a2[childno] = pid;
+  CC	net/rds_setsockopt.o
+cc1: warnings being treated as errors
+net/rds_setsockopt.c: In function =E2=80=98rds_setsockopt=E2=80=99:
+net/rds_setsockopt.c:23: error: unused variable =E2=80=98val=E2=80=99
+
+Signed-off-by: Vinson Lee <vlee@twitter.com>
+---
+ net/caif_setsockopt.c |    2 ++
+ net/rds_setsockopt.c  |    2 ++
+ 2 files changed, 4 insertions(+), 0 deletions(-)
+
+diff --git a/net/caif_setsockopt.c b/net/caif_setsockopt.c
+index fcc42c0..c829521 100644
+--- a/net/caif_setsockopt.c
++++ b/net/caif_setsockopt.c
+@@ -17,7 +17,9 @@ static const unsigned int caif_opts[] =3D { CAIFSO_LI=
+NK_SELECT, CAIFSO_REQ_PARAM }
+=20
+ void caif_setsockopt(struct sockopt *so)
+ {
++#ifdef USE_CAIF
+ 	unsigned char val;
++#endif
+=20
+ 	so->level =3D SOL_CAIF;
+=20
+diff --git a/net/rds_setsockopt.c b/net/rds_setsockopt.c
+index 25b6c8b..6ad6e2a 100644
+--- a/net/rds_setsockopt.c
++++ b/net/rds_setsockopt.c
+@@ -20,7 +20,9 @@ static const unsigned int rds_opts[] =3D {
+=20
+ void rds_setsockopt(struct sockopt *so)
+ {
++#ifdef USE_RDS
+ 	unsigned char val;
++#endif
+=20
+ 	so->level =3D SOL_RDS;
+ #ifdef USE_RDS
+--=20
+1.7.1
