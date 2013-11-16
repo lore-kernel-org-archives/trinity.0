@@ -1,43 +1,53 @@
-From: Vince Weaver <vincent.weaver@maine.edu>
-Subject: Re: [patch] perf_event_open more likely tracepoint values
-Date: Fri, 15 Nov 2013 15:45:44 -0500 (EST)
-Message-ID: <alpine.DEB.2.10.1311151544140.12594@vincent-weaver-1.um.maine.edu>
-References: <alpine.DEB.2.10.1311141230450.8746@vincent-weaver-1.um.maine.edu> <20131114173352.GA5855@redhat.com>
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] net/rds_setsockopt.c: Always define SOL_RDS.
+Date: Fri, 15 Nov 2013 17:01:29 -0800
+Message-ID: <1384563689-6560-1-git-send-email-vlee@freedesktop.org>
 Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20131114173352.GA5855@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: TEXT/PLAIN; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Dave Jones <davej@redhat.com>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
-On Thu, 14 Nov 2013, Dave Jones wrote:
+=46rom: Vinson Lee <vlee@twitter.com>
 
-> On Thu, Nov 14, 2013 at 12:35:27PM -0500, Vince Weaver wrote:
->  
->  > Tracepoint ids tend to be relatively small (less than 1024 or so).
->  > This change makes it more likely to hit valid ones.
->  > 
->  > Once the fix to avoid the troublesome 0x18 (irq_work_exit)
->  > tracepoint gets into the kernel maybe we can start stressing
->  > things with trinity again.
->  
-> applied, though fyi, this (and some other boolean choices) could
-> be shorter with just
-> 
-> 	if (rand_bool())
-> 		foo
-> 	else
-> 		bar
-> 
-> guess it depends if you foresee adding further case's though.
+This patch fixes this build error on CentOS 6.
 
-I wasn't sure of rand_bool() was only meant for setting boolean flag 
-variables or if it should be also used as the generic "choose one of two 
-options" selector.  
+  CC	net/rds_setsockopt.o
+net/rds_setsockopt.c: In function =E2=80=98rds_setsockopt=E2=80=99:
+net/rds_setsockopt.c:33: error: =E2=80=98SOL_RDS=E2=80=99 undeclared (f=
+irst use in this function)
+net/rds_setsockopt.c:33: error: (Each undeclared identifier is reported=
+ only once
+net/rds_setsockopt.c:33: error: for each function it appears in.)
 
-I'll start using it instead of rand()%2 in future patches.
+Signed-off-by: Vinson Lee <vlee@twitter.com>
+---
+ net/rds_setsockopt.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
 
-Vince
+diff --git a/net/rds_setsockopt.c b/net/rds_setsockopt.c
+index 5421c3b..d0dec57 100644
+--- a/net/rds_setsockopt.c
++++ b/net/rds_setsockopt.c
+@@ -2,14 +2,14 @@
+ #include "net.h"
+ #include "config.h"
+=20
++#define SOL_RDS 276
++
+ #ifdef USE_RDS
+ #include <linux/rds.h>
+=20
+ #include "compat.h"
+ #include "trinity.h"	// ARRAY_SIZE
+=20
+-#define SOL_RDS 276
+-
+ #define NR_SOL_RDS_OPTS ARRAY_SIZE(rds_opts)
+ static const unsigned int rds_opts[] =3D {
+ 	RDS_CANCEL_SENT_TO, RDS_GET_MR, RDS_FREE_MR,
+--=20
+1.7.1
