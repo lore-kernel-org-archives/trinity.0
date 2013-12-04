@@ -1,51 +1,43 @@
-From: Ildar Muslukhov <ildarm@google.com>
-Subject: [PATCH] Fixes incorrect syscall indices for shmat and shmctl in
- X86_64 arch.
-Date: Tue, 3 Dec 2013 16:44:46 -0800 (PST)
-Message-ID: <alpine.DEB.2.02.1312031641330.30422@ildarm-linux.kir.corp.google.com>
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] syscall/prctl.c: Fix unused variable build error with USE_SECCOMP=0.
+Date: Wed,  4 Dec 2013 10:33:00 -0800
+Message-ID: <1386181980-3294-1-git-send-email-vlee@freedesktop.org>
 Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20120113;
-        h=date:from:to:cc:subject:message-id:user-agent:mime-version
-         :content-type;
-        bh=XS4loeT4q8KEwSNEmMWWYwqYvvei2s33C9fCqc8exhw=;
-        b=h2+i1BElGss35XH2E5ESQ+5F86H0RKZ5jM5b9qfPnWf2vCQsMjm+M5SKOYc++yEYVj
-         OksIIRVOoZDq7l5c+FQ+X+0DVc8+DjCuGw+VuB/Q4ju+XgPrQlmnx31bAW1KrY22KGUE
-         0gbj2dP1JwOVwnjxdOIEnuWmSOZjSJXX0TpAzrHcDSsxqT6rTBLEiur2eZwJduX6AGKA
-         Qs+fIr7vf8uMEjprVXTOqRPeODBowc4oajF2P53NzsKbaJDHEWDE/zFeiQ/o4SVgGsZj
-         qtcf3xIS4X6hMhxEx+pkgM7gHGbKt2s/UDC2IHf3CP+v0rVPDhsEmm3IyimAt2n1mTfo
-         z2fg==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: TEXT/PLAIN; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
 To: trinity@vger.kernel.org
-Cc: davej@redhat.com
+Cc: Vinson Lee <vlee@twitter.com>
 
+=46rom: Vinson Lee <vlee@twitter.com>
 
-This patch fixes incorrect indices for shmat (should be #30) and shmctl 
-(should be #31).
+This patch fixes this build error on CentOS 6.
 
-Signed-off-by: Ildar Muslukhov <ildarm@google.com>
+  CC	syscalls/prctl.o
+cc1: warnings being treated as errors
+syscalls/prctl.c: In function =E2=80=98sanitise_prctl=E2=80=99:
+syscalls/prctl.c:36: error: unused variable =E2=80=98saddr=E2=80=99
 
+Signed-off-by: Vinson Lee <vlee@twitter.com>
 ---
- include/syscalls-x86_64.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ syscalls/prctl.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
 
-diff --git a/include/syscalls-x86_64.h b/include/syscalls-x86_64.h
-index 9ceb65c..23c2166 100644
---- a/include/syscalls-x86_64.h
-+++ b/include/syscalls-x86_64.h
-@@ -38,8 +38,8 @@ struct syscalltable syscalls_x86_64[] = {
- 	{ .entry = &syscall_mincore },
- 	{ .entry = &syscall_madvise },
- 	{ .entry = &syscall_shmget },
--	{ .entry = &syscall_shmctl },
- 	{ .entry = &syscall_shmat },
-+	{ .entry = &syscall_shmctl },
- 	{ .entry = &syscall_dup },
- 	{ .entry = &syscall_dup2 },
- 	{ .entry = &syscall_pause },
--- 
-1.8.4.1
+diff --git a/syscalls/prctl.c b/syscalls/prctl.c
+index acca027..bde76aa 100644
+--- a/syscalls/prctl.c
++++ b/syscalls/prctl.c
+@@ -33,7 +33,9 @@ static int prctl_opts[NR_PRCTL_OPTS] =3D {
+ void sanitise_prctl(int childno)
+ {
+ 	int option =3D prctl_opts[rand() % NR_PRCTL_OPTS];
++#ifdef USE_SECCOMP
+ 	struct sockaddr *saddr =3D NULL;
++#endif
+=20
+ // For now, just do SECCOMP, the other options need some attention.
+ option =3D PR_SET_SECCOMP;
+--=20
+1.7.1
