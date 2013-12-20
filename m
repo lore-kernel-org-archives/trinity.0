@@ -1,136 +1,100 @@
-From: Vince Weaver <vincent.weaver@maine.edu>
-Subject: [patch] perf_event_open update to 3.13-rc3
-Date: Fri, 13 Dec 2013 15:40:43 -0500 (EST)
-Message-ID: <alpine.DEB.2.10.1312131537010.9957@vincent-weaver-1.um.maine.edu>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
+Subject: current trinity gives glibc errors
+Date: Fri, 20 Dec 2013 15:51:49 +0100
+Message-ID: <52B45985.6060806@gmx.de>
 Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: TEXT/PLAIN; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="iso-8859-1"
 To: trinity@vger.kernel.org
 
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
 
-Update perf_event_open support to Linux 3.13-rc3
+When I run latest trinity at a stable 32 Bit Gentoo Linux user mode lin=
+ux image I do now get :
 
-This mostly just enables Haswell PERF_SAMPLE_TRANSACTION
-support.
+trinity -q -N 10000 -C 2 -x mremap
 
-Signed-off-by: Vince Weaver <vincent.weaver@maine.edu>
+=2E..
 
-diff --git a/include/perf_event.h b/include/perf_event.h
-index 40a1fb8..e1802d6 100644
---- a/include/perf_event.h
-+++ b/include/perf_event.h
-@@ -136,8 +136,9 @@ enum perf_event_sample_format {
- 	PERF_SAMPLE_WEIGHT			= 1U << 14,
- 	PERF_SAMPLE_DATA_SRC			= 1U << 15,
- 	PERF_SAMPLE_IDENTIFIER			= 1U << 16,
-+	PERF_SAMPLE_TRANSACTION			= 1U << 17,
- 
--	PERF_SAMPLE_MAX = 1U << 17,		/* non-ABI */
-+	PERF_SAMPLE_MAX = 1U << 18,		/* non-ABI */
- };
- 
- /*
-@@ -181,6 +182,28 @@ enum perf_sample_regs_abi {
- };
- 
- /*
-+ * Values for the memory transaction event qualifier, mostly for
-+ * abort events. Multiple bits can be set.
-+ */
-+enum {
-+	PERF_TXN_ELISION        = (1 << 0), /* From elision */
-+	PERF_TXN_TRANSACTION    = (1 << 1), /* From transaction */
-+	PERF_TXN_SYNC           = (1 << 2), /* Instruction is related */
-+	PERF_TXN_ASYNC          = (1 << 3), /* Instruction not related */
-+	PERF_TXN_RETRY          = (1 << 4), /* Retry possible */
-+	PERF_TXN_CONFLICT       = (1 << 5), /* Conflict abort */
-+	PERF_TXN_CAPACITY_WRITE = (1 << 6), /* Capacity write abort */
-+	PERF_TXN_CAPACITY_READ  = (1 << 7), /* Capacity read abort */
-+
-+	PERF_TXN_MAX	        = (1 << 8), /* non-ABI */
-+
-+	/* bits 32..63 are reserved for the abort code */
-+
-+	PERF_TXN_ABORT_MASK  = (0xffffffffULL << 32),
-+	PERF_TXN_ABORT_SHIFT = 32,
-+};
-+
-+/*
-  * The format of the data returned by read() on a perf event fd,
-  * as specified by attr.read_format:
-  *
-@@ -380,10 +403,13 @@ struct perf_event_mmap_page {
- 	union {
- 		__u64	capabilities;
- 		struct {
--			__u64	cap_usr_time		: 1,
--				cap_usr_rdpmc		: 1,
--				cap_usr_time_zero	: 1,
--				cap_____res		: 61;
-+			__u64	cap_bit0		: 1, /* Always 0, deprecated, see commit 860f085b74e9 */
-+				cap_bit0_is_deprecated	: 1, /* Always 1, signals that bit 0 is zero */
-+
-+				cap_user_rdpmc		: 1, /* The RDPMC instruction can be used to read counts */
-+				cap_user_time		: 1, /* The time_* fields are used */
-+				cap_user_time_zero	: 1, /* The time_zero field is used */
-+				cap_____res		: 59;
- 		};
- 	};
- 
-@@ -442,23 +468,26 @@ struct perf_event_mmap_page {
- 	 *               ((rem * time_mult) >> time_shift);
- 	 */
- 	__u64	time_zero;
-+	__u32	size;			/* Header size up to __reserved[] fields. */
- 
- 		/*
- 		 * Hole for extension of the self monitor capabilities
- 		 */
- 
--	__u64	__reserved[119];	/* align to 1k */
-+	__u8	__reserved[118*8+4];	/* align to 1k. */
- 
- 	/*
- 	 * Control data for the mmap() data buffer.
- 	 *
--	 * User-space reading the @data_head value should issue an rmb(), on
--	 * SMP capable platforms, after reading this value -- see
--	 * perf_event_wakeup().
-+	 * User-space reading the @data_head value should issue an smp_rmb(),
-+	 * after reading this value.
- 	 *
- 	 * When the mapping is PROT_WRITE the @data_tail value should be
--	 * written by userspace to reflect the last read data. In this case
--	 * the kernel will not over-write unread data.
-+	 * written by userspace to reflect the last read data, after issueing
-+	 * an smp_mb() to separate the data read from the ->data_tail store.
-+	 * In this case the kernel will not over-write unread data.
-+	 *
-+	 * See perf_output_put_handle() for the data ordering.
- 	 */
- 	__u64   data_head;		/* head in the data section */
- 	__u64	data_tail;		/* user-space written tail */
-@@ -528,6 +557,7 @@ enum perf_event_type {
- 	 *	u64				len;
- 	 *	u64				pgoff;
- 	 *	char				filename[];
-+	 * 	struct sample_id		sample_id;
- 	 * };
- 	 */
- 	PERF_RECORD_MMAP			= 1,
-diff --git a/syscalls/perf_event_open.c b/syscalls/perf_event_open.c
-index 516172a..f7d6187 100644
---- a/syscalls/perf_event_open.c
-+++ b/syscalls/perf_event_open.c
-@@ -863,6 +863,8 @@ static long long random_sample_type(void)
- 		sample_type |= PERF_SAMPLE_DATA_SRC;
- 	if (rand_bool())
- 		sample_type |= PERF_SAMPLE_IDENTIFIER;
-+	if (rand_bool())
-+		sample_type |= PERF_SAMPLE_TRANSACTION;
- 
- 	return sample_type;
- }
+[child0:1763] init_module (128) returned ENOSYS, marking as inactive.
+[child0:1763] ipc (117) returned ENOSYS, marking as inactive.
+[main] Random reseed: 3211420801
+[child0:1765] ioperm (101) returned ENOSYS, marking as inactive.
+[child0:1765] set_robust_list (311) returned ENOSYS, marking as inactiv=
+e.
+[child0:1765] move_pages (317) returned ENOSYS, marking as inactive.
+*** glibc detected *** trinity: double free or corruption (out): 0x085b=
+c000 ***
+=3D=3D=3D=3D=3D=3D=3D Backtrace: =3D=3D=3D=3D=3D=3D=3D=3D=3D
+/lib/libc.so.6(+0x76552)[0x400a0552]
+trinity[0x805930e]
+trinity[0x8052085]
+trinity[0x805508c]
+trinity[0x804af91]
+trinity[0x804ead5]
+trinity[0x804a605]
+/lib/libc.so.6(__libc_start_main+0xf5)[0x40046ad5]
+trinity[0x804ab15]
+=3D=3D=3D=3D=3D=3D=3D Memory map: =3D=3D=3D=3D=3D=3D=3D=3D
+00100000-00102000 r-xp 00000000 00:00 0=20
+08048000-0806d000 r-xp 00000000 62:00 88380      /usr/bin/trinity
+0806d000-0806e000 r--p 00024000 62:00 88380      /usr/bin/trinity
+0806e000-080cb000 rw-p 00025000 62:00 88380      /usr/bin/trinity
+080cb000-084eb000 rw-p 00000000 00:00 0          [heap]
+084eb000-085b5000 rw-p 00000000 00:00 0          [heap]
+085b5000-08783000 rw-p 00000000 00:00 0          [heap]
+40000000-40020000 r-xp 00000000 62:00 88339      /lib/ld-2.16.so
+40020000-40021000 r--p 0001f000 62:00 88339      /lib/ld-2.16.so
+40021000-40022000 rw-p 00020000 62:00 88339      /lib/ld-2.16.so
+40022000-40026000 rw-p 00000000 00:00 0=20
+40026000-40028000 rw-s 00000000 00:04 83577      /dev/zero (deleted)
+40028000-40029000 rw-p 00000000 00:00 0=20
+40029000-4002a000 rw-p 00000000 00:00 0=20
+4002a000-401cb000 r-xp 00000000 62:00 88343      /lib/libc-2.16.so
+401cb000-401cc000 ---p 001a1000 62:00 88343      /lib/libc-2.16.so
+401cc000-401ce000 r--p 001a1000 62:00 88343      /lib/libc-2.16.so
+401ce000-401cf000 rw-p 001a3000 62:00 88343      /lib/libc-2.16.so
+401cf000-401d3000 rw-p 00000000 00:00 0=20
+401d3000-4022a000 rw-s 00000000 00:04 83575      /dev/zero (deleted)
+4022a000-40248000 ---s 00000000 00:04 83576      /dev/zero (deleted)
+40248000-40254000 rw-s 0001e000 00:04 83576      /dev/zero (deleted)
+40254000-40272000 ---s 0002a000 00:04 83576      /dev/zero (deleted)
+40272000-40274000 r--s 00000000 00:04 83578      /dev/zero (deleted)
+40274000-40276000 -w-s 00000000 00:04 83579      /dev/zero (deleted)
+40276000-40376000 rw-s 00000000 00:04 83580      /dev/zero (deleted)
+40376000-40476000 r--s 00000000 00:04 83581      /dev/zero (deleted)
+40476000-40576000 -w-s 00000000 00:04 83582      /dev/zero (deleted)
+40576000-40776000 rw-s 00000000 00:04 83583      /dev/zero (deleted)
+40776000-40976000 r--s 00000000 00:04 83584      /dev/zero (deleted)
+40976000-40b76000 -w-s 00000000 00:04 83585      /dev/zero (deleted)
+40b76000-40f76000 rw-s 00000000 00:04 83586      /dev/zero (deleted)
+40f76000-41376000 r--s 00000000 00:04 83587      /dev/zero (deleted)
+41376000-41776000 -w-s 00000000 00:04 83588      /dev/zero (deleted)
+41776000-42176000 rw-s 00000000 00:04 83589      /dev/zero (deleted)
+42176000-42b76000 r--s 00000000 00:04 83590      /dev/zero (deleted)
+42b76000-43576000 -w-s 00000000 00:04 83591      /dev/zero (deleted)
+4357d000-43597000 r-xp 00000000 62:00 85032      /usr/lib/gcc/i686-pc-l=
+inux-gnu/4.7.3/libgcc_s.so.1
+43597000-43598000 r--p 00019000 62:00 85032      /usr/lib/gcc/i686-pc-l=
+inux-gnu/4.7.3/libgcc_s.so.1
+43598000-43599000 rw-p 0001a000 62:00 85032      /usr/lib/gcc/i686-pc-l=
+inux-gnu/4.7.3/libgcc_s.so.1
+bf7e3000-bf804000 rw-p 00000000 00:00 0
+[main] Random reseed: 3271769164
+
+- --=20
+MfG/Sincerely
+Toralf F=C3=B6rster
+pgp finger print:1A37 6F99 4A9D 026F 13E2 4DCF C4EA CDDE 0076 E94E
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2.0.22 (GNU/Linux)
+Comment: Using GnuPG with Thunderbird - http://www.enigmail.net/
+
+iF4EAREIAAYFAlK0WYUACgkQxOrN3gB26U4+IwD+IqBcRpU9nQud5F1omd0EPWki
+Hqvx4eBlZcKgJg19zwQA/1ypItkbJ/qTw6aQtrb/6U832kd7BF4mUfBiWwELD0O2
+=3D0UZq
+-----END PGP SIGNATURE-----
