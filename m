@@ -1,34 +1,53 @@
 From: Vince Weaver <vincent.weaver@maine.edu>
-Subject: divide by zero in random/taviso()
-Date: Fri, 17 Jan 2014 15:21:20 -0500 (EST)
-Message-ID: <alpine.DEB.2.10.1401171519070.6751@vincent-weaver-1.um.maine.edu>
+Subject: [patch] fix divide by zero in random/taviso()
+Date: Fri, 17 Jan 2014 15:41:58 -0500 (EST)
+Message-ID: <alpine.DEB.2.10.1401171541490.6771@vincent-weaver-1.um.maine.edu>
+References: <alpine.DEB.2.10.1401171519070.6751@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
+In-Reply-To: <alpine.DEB.2.10.1401171519070.6751@vincent-weaver-1.um.maine.edu>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
 
-Hello
 
-so for my perf_fuzzer I re-use the trinity random.c, and today I hit
+I'm not sure if this is the cleanest fix for the issue, but it seems to 
+work for me.
 
-[ 1241.026870] traps: perf_fuzzer[4509] trap divide error ip:40a779 
+In random.c the taviso() routine uses "rand() % rand()" which
+can cause a floating point exception if rand() returns 0.
+Add some tests to make sure that doesn't happen.
 
-which maps to the taviso() routine which is doing:
+Signed-off-by: Vince Weaver <vincent.weaver@maine.edu>
 
-           case 1: r = rand() % rand();
-#if __WORDSIZE == 64
-                r <<= 32;
-                r |= rand() % rand();
-#endif
-                break;
-
-which is a divide by zero if rand() returns 0.
-
-Is there a good way to fix this short of a lot of special case checks?
-
-Vince Weaver
-vincent.weaver@maine.edu
-http://www.eece.maine.edu/~vweaver/
+diff --git a/random.c b/random.c
+index 7def9ff..a71fcea 100644
+--- a/random.c
++++ b/random.c
+@@ -42,6 +42,7 @@ static unsigned long randbits(int limit)
+ static unsigned long taviso(void)
+ {
+ 	unsigned long r = 0;
++	unsigned long temp;
+ 
+ 	switch (rand() % 4) {
+ 	case 0:	r = rand() & rand();
+@@ -51,10 +52,14 @@ static unsigned long taviso(void)
+ #endif
+ 		break;
+ 
+-	case 1:	r = rand() % rand();
++	case 1:	temp = rand();
++		r = rand();
++		if (!temp) r %= temp;
+ #if __WORDSIZE == 64
+ 		r <<= 32;
+-		r |= rand() % rand();
++
++		temp = rand();
++		if (!temp) r |= rand() % temp;
+ #endif
+ 		break;
+ 
