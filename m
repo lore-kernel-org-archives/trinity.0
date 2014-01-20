@@ -1,26 +1,51 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: [PATCH] modify_ldt: initialize scratch
-Date: Mon, 20 Jan 2014 16:39:24 -0500
-Message-ID: <20140120213924.GB11834@redhat.com>
-References: <1390248935-22801-1-git-send-email-jslaby@suse.cz>
-Mime-Version: 1.0
+From: Jiri Slaby <jslaby@suse.cz>
+Subject: [PATCH 1/1] handle SIGABRT similar to SIGSEGV
+Date: Mon, 20 Jan 2014 22:45:51 +0100
+Message-ID: <1390254351-24457-1-git-send-email-jslaby@suse.cz>
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1390248935-22801-1-git-send-email-jslaby@suse.cz>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Jiri Slaby <jslaby@suse.cz>
-Cc: trinity@vger.kernel.org, jirislaby@gmail.com
+To: davej@redhat.com
+Cc: trinity@vger.kernel.org, jirislaby@gmail.com, Jiri Slaby <jslaby@suse.cz>
 
-On Mon, Jan 20, 2014 at 09:15:35PM +0100, Jiri Slaby wrote:
- > From: Jiri Slaby <jirislaby@gmail.com>
- > 
- > We store a pointer in the scratch area, but only conditionally. Hence
- > there can be an uninitialized value which causes problems in the
- > tear-down path:
+Sometimes, glibc aborts when some assertion is not met. In that case,
+we want to have a coredump, so do not ignore that signal when
+debugging is enabled.
+---
+ child.c   | 1 +
+ signals.c | 4 +++-
+ 2 files changed, 4 insertions(+), 1 deletion(-)
 
-duh, good catch. Applied.
-
-	Dave
+diff --git a/child.c b/child.c
+index 74c72e124a86..8351d8eb6706 100644
+--- a/child.c
++++ b/child.c
+@@ -35,6 +35,7 @@ static void disable_coredumps(void)
+ 	struct rlimit limit;
+ 
+ 	if (debug == TRUE) {
++		(void)signal(SIGABRT, SIG_DFL);
+ 		(void)signal(SIGSEGV, SIG_DFL);
+ 		return;
+ 	}
+diff --git a/signals.c b/signals.c
+index 94c690bc6ffc..a6cac95aa2ba 100644
+--- a/signals.c
++++ b/signals.c
+@@ -82,8 +82,10 @@ void mask_signals_child(void)
+ 		(void)signal(i, SIG_IGN);
+ 
+ 	/* If we are in debug mode, we want segfaults and core dumps */
+-	if (debug == TRUE)
++	if (debug == TRUE) {
++		(void)signal(SIGABRT, SIG_DFL);
+ 		(void)signal(SIGSEGV, SIG_DFL);
++	}
+ 
+ 	/* trap ctrl-c */
+ 	(void)signal(SIGINT, ctrlc_handler);
+-- 
+1.8.5.2
