@@ -1,49 +1,40 @@
-From: Jiri Slaby <jslaby@suse.cz>
-Subject: [PATCH] modify_ldt: initialize scratch
-Date: Mon, 20 Jan 2014 21:15:35 +0100
-Message-ID: <1390248935-22801-1-git-send-email-jslaby@suse.cz>
+From: Dave Jones <davej@redhat.com>
+Subject: Re: trinity: lots of free(): invalid pointer
+Date: Mon, 20 Jan 2014 16:37:59 -0500
+Message-ID: <20140120213759.GA11834@redhat.com>
+References: <52D70DC5.8070104@suse.cz>
+ <20140117190932.GA4300@redhat.com>
+ <52DD799F.7090403@suse.cz>
+ <52DD7E2E.7000307@suse.cz>
+Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <52DD7E2E.7000307@suse.cz>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: davej@redhat.com
-Cc: trinity@vger.kernel.org, jirislaby@gmail.com
+To: Jiri Slaby <jslaby@suse.cz>
+Cc: trinity@vger.kernel.org
 
-From: Jiri Slaby <jirislaby@gmail.com>
-
-We store a pointer in the scratch area, but only conditionally. Hence
-there can be an uninitialized value which causes problems in the
-tear-down path:
-*** Error in `trinity': double free or corruption (!prev):
-0x0000000002484530 ***
-======= Backtrace: =========
-/lib64/libc.so.6(+0x740af)[0x7f2a66eb60af]
-/lib64/libc.so.6(+0x798de)[0x7f2a66ebb8de]
-/lib64/libc.so.6(+0x7a5e6)[0x7f2a66ebc5e6]
-trinity[0x40abc8]
-trinity[0x40dabc]
-trinity[0x40338a]
-trinity[0x40704c]
-trinity[0x402c47]
-/lib64/libc.so.6(__libc_start_main+0xf5)[0x7f2a66e63b15]
-trinity[0x402f13]
----
- syscalls/modify_ldt.c | 1 +
- 1 file changed, 1 insertion(+)
-
-diff --git a/syscalls/modify_ldt.c b/syscalls/modify_ldt.c
-index de9cbbe..c0cac1a 100644
---- a/syscalls/modify_ldt.c
-+++ b/syscalls/modify_ldt.c
-@@ -18,6 +18,7 @@ static void sanitise_modify_ldt(int childno)
- 	void *ldt;
- 	//struct user_desc *desc;
+On Mon, Jan 20, 2014 at 08:51:10PM +0100, Jiri Slaby wrote:
  
-+	shm->scratch[childno] = 0;
- 	switch (shm->a1[childno]) {
- 	case 0:
- 		/* read the ldt into the memory pointed to by ptr.
--- 
-1.8.5.2
+ > (gdb) l * 0x410fa4
+ > 0x410fa4 is in post_modify_ldt (syscalls/modify_ldt.c:62).
+ > 57
+ > 58              ptr = (void *) shm->scratch[childno];
+ > 59
+ > 60              if (ptr != NULL)
+ > 61                      free(ptr);
+ > 62      }
+ > 63
+ > 64      struct syscallentry syscall_modify_ldt = {
+ > 65              .name = "modify_ldt",
+ > 66              .num_args = 3,
+ > 
+
+That syscall should probably be marked as AVOID for now, as it's pretty easy
+to completely screw up the LDT and segv. We'll need to be a bit more
+creative to make it actually find bugs.
+ 
+	Dave
