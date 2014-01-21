@@ -1,59 +1,64 @@
 From: Dave Jones <davej@redhat.com>
-Subject: Re: cppcheck mentions format string error
-Date: Mon, 20 Jan 2014 17:00:49 -0500
-Message-ID: <20140120220049.GA2792@redhat.com>
-References: <52CD9E52.6080301@gmx.de>
- <20140108190438.GA7714@redhat.com>
- <52CDA849.2080203@gmx.de>
+Subject: Re: [patch] fix divide by zero in random/taviso()
+Date: Tue, 21 Jan 2014 14:07:03 -0500
+Message-ID: <20140121190703.GA27774@redhat.com>
+References: <alpine.DEB.2.10.1401171519070.6751@vincent-weaver-1.um.maine.edu>
+ <alpine.DEB.2.10.1401171541490.6771@vincent-weaver-1.um.maine.edu>
+ <20140117210356.GA10744@redhat.com>
+ <CAKB9nXvQmAU-PXjqbezf7G5bWfrjMTD5LjoFnj98K8Tyy5eQ2Q@mail.gmail.com>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <52CDA849.2080203@gmx.de>
+In-Reply-To: <CAKB9nXvQmAU-PXjqbezf7G5bWfrjMTD5LjoFnj98K8Tyy5eQ2Q@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: Andrew Honig <ahonig@google.com>
+Cc: Vince Weaver <vincent.weaver@maine.edu>, trinity@vger.kernel.org
 
-On Wed, Jan 08, 2014 at 08:34:33PM +0100, Toralf F=F6rster wrote:
-=20
- > On 01/08/2014 08:04 PM, Dave Jones wrote:
- > > On Wed, Jan 08, 2014 at 07:52:02PM +0100, Toralf F=F6rster wrote:
- > >> heise.de reported about a security flaw in xorg-server found by
- > >> cppcheck - so I just gave it a try.
- > >>=20
- > >> It reports :
- > >>=20
- > >> ~/devel/trinity $ cppcheck ./ --force --quiet [devices.c:90]:
- > >> (warning) %a in format string (no. 2) requires 'float *' but the
- > >> argument type is 'char * *'.
- > >>=20
- > >>=20
- > >> Is it correct ?
- > >=20
- > > no. Looks like it doesn't understand the gnu %as extension, and
- > > thinks it's %a followed by 's'.
- > >=20
- > > That extension isn't C99, but given portability isn't really a goa=
-l
- > > for trinity, I'm not overly bothered by it.
- > >=20
- > > Dave
- > >=20
- > >=20
- > ok
- >=20
- > FWIW I created an enhancement request for cppcheck :
- >=20
- > Ticket URL: <http://sourceforge.net/apps/trac/cppcheck/ticket/5329>
+On Tue, Jan 21, 2014 at 11:03:43AM -0800, Andrew Honig wrote:
+ 
+ > >  > In random.c the taviso() routine uses "rand() % rand()" which
+ > >  > can cause a floating point exception if rand() returns 0.
+ > >  > Add some tests to make sure that doesn't happen.
+ > >  >
+ > >  > Signed-off-by: Vince Weaver <vincent.weaver@maine.edu>
+ > >  >
+ > >  > diff --git a/random.c b/random.c
+ > >  > index 7def9ff..a71fcea 100644
+ > >  > --- a/random.c
+ > >  > +++ b/random.c
+ > >  > @@ -42,6 +42,7 @@ static unsigned long randbits(int limit)
+ > >  >  static unsigned long taviso(void)
+ > >  >  {
+ > >  >      unsigned long r = 0;
+ > >  > +    unsigned long temp;
+ > >  >
+ > >  >      switch (rand() % 4) {
+ > >  >      case 0: r = rand() & rand();
+ > >  > @@ -51,10 +52,14 @@ static unsigned long taviso(void)
+ > >  >  #endif
+ > >  >              break;
+ > >  >
+ > >  > -    case 1: r = rand() % rand();
+ > >  > +    case 1: temp = rand();
+ > >  > +            r = rand();
+ > >
+ > 
+ > Perhaps, I'm reading this wrong, but this looks backwards to me.  This will
+ > perform the mod operation only when temp is 0.  Shouldn't this be
+ > if (temp) r %= temp;
 
-I'm not sure why I never noticed before, but after upgrading some packa=
-ges
-this last week, suddenly gcc and llvm are both warning about it.
-After filing a bug on what I thought was a gcc bug, Jakub suggested
-switching to %ms, which should make things happier, including cppcheck.
+clang seems to agree.
 
-strange.
+random.c:57:16: warning: Division by zero
+                if (!temp) r %= temp;
+                           ~~^~~~~~~
+random.c:62:26: warning: Division by zero
+                if (!temp) r |= rand() % temp;
+                                ~~~~~~~^~~~~~
+
+Vince, want to send a follow-up fix ?
 
 	Dave
