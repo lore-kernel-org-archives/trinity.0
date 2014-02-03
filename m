@@ -1,51 +1,122 @@
-From: Tommi Rantala <tt.rantala@gmail.com>
-Subject: Re: BUG ip_dst_cache (Not tainted): Poison overwritten
-Date: Mon, 3 Feb 2014 21:35:24 +0200
-Message-ID: <CA+ydwto5CTDSED=pZ_DfAZyh6Jx7xKJafRuDFUtV4ZZCb70ULA@mail.gmail.com>
+From: Eric Dumazet <eric.dumazet@gmail.com>
+Subject: [PATCH] ip_tunnel: fix panic in ip_tunnel_xmit()
+Date: Mon, 03 Feb 2014 12:52:14 -0800
+Message-ID: <1391460734.28432.111.camel@edumazet-glaptop2.roam.corp.google.com>
 References: <CA+ydwtrWCgi=v7v=8yjNMV37Aa4ua9zbqYM5_uUdQrLSQt+VEw@mail.gmail.com>
-	<1391201873.28432.86.camel@edumazet-glaptop2.roam.corp.google.com>
-	<CA+ydwtpmFbhkck9z8G7tfHQZW+4rWSepQMgPURqVCwrZ77v2bA@mail.gmail.com>
+	 <1391201873.28432.86.camel@edumazet-glaptop2.roam.corp.google.com>
+	 <CA+ydwtpmFbhkck9z8G7tfHQZW+4rWSepQMgPURqVCwrZ77v2bA@mail.gmail.com>
+	 <CA+ydwto5CTDSED=pZ_DfAZyh6Jx7xKJafRuDFUtV4ZZCb70ULA@mail.gmail.com>
 Mime-Version: 1.0
-Return-path: <linux-kernel-owner@vger.kernel.org>
+Content-Transfer-Encoding: QUOTED-PRINTABLE
+Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
-        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
-         :cc:content-type;
-        bh=sIls2iLmnzp4jtQ79847+OkZHIYllTEo3OLpHJcwaHY=;
-        b=Gtd9Ie768b4cnjKJhN/EJ6KWURLnuFAHwcKY7Pi2nL65jtBnOuoc9ElWM5o+ySVD4O
-         RakuzKTChNOuY8x0Nd3naKDGBg7Gx1zisZ56ELxpaCMGDNnSp1/w/RySS15adSUbHgDV
-         S7FC3gDKP9COM0QRLGt41bfaZ/lguny4e8Bvof6rfKKJvnpraDmE7bjsrlVMGr6huWqw
-         jmHe0ueHwn4tf2dz85/vuy7oLrVkfvAYDgtPd0yt6X07N0tLVO/U5Q9b+3O2+YAdptbT
-         w3EcA72+J1no7d3QTNekfsPrCq0HxdcTJKjsIpbQOsfuOMTGDslVxe94ZvLZI5KTmo9a
-         iDDg==
-In-Reply-To: <CA+ydwtpmFbhkck9z8G7tfHQZW+4rWSepQMgPURqVCwrZ77v2bA@mail.gmail.com>
-Sender: linux-kernel-owner@vger.kernel.org
+        h=message-id:subject:from:to:cc:date:in-reply-to:references
+         :content-type:content-transfer-encoding:mime-version;
+        bh=p2CmJv0cDKZ5GIBsiB+S1tjd9iqNyVmexGhxoCqP1jQ=;
+        b=fWtS0/pkhd6bPSC8Iyp8OTh6VVqlGjoemiKDf7bSkNRK46RtVzigfZgfyb8ICBWUcQ
+         WRSl4KmCmWGgyQf8hswaefQaKHB60OLmPaIOgnzRrsufiL7nZMAUAxUyIIuzk1tHZ376
+         f42NCBjE6gYmA+RZ3xICwMUHdFBC2eDWg7MKKJaNbLllaxypehHWcgmXPmu7N0osIA2s
+         jQjMAFuF6E6AxnB6gHWRwfUOeo2GoooZxJrAjEF3vCDij5xMvxJ2IC16gRzma8dLLTWp
+         806EkQsR0E4Ajo5Sbh0g2SmMYbuWEkCmIiESopGCRBHkKp7/pLVm+WtbqilGJLTanW/U
+         zJog==
+In-Reply-To: <CA+ydwto5CTDSED=pZ_DfAZyh6Jx7xKJafRuDFUtV4ZZCb70ULA@mail.gmail.com>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Eric Dumazet <eric.dumazet@gmail.com>
-Cc: netdev@vger.kernel.org, Dave Jones <davej@redhat.com>, trinity@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset="iso-8859-1"
+To: Tommi Rantala <tt.rantala@gmail.com>, David Miller <davem@davemloft.net>
+Cc: netdev@vger.kernel.org, Dave Jones <davej@redhat.com>, trinity@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, Tom Herbert <therbert@google.com>, Maciej =?UTF-8?Q?=C5=BBenczykowski?= <maze@google.com>
 
-2014-02-01 Tommi Rantala <tt.rantala@gmail.com>:
-> 2014-01-31 Eric Dumazet <eric.dumazet@gmail.com>:
->> On Fri, 2014-01-31 at 22:11 +0200, Tommi Rantala wrote:
->>> Hello,
->>>
->>> Hit this while fuzzing v3.13-9218-g0e47c96 with trinity in a qemu
->>> virtual machine.
->>>
->>> Tommi
->>
->> Hi Tommi
->>
->> Could you please try the following fix ?
->
-> Thanks, giving this a spin. This does not reproduce very easily with
-> Trinity, I'll let you know if anything blows up.
+=46rom: Eric Dumazet <edumazet@google.com>
 
-Looking good after two days of fuzzing in several virtual machines.
-The bug has not been reproduced, and no other ill effects visible.
+Setting rt variable to NULL at the beginning of ip_tunnel_xmit()
+missed possible use of this variable as a scratch value.
 
-Thanks!
+Also fixes a possible dst leak in tunnel_dst_check() :
+If we had to call tunnel_dst_reset(), we forgot to
+release the reference on dst.
 
-Tommi
+Merges tunnel_dst_get()/tunnel_dst_check() into
+a single tunnel_rtable_get() function for clarity.
+
+Many thanks to Tommi for his report and tests.
+
+=46ixes: 7d442fab0a67 ("ipv4: Cache dst in tunnels)"
+Reported-by: Tommi Rantala <tt.rantala@gmail.com>
+Signed-off-by: Eric Dumazet <edumazet@google.com>
+Tested-by: Tommi Rantala <tt.rantala@gmail.com>
+Cc: Tom Herbert <therbert@google.com>
+Cc: Maciej =C5=BBenczykowski <maze@google.com>
+---
+ net/ipv4/ip_tunnel.c |   29 +++++++++++------------------
+ 1 file changed, 11 insertions(+), 18 deletions(-)
+
+diff --git a/net/ipv4/ip_tunnel.c b/net/ipv4/ip_tunnel.c
+index bd28f386bd02..50228be5c17b 100644
+--- a/net/ipv4/ip_tunnel.c
++++ b/net/ipv4/ip_tunnel.c
+@@ -101,28 +101,22 @@ static void tunnel_dst_reset_all(struct ip_tunnel=
+ *t)
+ 		__tunnel_dst_set(per_cpu_ptr(t->dst_cache, i), NULL);
+ }
+=20
+-static struct dst_entry *tunnel_dst_get(struct ip_tunnel *t)
++static struct rtable *tunnel_rtable_get(struct ip_tunnel *t, u32 cooki=
+e)
+ {
+ 	struct dst_entry *dst;
+=20
+ 	rcu_read_lock();
+ 	dst =3D rcu_dereference(this_cpu_ptr(t->dst_cache)->dst);
+-	if (dst)
++	if (dst) {
++		if (dst->obsolete && dst->ops->check(dst, cookie) =3D=3D NULL) {
++			rcu_read_unlock();
++			tunnel_dst_reset(t);
++			return NULL;
++		}
+ 		dst_hold(dst);
+-	rcu_read_unlock();
+-	return dst;
+-}
+-
+-static struct dst_entry *tunnel_dst_check(struct ip_tunnel *t, u32 coo=
+kie)
+-{
+-	struct dst_entry *dst =3D tunnel_dst_get(t);
+-
+-	if (dst && dst->obsolete && dst->ops->check(dst, cookie) =3D=3D NULL)=
+ {
+-		tunnel_dst_reset(t);
+-		return NULL;
+ 	}
+-
+-	return dst;
++	rcu_read_unlock();
++	return (struct rtable *)dst;
+ }
+=20
+ /* Often modified stats are per cpu, other are shared (netdev->stats) =
+*/
+@@ -584,7 +578,7 @@ void ip_tunnel_xmit(struct sk_buff *skb, struct net=
+_device *dev,
+ 	struct flowi4 fl4;
+ 	u8     tos, ttl;
+ 	__be16 df;
+-	struct rtable *rt =3D NULL;	/* Route to the other host */
++	struct rtable *rt;		/* Route to the other host */
+ 	unsigned int max_headroom;	/* The extra header space needed */
+ 	__be32 dst;
+ 	int err;
+@@ -657,8 +651,7 @@ void ip_tunnel_xmit(struct sk_buff *skb, struct net=
+_device *dev,
+ 	init_tunnel_flow(&fl4, protocol, dst, tnl_params->saddr,
+ 			 tunnel->parms.o_key, RT_TOS(tos), tunnel->parms.link);
+=20
+-	if (connected)
+-		rt =3D (struct rtable *)tunnel_dst_check(tunnel, 0);
++	rt =3D connected ? tunnel_rtable_get(tunnel, 0) : NULL;
+=20
+ 	if (!rt) {
+ 		rt =3D ip_route_output_key(tunnel->net, &fl4);
+
