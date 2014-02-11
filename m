@@ -1,51 +1,42 @@
-From: Tejun Heo <tj@kernel.org>
-Subject: Re: lockdep: strange %s#5 lock name
-Date: Tue, 11 Feb 2014 10:27:41 -0500
-Message-ID: <20140211152741.GA24490@htj.dyndns.org>
-References: <CA+ydwtqC7En++T5S7q5qzaDe_tf9dcMx3Y3aH=+Fcss_NU7stA@mail.gmail.com>
- <20140210192846.GF27965@twins.programming.kicks-ass.net>
- <20140210215224.GB25350@mtj.dyndns.org>
- <20140211110036.GT9987@twins.programming.kicks-ass.net>
+From: Dave Jones <davej@redhat.com>
+Subject: Re: trinity: lots of corrupted double-linked list errors when run on
+ x32
+Date: Tue, 11 Feb 2014 12:13:59 -0500
+Message-ID: <20140211171359.GA31222@redhat.com>
+References: <alpine.DEB.2.10.1402061142030.17478@vincent-weaver-1.um.maine.edu>
 Mime-Version: 1.0
-Return-path: <linux-kernel-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=sender:date:from:to:cc:subject:message-id:references:mime-version
-         :content-type:content-disposition:in-reply-to:user-agent;
-        bh=D+i6ZDE5BeY/10LPjDHPu7C7xDFMJJfKa3X11Pbahkk=;
-        b=sLTxXUHEFuXyAzNthMOggzHLAoafpajAJY23tWvxQrtvVc5oZrBhCFE474qBK4FdSs
-         lg/rH2Z1MhOgcfx2OWVP6evsJhW8lVtvnkgOWVZ4diHmoXE6XsjuUIOmEYsb0vzlrIEO
-         DRQ7HXoovHAepvb2ItK6ZfeQsdANF5lZLDUJAPvMmHo8cMNy3l6IyzW8gWfmE8x9XxXj
-         QUImX2Qgw38GgHySe4k63sc0tmaTDYcCjluoiOuNLBXuCLAmBgEo+pgmmazD2BLpc0K7
-         XblfeGJB/JvxOZKMypWNZh8tlFwt5s+6Z2TDPdwzhJKAlGYxtUk/bJQLDEC7tueXd8CC
-         BlJQ==
+Return-path: <trinity-owner@vger.kernel.org>
 Content-Disposition: inline
-In-Reply-To: <20140211110036.GT9987@twins.programming.kicks-ass.net>
-Sender: linux-kernel-owner@vger.kernel.org
+In-Reply-To: <alpine.DEB.2.10.1402061142030.17478@vincent-weaver-1.um.maine.edu>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Tommi Rantala <tt.rantala@gmail.com>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Dave Jones <davej@redhat.com>, trinity@vger.kernel.org
+To: Vince Weaver <vincent.weaver@maine.edu>
+Cc: trinity@vger.kernel.org
 
-On Tue, Feb 11, 2014 at 12:00:36PM +0100, Peter Zijlstra wrote:
-> > Looks good to me.  Can you please post the patch with SOB?
-> 
-> ---
-> Subject: workqueue: Fix workqueue lockdep name
-> 
-> Tommi noticed a 'funny' lock class name: "%s#5" from a lock acquired in
-> process_one_work(). It turns out that commit b196be89cdc14 forgot to
-> change the lockdep_init_map() when it changed the @lock_name argument
-> from a string to a format.
-> 
-> Fixes: b196be89cdc14 ("workqueue: make alloc_workqueue() take printf fmt and args for name")
-> Reported-by: Tommi Rantala <tt.rantala@gmail.com>
-> Signed-off-by: Peter Zijlstra <peterz@infradead.org>
+On Thu, Feb 06, 2014 at 11:45:49AM -0500, Vince Weaver wrote:
+ > 
+ > I'm running trinity compiled for x32 (by adding -mx32 to the CFLAGS
+ > and -static in the LDFLGAS as for some reason my debian system with x32 
+ > libs installed gives "FATAL: kernel too old" if I try to run the 
+ > dynamically linked version).
+ > 
+ > Anyway I think glibc is reporting these particular errors.  Should I try 
+ > tracking them down?  Or is this normal when running trinity?
+ > 
+ > Vince
+ > 
+ > *** Error in `./trinity': corrupted double-linked list: 0x018c31f8 ***
+ > *** Error in `./trinity': corrupted double-linked list: 0x01a68038 ***
+ > *** Error in `./trinity': corrupted double-linked list: 0x0170a448 ***
+ > *** Error in `./trinity': corrupted double-linked list: 0x01a0cd08 ***
+ > *** Error in `./trinity': free(): invalid size: 0x01a150d0 ***
 
-Applied to wq/for-3.14-fixes.
+I've spotted a bunch of weird stuff lately, like core dumps in odd places (when run with -D)
+(and gdb insisting it doesn't match the executable).  I think it started when
+I added the mmap lists, but I've not nailed down exactly what's failing yet.
 
-Thanks!
+I'm looking into it, but haven't got a good feel for what's going wrong.
 
--- 
-tejun
+	Dave
