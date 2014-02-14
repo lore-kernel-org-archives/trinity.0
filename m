@@ -1,53 +1,64 @@
-From: Tejun Heo <tj@kernel.org>
-Subject: Re: lockdep: strange %s#5 lock name
-Date: Thu, 13 Feb 2014 17:15:15 -0500
-Message-ID: <20140213221515.GL17608@htj.dyndns.org>
+From: Li Zhong <zhong@linux.vnet.ibm.com>
+Subject: [PATCH ] workqueue: add args to workqueue lockdep name
+Date: Fri, 14 Feb 2014 10:52:57 +0800
+Message-ID: <1392346377.4744.8.camel@ThinkPad-T5421.cn.ibm.com>
 References: <CA+ydwtqC7En++T5S7q5qzaDe_tf9dcMx3Y3aH=+Fcss_NU7stA@mail.gmail.com>
- <20140210192846.GF27965@twins.programming.kicks-ass.net>
- <20140210215224.GB25350@mtj.dyndns.org>
- <20140211110036.GT9987@twins.programming.kicks-ass.net>
- <20140211152741.GA24490@htj.dyndns.org>
- <1392266124.4974.35.camel@ThinkPad-T5421.cn.ibm.com>
- <20140213212645.GG17608@htj.dyndns.org>
- <20140213213253.GF27965@twins.programming.kicks-ass.net>
+	 <20140210192846.GF27965@twins.programming.kicks-ass.net>
+	 <20140210215224.GB25350@mtj.dyndns.org>
+	 <20140211110036.GT9987@twins.programming.kicks-ass.net>
+	 <20140211152741.GA24490@htj.dyndns.org>
+	 <1392266124.4974.35.camel@ThinkPad-T5421.cn.ibm.com>
+	 <20140213212645.GG17608@htj.dyndns.org>
+	 <20140213213253.GF27965@twins.programming.kicks-ass.net>
+	 <20140213221515.GL17608@htj.dyndns.org>
 Mime-Version: 1.0
-Return-path: <linux-kernel-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=sender:date:from:to:cc:subject:message-id:references:mime-version
-         :content-type:content-disposition:in-reply-to:user-agent;
-        bh=5kDLDzrWssgAyN81j8fYWlSvXHk7SEbDQ+NFIWf4IB8=;
-        b=q546iKpPw7qP2lXWl0YyU2Tr9vZ1MgZmGCOGj+uAXYYyWa5wo0mUxZo15H80xmCcu6
-         EKvA/GV4iJJFNMO9nOfd75PuwHuBxTty1tCSGsfvP0m6fFAQgRvUhGNN21jedhEpQiFA
-         YV9t7xxjxEWZH/1MY+85wNGCY9o9Zd+BNLu0JvRTO+M0o+p1E5zTxTT1Xb/sRrqH8h0W
-         l+xAxojJKJ+xoRZ3yD3bBy8oO50oUi/NHc5nAs9waN7Uvt4mV9owPCW33JVCnZerwuCa
-         Fwffxbza56f02Z7y4f5OCdghAx8mx76V1YhhCxHdEQ3zW2txuXi6orhJlgo/J/9oGqsh
-         Ud4A==
-Content-Disposition: inline
-In-Reply-To: <20140213213253.GF27965@twins.programming.kicks-ass.net>
-Sender: linux-kernel-owner@vger.kernel.org
+Content-Transfer-Encoding: 7bit
+Return-path: <trinity-owner@vger.kernel.org>
+In-Reply-To: <20140213221515.GL17608@htj.dyndns.org>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Li Zhong <zhong@linux.vnet.ibm.com>, Tommi Rantala <tt.rantala@gmail.com>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Dave Jones <davej@redhat.com>, trinity@vger.kernel.org
+To: Tejun Heo <tj@kernel.org>
+Cc: Peter Zijlstra <peterz@infradead.org>, Tommi Rantala <tt.rantala@gmail.com>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Dave Jones <davej@redhat.com>, trinity@vger.kernel.org
 
-On Thu, Feb 13, 2014 at 10:32:53PM +0100, Peter Zijlstra wrote:
-> On Thu, Feb 13, 2014 at 04:26:45PM -0500, Tejun Heo wrote:
-> > > It seems to me that when the second time alloc_workqueue() is called
-> > > from the same code path, it would have two locks with the same key, but
-> > > not the same &wq->name, which doesn't meet lockdep's assumption.
-> > 
-> > Dang...  I reverted the previous patch for now.  Peter, does this
-> > approach sound good to you?
-> 
-> Whatever works I suppose; like Li said; a little ugly but not sure we
-> can do better.
+Tommi noticed a 'funny' lock class name: "%s#5" from a lock acquired in
+process_one_work().
 
-Cool, Li, can you please spin it on top of v3.14-rc1 w/ SOB and
-description.
+Maybe #fmt plus #args could be used as the lock_name to give some more
+information for some fmt string like the above. 
 
-Thanks.
+__builtin_constant_p() check is removed (as there seems no good way to
+check all the variables in args list). However, by removing the check,
+it only adds two additional "s for those constants.
 
--- 
-tejun
+Some lockdep name examples printed out after the change:
+
+lockdep name                    wq->name
+
+"events_long"                   events_long
+"%s"("khelper")                 khelper
+"xfs-data/%s"mp->m_fsname       xfs-data/dm-3
+
+Signed-off-by: Li Zhong <zhong@linux.vnet.ibm.com>
+---
+ include/linux/workqueue.h |    5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/include/linux/workqueue.h b/include/linux/workqueue.h
+index 594521b..704f4f6 100644
+--- a/include/linux/workqueue.h
++++ b/include/linux/workqueue.h
+@@ -419,10 +419,7 @@ __alloc_workqueue_key(const char *fmt, unsigned int flags, int max_active,
+ 	static struct lock_class_key __key;				\
+ 	const char *__lock_name;					\
+ 									\
+-	if (__builtin_constant_p(fmt))					\
+-		__lock_name = (fmt);					\
+-	else								\
+-		__lock_name = #fmt;					\
++	__lock_name = #fmt#args;					\
+ 									\
+ 	__alloc_workqueue_key((fmt), (flags), (max_active),		\
+ 			      &__key, __lock_name, ##args);		\
+
+
