@@ -1,98 +1,63 @@
-From: James Morris <jmorris@namei.org>
-Subject: Re: [PATCH] KEYS: Make the keyring cycle detector ignore other
- keyrings of the same name
-Date: Thu, 6 Mar 2014 14:51:30 +1100 (EST)
-Message-ID: <alpine.LRH.2.02.1403061451070.10002@tundra.namei.org>
-References: <15425.1393949449@warthog.procyon.org.uk>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
+Subject: build error with latest gir tree at a 32 bit Linux
+Date: Thu, 06 Mar 2014 18:18:43 +0100
+Message-ID: <5318ADF3.5030905@gmx.de>
 Mime-Version: 1.0
-Return-path: <linux-security-module-owner@vger.kernel.org>
-In-Reply-To: <15425.1393949449@warthog.procyon.org.uk>
-Sender: linux-security-module-owner@vger.kernel.org
+Content-Transfer-Encoding: QUOTED-PRINTABLE
+Return-path: <trinity-owner@vger.kernel.org>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: TEXT/PLAIN; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: David Howells <dhowells@redhat.com>
-Cc: torvalds@linux-foundation.org, tt.rantala@gmail.com, keyrings@linux-nfs.org, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
+Content-Type: text/plain; charset="utf-8"
+To: trinity@vger.kernel.org
 
-Acked-by: James Morris <james.l.morris@oracle.com>
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
 
+i686-pc-linux-gnu-gcc -O2 -march=3Dnative -pipe -g -ggdb -Wall -W  -I. =
+-Iinclude/ -Wimplicit  -D_GNU_SOURCE -D__linux__ -Wdeclaration-after-st=
+atement -Wformat=3D2 -Winit-self -Wlogical-op -Wnested-externs -Wpacked=
+ -Wshadow -Wstrict-aliasing=3D3 -Wswitch-enum -Wundef -Wwrite-strings -=
+Wno-format-nonliteral -Wstrict-prototypes -Wmissing-prototypes -Werror =
+-Wl,-O1 -Wl,--as-needed -o interesting-numbers.o -c interesting-numbers=
+=2Ec
+i686-pc-linux-gnu-gcc -O2 -march=3Dnative -pipe -g -ggdb -Wall -W  -I. =
+-Iinclude/ -Wimplicit  -D_GNU_SOURCE -D__linux__ -Wdeclaration-after-st=
+atement -Wformat=3D2 -Winit-self -Wlogical-op -Wnested-externs -Wpacked=
+ -Wshadow -Wstrict-aliasing=3D3 -Wswitch-enum -Wundef -Wwrite-strings -=
+Wno-format-nonliteral -Wstrict-prototypes -Wmissing-prototypes -Werror =
+-Wl,-O1 -Wl,--as-needed -o locks.o -c locks.c
+i686-pc-linux-gnu-gcc -O2 -march=3Dnative -pipe -g -ggdb -Wall -W  -I. =
+-Iinclude/ -Wimplicit  -D_GNU_SOURCE -D__linux__ -Wdeclaration-after-st=
+atement -Wformat=3D2 -Winit-self -Wlogical-op -Wnested-externs -Wpacked=
+ -Wshadow -Wstrict-aliasing=3D3 -Wswitch-enum -Wundef -Wwrite-strings -=
+Wno-format-nonliteral -Wstrict-prototypes -Wmissing-prototypes -Werror =
+-Wl,-O1 -Wl,--as-needed -o log.o -c log.c
+locks.c: In function =E2=80=98lock=E2=80=99:
+locks.c:4:19: error: declaration of =E2=80=98lock=E2=80=99 shadows a gl=
+obal declaration [-Werror=3Dshadow]
+locks.c:4:6: error: shadowed declaration is here [-Werror=3Dshadow]
+locks.c: In function =E2=80=98unlock=E2=80=99:
+locks.c:12:21: error: declaration of =E2=80=98lock=E2=80=99 shadows a g=
+lobal declaration [-Werror=3Dshadow]
+locks.c:4:6: error: shadowed declaration is here [-Werror=3Dshadow]
+cc1: all warnings being treated as errors
+make: *** [locks.o] Error 1
+make: *** Waiting for unfinished jobs....
+ * ERROR: dev-util/trinity-9999::toralf failed (compile phase):
+ *   emake failed
+ *
+ * If you need support, post the output of `emerge --info '=3Ddev-util/=
+trinity-9999::toralf'`,
 
-On Tue, 4 Mar 2014, David Howells wrote:
+- --=20
+MfG/Sincerely
+Toralf F=C3=B6rster
+pgp finger print:1A37 6F99 4A9D 026F 13E2 4DCF C4EA CDDE 0076 E94E
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2.0.22 (GNU/Linux)
+Comment: Using GnuPG with Thunderbird - http://www.enigmail.net/
 
-> 
-> This fixes CVE-2014-0102.
-> 
-> The following command sequence produces an oops:
-> 
-> 	keyctl new_session
-> 	i=`keyctl newring _ses @s`
-> 	keyctl link @s $i
-> 
-> The problem is that search_nested_keyrings() sees two keyrings that have
-> matching type and description, so keyring_compare_object() returns true.
-> s_n_k() then passes the key to the iterator function -
-> keyring_detect_cycle_iterator() - which *should* check to see whether this is
-> the keyring of interest, not just one with the same name.
-> 
-> Because assoc_array_find() will return one and only one match, I assumed that
-> the iterator function would only see an exact match or never be called - but
-> the iterator isn't only called from assoc_array_find()...
-> 
-> The oops looks something like this:
-> 
-> 	kernel BUG at /data/fs/linux-2.6-fscache/security/keys/keyring.c:1003!
-> 	invalid opcode: 0000 [#1] SMP
-> 	...
-> 	RIP: 0010:[<ffffffff811d39c3>] keyring_detect_cycle_iterator+0xe/0x1f
-> 	...
-> 	Stack:
-> 	...
-> 	Call Trace:
-> 	 [<ffffffff811d3706>] search_nested_keyrings+0x76/0x2aa
-> 	 [<ffffffff810fa7f4>] ? kmem_cache_alloc_trace+0xdd/0x159
-> 	 [<ffffffff81235669>] ? assoc_array_insert+0xab/0x929
-> 	 [<ffffffff811e226d>] ? selinux_key_permission+0x2d/0x2f
-> 	 [<ffffffff811dc94c>] ? security_key_permission+0x11/0x13
-> 	 [<ffffffff811d3e36>] __key_link_check_live_key+0x50/0x5f
-> 	 [<ffffffff811d39b5>] ? keyring_describe+0x7b/0x7b
-> 	 [<ffffffff811d3f2b>] key_link+0x4e/0x85
-> 	 [<ffffffff811d463a>] keyctl_keyring_link+0x60/0x81
-> 	 [<ffffffff811d553d>] SyS_keyctl+0x65/0xe4
-> 	 [<ffffffff81452edb>] tracesys+0xdd/0xe2
-> 
-> The fix is to make keyring_detect_cycle_iterator() check that the key it has
-> is the key it was actually looking for rather than calling BUG_ON().
-> 
-> A testcase has been included in the keyutils testsuite for this:
-> 
-> 	http://git.kernel.org/cgit/linux/kernel/git/dhowells/keyutils.git/commit/?id=891f3365d07f1996778ade0e3428f01878a1790b
-> 
-> Reported-by: Tommi Rantala <tt.rantala@gmail.com>
-> Signed-off-by: David Howells <dhowells@redhat.com>
-> ---
-> diff --git a/security/keys/keyring.c b/security/keys/keyring.c
-> index d46cbc5e335e..2fb2576dc644 100644
-> --- a/security/keys/keyring.c
-> +++ b/security/keys/keyring.c
-> @@ -1000,7 +1000,11 @@ static int keyring_detect_cycle_iterator(const void *object,
->  
->  	kenter("{%d}", key->serial);
->  
-> -	BUG_ON(key != ctx->match_data);
-> +	/* We might get a keyring with matching index-key that is nonetheless a
-> +	 * different keyring. */
-> +	if (key != ctx->match_data)
-> +		return 0;
-> +
->  	ctx->result = ERR_PTR(-EDEADLK);
->  	return 1;
->  }
-> --
-> To unsubscribe from this list: send the line "unsubscribe linux-security-module" in
-> the body of a message to majordomo@vger.kernel.org
-> More majordomo info at  http://vger.kernel.org/majordomo-info.html
-> 
-
--- 
-James Morris
-<jmorris@namei.org>
+iF4EAREIAAYFAlMYrfIACgkQxOrN3gB26U4W2AD9EjBYwm07R8MgTHt0x8HwwNtD
+h89c9Ebx7VZAkGW7e8cA+gKUgk+wfe69o2r55Sz2drcj4gKb3yTWxj3ON08I59QF
+=3Dw/Mb
+-----END PGP SIGNATURE-----
