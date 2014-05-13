@@ -1,64 +1,107 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Fwd: Trinity 1.4 tarball release.
-Date: Mon, 12 May 2014 13:43:32 -0400
-Message-ID: <20140512174332.GA3345@redhat.com>
+From: Michael Ellerman <mpe@ellerman.id.au>
+Subject: Re: Fwd: Trinity 1.4 tarball release.
+Date: Tue, 13 May 2014 16:43:48 +1000
+Message-ID: <1399963428.2395.2.camel@concordia>
+References: <20140512174332.GA3345@redhat.com>
 Mime-Version: 1.0
-Content-Type: multipart/mixed; boundary="k+w/mQv8wyuph6w0"
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
+In-Reply-To: <20140512174332.GA3345@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-To: trinity@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+To: Dave Jones <davej@redhat.com>
+Cc: trinity@vger.kernel.org
+
+On Mon, 2014-05-12 at 13:43 -0400, Dave Jones wrote:
+> heh, I knew I'd forget something. Hopefully "cc'ing the trinity list"
+> was the only thing this time around..
 
 
---k+w/mQv8wyuph6w0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
+Hi Dave,
 
-heh, I knew I'd forget something. Hopefully "cc'ing the trinity list"
-was the only thing this time around..
+I gave this spin on a system of mine here.
 
-	Dave
+I'm consistently ending up with a watchdog that is spinning using 100% cpu.
 
+strace shows it spinning calling kill:
 
---k+w/mQv8wyuph6w0
-Content-Type: message/rfc822
-Content-Disposition: inline
+kill(17833, SIG_0)                      = -1 ESRCH (No such process)
+kill(17833, SIG_0)                      = -1 ESRCH (No such process)
+kill(17833, SIG_0)                      = -1 ESRCH (No such process)
+kill(17833, SIG_0)                      = -1 ESRCH (No such process)
+...
 
-Date: Mon, 12 May 2014 13:14:09 -0400
-From: Dave Jones <davej@redhat.com>
-To: Linux Kernel <linux-kernel@vger.kernel.org>
-Cc: linux-mm@kvack.org
-Subject: Trinity 1.4 tarball release.
-Message-ID: <20140512171409.GA32653@redhat.com>
-Mail-Followup-To: Dave Jones <davej@redhat.com>,
-	Linux Kernel <linux-kernel@vger.kernel.org>, linux-mm@kvack.org
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-User-Agent: Mutt/1.5.23 (2014-03-12)
+Which gdb agrees with:
 
-I finally got around to cutting a new release of trinity, hopefully
-putting off the "are you running git, or tarball?" questions for a while.
-
-Big changes since 1.3 include some more targetted fuzzing of VM related
-syscalls, which judging from the fallout over the last six months, seems
-to be working quite well.
-
-Trinity should now also scale up a lot better on bigger machines with lots of cores.
-It should pick a reasonable default number of child processes, but you
-can override with -C as you could before, but now without any restrictions other
-than available memory.  (I'd love to hear stories of people running it
-on some of the more extreme systems, especially if something interesting broke)
-
-Info, tarballs, and pointers to git are as always, at
-http://codemonkey.org.uk/projects/trinity/
-
-thanks to everyone who sent patches, chased down interesting kernel bugs
-trinity found, or who gave me ideas/feedback. Your input has been much
-appreciated.
-
-	Dave
+(gdb) bt
+#0  0x1001c790 in kill@plt ()
+#1  0x10001984 in __check_main () at watchdog.c:158
+#2  0x10010510 in check_main_alive () at watchdog.c:185
+#3  watchdog () at watchdog.c:407
+#4  init_watchdog () at watchdog.c:484
+#5  0x10001d04 in main (argc=1, argv=<optimized out>) at trinity.c:128
 
 
---k+w/mQv8wyuph6w0--
+It's looping around:
+
+183			while (shm->mainpid != 0) {
+(gdb) n
+185				ret = __check_main();
+(gdb)
+186				if (ret == TRUE) {
+(gdb)
+183			while (shm->mainpid != 0) {
+(gdb)
+185				ret = __check_main();
+(gdb)
+186				if (ret == TRUE) {
+(gdb)
+183			while (shm->mainpid != 0) {
+(gdb)
+185				ret = __check_main();
+(gdb)
+186				if (ret == TRUE) {
+
+
+shm->mainpid is 17833, which agrees with strace, and that process is indeed
+no longer running.
+
+We are bailing out of __check_main() before clearing shm->mainpid because we
+see that we are already exiting.
+
+        if (ret == -1) {
+                /* Are we already exiting ? */
+                if (shm->exit_reason != STILL_RUNNING)
+                        return FALSE;
+
+                /* No. Check what happened. */
+                if (errno == ESRCH) {
+
+
+161			if (shm->exit_reason != STILL_RUNNING)
+(gdb) print shm->exit_reason
+$6 = EXIT_FORK_FAILURE
+
+It looks like the only other place shm->mainpid is written is in
+trinity.c:main(), which is dead. So we are stuck forever as far as I can tell.
+
+
+The last thing in trinity.log is:
+
+[main] couldn't create child! (Cannot allocate memory)
+
+From main.c:69:
+
+	output(0, "couldn't create child! (%s)\n", strerror(errn    o));
+	shm->exit_reason = EXIT_FORK_FAILURE;
+	exit(EXIT_FAILURE);
+
+
+So we exited directly and didn't let the code in main() clear shm->mainpid.
+
+Not sure what the correct fix is. We could drop the check of shm->exit_reason
+in __check_main(), but presumably that is there for a good reason.
+
+cheers
+
