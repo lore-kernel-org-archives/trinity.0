@@ -1,50 +1,62 @@
-From: Markos Chandras <markos.chandras@imgtec.com>
-Subject: [PATCH] syscall: Take SYSCALL_OFFSET into account
-Date: Wed, 14 May 2014 12:35:38 +0100
-Message-ID: <1400067338-12416-1-git-send-email-markos.chandras@imgtec.com>
+From: Dave Jones <davej@redhat.com>
+Subject: Re: Fwd: Trinity 1.4 tarball release.
+Date: Wed, 14 May 2014 09:35:22 -0400
+Message-ID: <20140514133522.GA10167@redhat.com>
+References: <20140512174332.GA3345@redhat.com>
+ <1399963428.2395.2.camel@concordia>
+ <20140513140006.GA32674@redhat.com>
+ <1400052389.8826.1.camel@concordia>
 Mime-Version: 1.0
 Return-path: <trinity-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <1400052389.8826.1.camel@concordia>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
-Cc: Markos Chandras <markos.chandras@imgtec.com>
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: trinity@vger.kernel.org
 
-MIPS and IA64 have their syscall tables starting at non-zero
-offsets so take that into account when executing a sycall
-otherwise trinity just fails with ENOSYS error messages.
+On Wed, May 14, 2014 at 05:26:29PM +1000, Michael Ellerman wrote:
 
-Tested on MIPS 32/LE system.
+ > >  > Not sure what the correct fix is.
+ > > 
+ > > I think just clearing mainpid before we call exit is the right thing to
+ > > do here.  I'll audit all the other exit() calls too, as this might be a
+ > > problem in other paths.
+ > 
+ > Thanks. That fix is working for me.
+ > 
+ > It still exits after a minute or so, because it fails to fork a child in
+ > fork_children().
+ > 
+ > I have 64 cpus and 16GB of RAM, so that's only 250MB per child.
+ > 
+ > If I reduce to 32 children then it runs much longer.
+ > 
+ > I wonder though, should failing to fork a child be a fatal error? Or could it
+ > just skip that child and continue.
 
-Signed-off-by: Markos Chandras <markos.chandras@imgtec.com>
----
- syscall.c | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
+Maybe.  It could wait until another child exits before retrying.
+Something like the patch below maybe.  I think I tried something like
+this before though, and it resulted in a flood of failed forks.
 
-diff --git a/syscall.c b/syscall.c
-index 968962b..a1ccb6b 100644
---- a/syscall.c
-+++ b/syscall.c
-@@ -79,6 +79,7 @@ static long syscall32(unsigned int call,
- static unsigned long do_syscall(int childno, int *errno_saved)
- {
- 	int nr = shm->syscall[childno].nr;
-+	int call = nr + SYSCALL_OFFSET;
- 	unsigned long a1, a2, a3, a4, a5, a6;
- 	unsigned long ret = 0;
- 
-@@ -99,9 +100,9 @@ static unsigned long do_syscall(int childno, int *errno_saved)
- 	errno = 0;
- 
- 	if (shm->syscall[childno].do32bit == FALSE)
--		ret = syscall(nr, a1, a2, a3, a4, a5, a6);
-+		ret = syscall(call, a1, a2, a3, a4, a5, a6);
- 	else
--		ret = syscall32(nr, a1, a2, a3, a4, a5, a6);
-+		ret = syscall32(call, a1, a2, a3, a4, a5, a6);
- 
- 	*errno_saved = errno;
- 
--- 
-1.9.3
+Let me know how this work out.
+
+	Dave
+
+diff --git a/main.c b/main.c
+index f393f81ae0ba..be7108287dc9 100644
+--- a/main.c
++++ b/main.c
+@@ -79,6 +79,10 @@ static void fork_children(void)
+ 			_exit(EXIT_SUCCESS);
+ 		} else {
+ 			if (pid == -1) {
++				/* We failed, wait for a child to exit before retrying. */
++				if (shm->running_childs > 0)
++					return;
++
+ 				output(0, "couldn't create child! (%s)\n", strerror(errno));
+ 				shm->exit_reason = EXIT_FORK_FAILURE;
+ 				exit_main_fail();
