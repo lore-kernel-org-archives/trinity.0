@@ -1,51 +1,55 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
+From: Dave Jones <davej@redhat.com>
 Subject: Re: Fwd: Trinity 1.4 tarball release.
-Date: Thu, 22 May 2014 13:43:15 +1000
-Message-ID: <1400730195.14864.6.camel@concordia>
+Date: Wed, 21 May 2014 23:50:45 -0400
+Message-ID: <20140522035045.GB21777@redhat.com>
 References: <20140512174332.GA3345@redhat.com>
-	 <1399963428.2395.2.camel@concordia> <20140513140006.GA32674@redhat.com>
-	 <1400052389.8826.1.camel@concordia> <20140514133522.GA10167@redhat.com>
-	 <1400726436.14864.4.camel@concordia> <20140522034056.GA21777@redhat.com>
+ <1399963428.2395.2.camel@concordia>
+ <20140513140006.GA32674@redhat.com>
+ <1400052389.8826.1.camel@concordia>
+ <20140514133522.GA10167@redhat.com>
+ <1400726436.14864.4.camel@concordia>
+ <1400730073.14864.5.camel@concordia>
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20140522034056.GA21777@redhat.com>
+Content-Disposition: inline
+In-Reply-To: <1400730073.14864.5.camel@concordia>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
-To: Dave Jones <davej@redhat.com>
+Content-Transfer-Encoding: 7bit
+To: Michael Ellerman <michael@ellerman.id.au>
 Cc: trinity@vger.kernel.org
 
-On Wed, 2014-05-21 at 23:40 -0400, Dave Jones wrote:
-> On Thu, May 22, 2014 at 12:40:36PM +1000, Michael Ellerman wrote:
->  
->  > Sorry I didn't get back to you on this. I've been chasing a bug that trinity
->  > found for us.
->  > 
->  > Running aae6d6a I've seen this once, but only once:
->  > 
->  > [watchdog] Sanity check failed! Found pid 1885550132!
->  > [watchdog] problem checking on pid 112 (1:Operation not permitted)
->  > [watchdog] pid 1885550132 has disappeared (oom-killed maybe?). Reaping.
->  > [watchdog] pid 678326126 has disappeared (oom-killed maybe?). Reaping.
->  > [watchdog] pid 1697185792 has disappeared (oom-killed maybe?). Reaping.
->  > [watchdog] Reaped 3 dead children
->  > Killed
-> 
-> If it happens again, check /proc/sys/kernel/pid_max.
-> I wonder if something scribbled in there.
+On Thu, May 22, 2014 at 01:41:13PM +1000, Michael Ellerman wrote:
+ 
+ > [main] Registered 6 fd providers.
+ > [main] Couldn't find socket cachefile. Regenerating.
+ > [main] created 375 sockets
+ > [main] Generating file descriptors
+ > [main] Added 276 filenames from /dev
+ > [main] Something went wrong during nftw(/proc). (-1:Value too large for defined data type)
 
-It hasn't happened again, but I haven't rebooted since it did, and I still have:
+that's curious, but probably not fatal.
 
-$ cat /proc/sys/kernel/pid_max
-65536
+ > [child6:56655] ipc (117) returned ENOSYS, marking as inactive.
+ > [child11:56660] BUG!: CHILD (pid:56660) GOT REPARENTED! parent pid:47159. Watchdog pid:47158
 
-> Though looking at the pids in the dump above, I wonder if there's
-> something more screwed up, like we corrupted the ptrs to the pid map
-> in the shm.
+This is usually indicative of the main pid segfaulting.
+If you run with -D, you'll get coredumps (though also of the child
+processes, so there's going to be a lot of them if it runs enough)
+You should able to find the one that corresponds to the main pid though,
+and get a backtrace.
 
-Yeah it looks more like that to me.
+ > I/O possible
 
-cheers
+Also weird.
 
+I'll dig into it some more tomorrow if you don't beat me to it.
 
+As a last resort, you might be able to bisect between todays changes
+(I'd say start at c19c0ef3973bf816025a2aef5ae5dbd00ca5c9eb).
+There's only one bad commit in that range, which is
+4401f6d0f0bfdeb92595520dc3be23dee32efc77.  If the bisect lands on that,
+do git show 4401f6d0f0bfdeb92595520dc3be23dee32efc77| patch -p1 on top of it.
+
+	Dave
