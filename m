@@ -1,44 +1,48 @@
-From: Vinson Lee <vlee@twopensource.com>
-Subject: [PATCH] Fix build errors on Ubuntu 12.04.
-Date: Thu, 22 May 2014 21:16:10 -0700
-Message-ID: <1400818570-13710-1-git-send-email-vlee@twopensource.com>
-Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+From: Michael Ellerman <mpe@ellerman.id.au>
+Subject: [PATCH] Fix buffer overflow in output() when pid slot is not found
+Date: Fri, 23 May 2014 19:09:03 +1000
+Message-ID: <1400836143-22355-1-git-send-email-mpe@ellerman.id.au>
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
 
-=46rom: Vinson Lee <vlee@twitter.com>
+In output() we sprintf() the result of find_pid_slot(). We print the pid
+slot to the buffer with %u and have space for two digits of pid slot.
+find_pid_slot() potentially returns PIDSLOT_NOT_FOUND (-1), which when
+printed with %u is 4294967295 - ten digits.
 
-  CC    syscalls/prctl.o
-syscalls/prctl.c:33:13: error: =E2=80=98PR_SET_CHILD_SUBREAPER=E2=80=99=
- undeclared here (not in a function)
-syscalls/prctl.c:33:37: error: =E2=80=98PR_GET_CHILD_SUBREAPER=E2=80=99=
- undeclared here (not in a function)
-syscalls/prctl.c:34:23: error: =E2=80=98PR_GET_TID_ADDRESS=E2=80=99 und=
-eclared here (not in a function)
-
-Signed-off-by: Vinson Lee <vlee@twitter.com>
+Fix it two ways, use snprintf() - truncated output is better than a
+buffer overflow. And allocate more space in the buffer, 32 bytes is a
+nice round size, and gives us space for everything.
 ---
- include/compat.h |    3 +++
- 1 file changed, 3 insertions(+)
+ log.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/include/compat.h b/include/compat.h
-index 51f0936..30edc81 100644
---- a/include/compat.h
-+++ b/include/compat.h
-@@ -257,6 +257,9 @@ enum {
-=20
- #ifndef PR_SET_MM
- #define PR_SET_MM               35
-+#endif
-+
-+#ifndef PR_SET_CHILD_SUBREAPER
- #define PR_SET_CHILD_SUBREAPER  36
- #define PR_GET_CHILD_SUBREAPER  37
- #define PR_SET_NO_NEW_PRIVS     38
---=20
-1.7.9.5
+diff --git a/log.c b/log.c
+index 91b4f63..584901c 100644
+--- a/log.c
++++ b/log.c
+@@ -291,7 +291,7 @@ void output(unsigned char level, const char *fmt, ...)
+ 	char watchdog_prefix[]="[watchdog]";
+ 	char init_prefix[]="[init]";
+ 	char main_prefix[]="[main]";
+-	char child_prefix[]="[childNN:1234567890]";
++	char child_prefix[32];
+ 
+ 	if (logging == FALSE && level >= quiet_level)
+ 		return;
+@@ -311,7 +311,7 @@ void output(unsigned char level, const char *fmt, ...)
+ 		unsigned int slot;
+ 
+ 		slot = find_pid_slot(pid);
+-		sprintf(child_prefix, "[child%u:%u]", slot, pid);
++		snprintf(child_prefix, sizeof(child_prefix), "[child%u:%u]", slot, pid);
+ 		prefix = child_prefix;
+ 	}
+ 
+-- 
+1.9.1
