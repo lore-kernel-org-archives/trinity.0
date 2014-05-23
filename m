@@ -1,55 +1,44 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: Fwd: Trinity 1.4 tarball release.
-Date: Wed, 21 May 2014 23:50:45 -0400
-Message-ID: <20140522035045.GB21777@redhat.com>
-References: <20140512174332.GA3345@redhat.com>
- <1399963428.2395.2.camel@concordia>
- <20140513140006.GA32674@redhat.com>
- <1400052389.8826.1.camel@concordia>
- <20140514133522.GA10167@redhat.com>
- <1400726436.14864.4.camel@concordia>
- <1400730073.14864.5.camel@concordia>
+From: Vinson Lee <vlee@twopensource.com>
+Subject: [PATCH] Fix build errors on Ubuntu 12.04.
+Date: Thu, 22 May 2014 21:16:10 -0700
+Message-ID: <1400818570-13710-1-git-send-email-vlee@twopensource.com>
 Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1400730073.14864.5.camel@concordia>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Michael Ellerman <michael@ellerman.id.au>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
-On Thu, May 22, 2014 at 01:41:13PM +1000, Michael Ellerman wrote:
- 
- > [main] Registered 6 fd providers.
- > [main] Couldn't find socket cachefile. Regenerating.
- > [main] created 375 sockets
- > [main] Generating file descriptors
- > [main] Added 276 filenames from /dev
- > [main] Something went wrong during nftw(/proc). (-1:Value too large for defined data type)
+=46rom: Vinson Lee <vlee@twitter.com>
 
-that's curious, but probably not fatal.
+  CC    syscalls/prctl.o
+syscalls/prctl.c:33:13: error: =E2=80=98PR_SET_CHILD_SUBREAPER=E2=80=99=
+ undeclared here (not in a function)
+syscalls/prctl.c:33:37: error: =E2=80=98PR_GET_CHILD_SUBREAPER=E2=80=99=
+ undeclared here (not in a function)
+syscalls/prctl.c:34:23: error: =E2=80=98PR_GET_TID_ADDRESS=E2=80=99 und=
+eclared here (not in a function)
 
- > [child6:56655] ipc (117) returned ENOSYS, marking as inactive.
- > [child11:56660] BUG!: CHILD (pid:56660) GOT REPARENTED! parent pid:47159. Watchdog pid:47158
+Signed-off-by: Vinson Lee <vlee@twitter.com>
+---
+ include/compat.h |    3 +++
+ 1 file changed, 3 insertions(+)
 
-This is usually indicative of the main pid segfaulting.
-If you run with -D, you'll get coredumps (though also of the child
-processes, so there's going to be a lot of them if it runs enough)
-You should able to find the one that corresponds to the main pid though,
-and get a backtrace.
-
- > I/O possible
-
-Also weird.
-
-I'll dig into it some more tomorrow if you don't beat me to it.
-
-As a last resort, you might be able to bisect between todays changes
-(I'd say start at c19c0ef3973bf816025a2aef5ae5dbd00ca5c9eb).
-There's only one bad commit in that range, which is
-4401f6d0f0bfdeb92595520dc3be23dee32efc77.  If the bisect lands on that,
-do git show 4401f6d0f0bfdeb92595520dc3be23dee32efc77| patch -p1 on top of it.
-
-	Dave
+diff --git a/include/compat.h b/include/compat.h
+index 51f0936..30edc81 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -257,6 +257,9 @@ enum {
+=20
+ #ifndef PR_SET_MM
+ #define PR_SET_MM               35
++#endif
++
++#ifndef PR_SET_CHILD_SUBREAPER
+ #define PR_SET_CHILD_SUBREAPER  36
+ #define PR_GET_CHILD_SUBREAPER  37
+ #define PR_SET_NO_NEW_PRIVS     38
+--=20
+1.7.9.5
