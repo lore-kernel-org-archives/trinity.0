@@ -1,53 +1,118 @@
 From: Michael Ellerman <mpe@ellerman.id.au>
-Subject: Re: [PATCH] Fix buffer overflow in output() when pid slot is not
- found
-Date: Mon, 26 May 2014 15:11:17 +1000
-Message-ID: <1401081077.3839.3.camel@concordia>
-References: <1400836143-22355-1-git-send-email-mpe@ellerman.id.au>
-	 <20140524005102.GB7139@redhat.com>
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
+Subject: [PATCH 1/2] Add an IGNORE_ENOSYS flag and use it
+Date: Mon, 26 May 2014 22:32:01 +1000
+Message-ID: <1401107522-21239-1-git-send-email-mpe@ellerman.id.au>
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20140524005102.GB7139@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
-To: Dave Jones <davej@redhat.com>
-Cc: trinity@vger.kernel.org
+Content-Transfer-Encoding: 7bit
+To: trinity@vger.kernel.org
 
-On Fri, 2014-05-23 at 20:51 -0400, Dave Jones wrote:
-> On Fri, May 23, 2014 at 07:09:03PM +1000, Michael Ellerman wrote:
->  > In output() we sprintf() the result of find_pid_slot(). We print the pid
->  > slot to the buffer with %u and have space for two digits of pid slot.
->  > find_pid_slot() potentially returns PIDSLOT_NOT_FOUND (-1), which when
->  > printed with %u is 4294967295 - ten digits.
->  > 
->  > Fix it two ways, use snprintf() - truncated output is better than a
->  > buffer overflow. And allocate more space in the buffer, 32 bytes is a
->  > nice round size, and gives us space for everything.
-> 
-> heh, this has been nagging me from time to time, but it wasn't a problem
-> until recently.   I'm curious why you're hitting that PIDSLOT_NOT_FOUND
-> case though, as it's a "should never happen" case.
+Some syscalls return ENOSYS depending on their arguments. We don't want
+to stop calling them just because we hit one of those cases. Add a flag
+to specify this behaviour so we don't have to keep special-casing those
+calls in mkcall().
+---
+ include/syscall.h   |  1 +
+ syscall.c           | 23 ++++++-----------------
+ syscalls/futex.c    |  2 +-
+ syscalls/ioctl.c    |  2 +-
+ syscalls/sendfile.c |  4 ++--
+ 5 files changed, 11 insertions(+), 21 deletions(-)
 
-Yeah, I figured it wasn't meant to happen.
-
-> Anyway, it's the right thing to do, so I pushed this out.
-> 
->  > @@ -311,7 +311,7 @@ void output(unsigned char level, const char *fmt, ...)
->  >  		unsigned int slot;
->  >  
->  >  		slot = find_pid_slot(pid);
->  > -		sprintf(child_prefix, "[child%u:%u]", slot, pid);
->  > +		snprintf(child_prefix, sizeof(child_prefix), "[child%u:%u]", slot, pid);
->  >  		prefix = child_prefix;
-> 
-> might be worth it to add something later to print PIDSLOT_NOT_FOUND entries as '?'
-> rather than 4294967295.
-
-I thought about it, but figured "4294967295" was actually a good eye-catcher.
-If you'd prefer "?" then let me know and I can do a patch for that. I haven't
-actually hit that case again though.
-
-cheers
-
+diff --git a/include/syscall.h b/include/syscall.h
+index e42cd85..bc19273 100644
+--- a/include/syscall.h
++++ b/include/syscall.h
+@@ -121,4 +121,5 @@ struct syscalltable {
+ #define TO_BE_DEACTIVATED	(1<<4)
+ #define NEED_ALARM		(1<<5)
+ #define EXTRA_FORK		(1<<6)
++#define IGNORE_ENOSYS		(1<<7)
+ 
+diff --git a/syscall.c b/syscall.c
+index bca2aea..50e64ac 100644
+--- a/syscall.c
++++ b/syscall.c
+@@ -176,29 +176,18 @@ bool mkcall(int childno)
+ 	if (dopause == TRUE)
+ 		sleep(1);
+ 
+-	/* If the syscall doesn't exist don't bother calling it next time. */
+-	if ((ret == -1UL) && (errno_saved == ENOSYS)) {
+-
+-		/* Futex is awesome, it ENOSYS's depending on arguments. Sigh. */
+-		if (call == (unsigned int) search_syscall_table(syscalls, max_nr_syscalls, "futex"))
+-			goto skip_enosys;
+-
+-		/* Unknown ioctls also ENOSYS. */
+-		if (call == (unsigned int) search_syscall_table(syscalls, max_nr_syscalls, "ioctl"))
+-			goto skip_enosys;
+-
+-		/* sendfile() may ENOSYS depending on args. */
+-		if (call == (unsigned int) search_syscall_table(syscalls, max_nr_syscalls, "sendfile"))
+-			goto skip_enosys;
+-
++	/*
++	 * If the syscall doesn't exist don't bother calling it next time.
++	 * Some syscalls return ENOSYS depending on their arguments, we mark
++	 * those as IGNORE_ENOSYS and keep calling them.
++	 */
++	if ((ret == -1UL) && (errno_saved == ENOSYS) && !(entry->flags & IGNORE_ENOSYS)) {
+ 		output(1, "%s (%d) returned ENOSYS, marking as inactive.\n",
+ 			entry->name, call + SYSCALL_OFFSET);
+ 
+ 		deactivate_syscall(call, syscallrec->do32bit);
+ 	}
+ 
+-skip_enosys:
+-
+ 	if (entry->post)
+ 	    entry->post(childno, syscallrec);
+ 
+diff --git a/syscalls/futex.c b/syscalls/futex.c
+index 5e194ab..4d18f30 100644
+--- a/syscalls/futex.c
++++ b/syscalls/futex.c
+@@ -33,5 +33,5 @@ struct syscallentry syscall_futex = {
+ 	.arg5type = ARG_ADDRESS,
+ 	.arg6name = "val3",
+ 	.rettype = RET_FD,		// FIXME: Needs to mutate depending on 'op' value
+-	.flags = NEED_ALARM,
++	.flags = NEED_ALARM | IGNORE_ENOSYS,
+ };
+diff --git a/syscalls/ioctl.c b/syscalls/ioctl.c
+index 012f055..db3b485 100644
+--- a/syscalls/ioctl.c
++++ b/syscalls/ioctl.c
+@@ -70,5 +70,5 @@ struct syscallentry syscall_ioctl = {
+ 	.arg3name = "arg",
+ 	.arg3type = ARG_RANDPAGE,
+ 	.sanitise = sanitise_ioctl,
+-	.flags = NEED_ALARM,
++	.flags = NEED_ALARM | IGNORE_ENOSYS,
+ };
+diff --git a/syscalls/sendfile.c b/syscalls/sendfile.c
+index 05e49e9..3e74841 100644
+--- a/syscalls/sendfile.c
++++ b/syscalls/sendfile.c
+@@ -14,7 +14,7 @@ struct syscallentry syscall_sendfile = {
+ 	.arg3type = ARG_ADDRESS,
+ 	.arg4name = "count",
+ 	.arg4type = ARG_LEN,
+-	.flags = NEED_ALARM,
++	.flags = NEED_ALARM | IGNORE_ENOSYS,
+ };
+ 
+ /*
+@@ -32,5 +32,5 @@ struct syscallentry syscall_sendfile64 = {
+ 	.arg3type = ARG_ADDRESS,
+ 	.arg4name = "count",
+ 	.arg4type = ARG_LEN,
+-	.flags = NEED_ALARM,
++	.flags = NEED_ALARM | IGNORE_ENOSYS,
+ };
+-- 
+1.9.1
