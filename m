@@ -1,60 +1,53 @@
 From: Michael Ellerman <mpe@ellerman.id.au>
-Subject: Re: [PATCH] Compat fixes for DRM & prctl()
-Date: Mon, 26 May 2014 13:06:29 +1000
-Message-ID: <1401073589.3839.2.camel@concordia>
-References: <1400836165-23714-1-git-send-email-mpe@ellerman.id.au>
-	 <20140524004818.GA7139@redhat.com>
+Subject: Re: [PATCH] Fix buffer overflow in output() when pid slot is not
+ found
+Date: Mon, 26 May 2014 15:11:17 +1000
+Message-ID: <1401081077.3839.3.camel@concordia>
+References: <1400836143-22355-1-git-send-email-mpe@ellerman.id.au>
+	 <20140524005102.GB7139@redhat.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20140524004818.GA7139@redhat.com>
+In-Reply-To: <20140524005102.GB7139@redhat.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 To: Dave Jones <davej@redhat.com>
 Cc: trinity@vger.kernel.org
 
-On Fri, 2014-05-23 at 20:48 -0400, Dave Jones wrote:
-> On Fri, May 23, 2014 at 07:09:25PM +1000, Michael Ellerman wrote:
->  > ---
->  >  include/compat.h | 9 +++++++++
->  >  ioctls/drm.c     | 2 ++
->  >  2 files changed, 11 insertions(+)
+On Fri, 2014-05-23 at 20:51 -0400, Dave Jones wrote:
+> On Fri, May 23, 2014 at 07:09:03PM +1000, Michael Ellerman wrote:
+>  > In output() we sprintf() the result of find_pid_slot(). We print the pid
+>  > slot to the buffer with %u and have space for two digits of pid slot.
+>  > find_pid_slot() potentially returns PIDSLOT_NOT_FOUND (-1), which when
+>  > printed with %u is 4294967295 - ten digits.
 >  > 
->  > diff --git a/include/compat.h b/include/compat.h
->  > index 51f0936..8bdaf92 100644
->  > --- a/include/compat.h
->  > +++ b/include/compat.h
->  > @@ -257,10 +257,19 @@ enum {
->  >  
->  >  #ifndef PR_SET_MM
->  >  #define PR_SET_MM               35
->  > +#endif
->  > +
->  > +#ifndef PR_SET_CHILD_SUBREAPER
->  >  #define PR_SET_CHILD_SUBREAPER  36
->  >  #define PR_GET_CHILD_SUBREAPER  37
->  > +#endif
->  > +
->  > +#ifndef PR_SET_NO_NEW_PRIVS
->  >  #define PR_SET_NO_NEW_PRIVS     38
->  >  #define PR_GET_NO_NEW_PRIVS     39
->  > +#endif
->  > +
->  > +#ifndef PR_GET_TID_ADDRESS
->  >  #define PR_GET_TID_ADDRESS      40
->  >  #endif
+>  > Fix it two ways, use snprintf() - truncated output is better than a
+>  > buffer overflow. And allocate more space in the buffer, 32 bytes is a
+>  > nice round size, and gives us space for everything.
 > 
-> I applied Vinson's variant of this, which I think should be
-> sufficient, because iirc, those all got added at the same time.
-> Can you send a follow up if needed ?
+> heh, this has been nagging me from time to time, but it wasn't a problem
+> until recently.   I'm curious why you're hitting that PIDSLOT_NOT_FOUND
+> case though, as it's a "should never happen" case.
 
-OK. I had a quick look and it looked like some were added separately, but
-Vinson's patch builds for me so that's fine.
+Yeah, I figured it wasn't meant to happen.
 
-> I edited your diff and applied the DRM part separately.
+> Anyway, it's the right thing to do, so I pushed this out.
+> 
+>  > @@ -311,7 +311,7 @@ void output(unsigned char level, const char *fmt, ...)
+>  >  		unsigned int slot;
+>  >  
+>  >  		slot = find_pid_slot(pid);
+>  > -		sprintf(child_prefix, "[child%u:%u]", slot, pid);
+>  > +		snprintf(child_prefix, sizeof(child_prefix), "[child%u:%u]", slot, pid);
+>  >  		prefix = child_prefix;
+> 
+> might be worth it to add something later to print PIDSLOT_NOT_FOUND entries as '?'
+> rather than 4294967295.
 
-Thanks.
+I thought about it, but figured "4294967295" was actually a good eye-catcher.
+If you'd prefer "?" then let me know and I can do a patch for that. I haven't
+actually hit that case again though.
 
 cheers
 
