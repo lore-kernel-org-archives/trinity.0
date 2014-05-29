@@ -1,60 +1,129 @@
-From: Vince Weaver <vincent.weaver@maine.edu>
-Subject: Re: [PATCH 1/2] Add an IGNORE_ENOSYS flag and use it
-Date: Wed, 28 May 2014 11:38:36 -0400 (EDT)
-Message-ID: <alpine.DEB.2.10.1405281134320.6109@vincent-weaver-1.umelst.maine.edu>
-References: <1401107522-21239-1-git-send-email-mpe@ellerman.id.au> <20140527004138.GA7911@redhat.com> <1401152719.9871.1.camel@concordia> <alpine.DEB.2.10.1405270057180.1362@vincent-weaver-1.umelst.maine.edu> <1401247674.5468.2.camel@concordia>
+From: Hugh Dickins <hughd@google.com>
+Subject: Re: BUG at mm/memory.c:1489!
+Date: Wed, 28 May 2014 17:33:11 -0700 (PDT)
+Message-ID: <alpine.LSU.2.11.1405281712310.7156@eggly.anvils>
+References: <1401265922.3355.4.camel@concordia>
 Mime-Version: 1.0
-Return-path: <trinity-owner@vger.kernel.org>
+Return-path: <owner-linux-mm@kvack.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=maine.edu; s=google;
-        h=from:date:to:cc:subject:in-reply-to:message-id:references
+        d=google.com; s=20120113;
+        h=date:from:to:cc:subject:in-reply-to:message-id:references
          :user-agent:mime-version:content-type;
-        bh=lcKmQq/6H4yIeCA4T+Qk/oQyhzlFfMuvlUTyEGfcBFE=;
-        b=DiK9IAVUGXoi7WAKqcuR6RZgrlKyfrYAwDf29cOZquONol4dEH1w498cyXcGa3mZ/S
-         k2AG7XZsikkQP2nw1/Ek5JeDwU+sGRIjGPXGpLPPUVoSMjD4LCS45TM3V/+HAjiQH9lA
-         0L9rJMiyqPIR0+B6OMuQWhSIiobBYasMMNtQo=
-In-Reply-To: <1401247674.5468.2.camel@concordia>
-Sender: trinity-owner@vger.kernel.org
+        bh=JrdIbd7L4s61g0/b/0tBxY+dOaXtCwiC8aLolhVi6MY=;
+        b=Uja6H5fFTGJkSq3kTHLLR2DzyzB7KqRuylxcqsspMmIM/4CJ9Tipkq/aTwn5OuZrZ5
+         w2/wv5vlRb4I/uQ3MMiJ9n2CrnqW2xn8ckTLYVUmZYYsiyzuzt8F//dt2f11lAQrJflK
+         UVhmBifqdj40AkI4OGwocWB1D4jRrUsXLWuoParrTRLMDn8BHfbtxgjHTBDzHDvVuYQn
+         W3VpsQV7gC21rg+ueS10edNKGAFbGd9ycIqnfzE+Sx0lgEGQklmkAHcZvkpmqdDCyvv8
+         qWJSCxmS0a91C8L8io3o2JxP8D9V7cTkvfhSEVUwANxR+mnIA/8bSnteJjFzV+EiMN1x
+         oTLw==
+In-Reply-To: <1401265922.3355.4.camel@concordia>
+Sender: owner-linux-mm@kvack.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: TEXT/PLAIN; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: Michael Ellerman <mpe@ellerman.id.au>
-Cc: Dave Jones <davej@redhat.com>, trinity@vger.kernel.org
+Cc: Andrew Morton <akpm@linux-foundation.org>, Naoya Horiguchi <n-horiguchi@ah.jp.nec.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Tony Luck <tony.luck@intel.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, trinity@vger.kernel.org
 
 On Wed, 28 May 2014, Michael Ellerman wrote:
-
-> On Tue, 2014-05-27 at 01:02 -0400, Vince Weaver wrote:
-> > On Tue, 27 May 2014, Michael Ellerman wrote:
-> > 
-> > > On Mon, 2014-05-26 at 20:41 -0400, Dave Jones wrote:
-> > > > On Mon, May 26, 2014 at 10:32:01PM +1000, Michael Ellerman wrote:
-> > > >  > Some syscalls return ENOSYS depending on their arguments. We don't want
-> > > >  > to stop calling them just because we hit one of those cases. Add a flag
-> > > >  > to specify this behaviour so we don't have to keep special-casing those
-> > > >  > calls in mkcall().
-> > > > 
-> > > > I was hopeful this list wouldn't grow, but that doesn't seem to be
-> > > > the case.  Begrudgingly, I applied this.  It's going to be a lot
-> > > > cleaner to maintain if people keep doing this.
-> > > 
-> > > Yeah it's annoying for sure, maybe perf will be the last one, but at least
-> > > there's a clean way to handle it if not.
-> > 
-> > As the author of the man page that you probably got the perf ENOSYS info 
-> > from, I have to put out there that perf_event_open() has really 
-> > inconsistent and confusing error return values, and they vary among the 
-> > various architectures.
+> Hey folks,
 > 
-> Actually I didn't read the man page, but thanks for reminding me that it
-> exists. And yes I am aware of your dislike of the perf interface.
+> Anyone seen this before? Trinity hit it just now:
+> 
+> Linux Blade312-5 3.15.0-rc7 #306 SMP Wed May 28 17:51:18 EST 2014 ppc64
+> 
+> [watchdog] 27853 iterations. [F:22642 S:5174 HI:1276]
+> ------------[ cut here ]------------
+> kernel BUG at /home/michael/mmk-build/flow/mm/memory.c:1489!
+> cpu 0xc: Vector: 700 (Program Check) at [c000000384eaf960]
+>     pc: c0000000001ad6f0: .follow_page_mask+0x90/0x650
+>     lr: c0000000001ad6d8: .follow_page_mask+0x78/0x650
+>     sp: c000000384eafbe0
+>    msr: 8000000000029032
+>   current = 0xc0000003c27e1bc0
+>   paca    = 0xc000000001dc3000   softe: 0        irq_happened: 0x01
+>     pid   = 20800, comm = trinity-c12
+> kernel BUG at /home/michael/mmk-build/flow/mm/memory.c:1489!
+> enter ? for help
+> [c000000384eafcc0] c0000000001e5514 .SyS_move_pages+0x524/0x7d0
+> [c000000384eafe30] c00000000000a1d8 syscall_exit+0x0/0x98
+> --- Exception: c01 (System Call) at 00003fff795f30a8
+> SP (3ffff958f290) is in userspace
+> 
+> I've left it in the debugger, can dig into it a bit more tomorrow
+> if anyone has any clues.
 
-I had just recently contributed an improved "ERRORS" section to the 
-perf_event_open manpage that tries to be complete, but I'm sure I missed 
-some corner cases.  It does document the odd choice of returning ENOSYS in 
-the PERF_SAMPLE_STACK_USER case.
+Thanks for leaving it overnight, but this one is quite obvious,
+so go ahead and reboot whenever suits you.
 
-It's a shame there isn't some sort of automated tool that could spit out 
-all possible system call return values, it would make it a lot easier to 
-keep things consistent.
+Trinity didn't even need to do anything bizarre to get this: that
+ordinary path simply didn't get tried on powerpc or ia64 before.
 
-Vince
+Here's a patch which should fix it for you, but I believe leaves
+a race in common with other architectures.  I must turn away to
+other things, and hope Naoya-san can fix up the locking separately
+(or point out why it's already safe).
+
+[PATCH] mm: fix move_pages follow_page huge_addr BUG
+
+v3.12's e632a938d914 ("mm: migrate: add hugepage migration code to
+move_pages()") is okay on most arches, but on follow_huge_addr-style
+arches ia64 and powerpc, it hits my old BUG_ON(flags & FOLL_GET)
+from v2.6.15 deceb6cd17e6 ("mm: follow_page with inner ptlock").
+
+The point of the BUG_ON was that nothing needed FOLL_GET there at
+the time, and it was not clear that we have sufficient locking to
+use get_page() safely here on the outside - maybe the page found has
+already been freed and even reused when follow_huge_addr() returns.
+
+I suspect that e632a938d914's use of get_page() after return from
+follow_huge_pmd() has the same problem: what prevents a racing
+instance of move_pages() from already migrating away and freeing
+that page by then?  A reference to the page should be taken while
+holding suitable lock (huge_pte_lockptr?), to serialize against
+concurrent migration.
+
+But I'm not prepared to rework the hugetlb locking here myself;
+so for now just supply a patch to copy e632a938d914's get_page()
+after follow_huge_pmd() to after follow_huge_addr(): removing
+the BUG_ON(flags & FOLL_GET), but probably leaving a race.
+
+Fixes: e632a938d914 ("mm: migrate: add hugepage migration code to move_pages()")
+Reported-by: Michael Ellerman <mpe@ellerman.id.au>
+Signed-off-by: Hugh Dickins <hughd@google.com>
+Cc: Naoya Horiguchi <n-horiguchi@ah.jp.nec.com>
+Cc: stable@vger.kernel.org # 3.12+
+---
+Whether this is a patch that should go in without fixing the locking,
+I don't know.  An unlikely race is better than a triggerable BUG?
+Or perhaps I'm just wrong about there being any such race.
+
+ mm/memory.c |   12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+--- 3.15-rc7/mm/memory.c	2014-04-27 23:55:53.608801152 -0700
++++ linux/mm/memory.c	2014-05-28 13:05:48.340124615 -0700
+@@ -1486,7 +1486,17 @@ struct page *follow_page_mask(struct vm_
+ 
+ 	page = follow_huge_addr(mm, address, flags & FOLL_WRITE);
+ 	if (!IS_ERR(page)) {
+-		BUG_ON(flags & FOLL_GET);
++		if (page && (flags & FOLL_GET)) {
++			/*
++			 * Refcount on tail pages are not well-defined and
++			 * shouldn't be taken. The caller should handle a NULL
++			 * return when trying to follow tail pages.
++			 */
++			if (PageHead(page))
++				get_page(page);
++			else
++				page = NULL;
++		}
+ 		goto out;
+ 	}
+ 
+
+--
+To unsubscribe, send a message with 'unsubscribe linux-mm' in
+the body to majordomo@kvack.org.  For more info on Linux MM,
+see: http://www.linux-mm.org/ .
+Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
