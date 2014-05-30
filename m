@@ -1,91 +1,66 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
-Subject: Re: [PATCH] hugetlb: restrict hugepage_migration_support() to
- x86_64 (Re: BUG at mm/memory.c:1489!)
-Date: Fri, 30 May 2014 11:35:16 +1000
-Message-ID: <1401413716.29324.2.camel@concordia>
-References: <1401265922.3355.4.camel@concordia>
-	 <alpine.LSU.2.11.1405281712310.7156@eggly.anvils>
-	 <1401353983.4930.15.camel@concordia>
-	 <1401388474-mqnis5cp@n-horiguchi@ah.jp.nec.com>
+From: Hugh Dickins <hughd@google.com>
+Subject: Re: [PATCH] hugetlb: restrict hugepage_migration_support() to x86_64
+ (Re: BUG at mm/memory.c:1489!)
+Date: Thu, 29 May 2014 18:52:11 -0700 (PDT)
+Message-ID: <alpine.LSU.2.11.1405291851001.27151@eggly.anvils>
+References: <1401265922.3355.4.camel@concordia> <alpine.LSU.2.11.1405281712310.7156@eggly.anvils> <1401353983.4930.15.camel@concordia> <1401388474-mqnis5cp@n-horiguchi@ah.jp.nec.com> <1401413716.29324.2.camel@concordia>
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <1401388474-mqnis5cp@n-horiguchi@ah.jp.nec.com>
-Sender: trinity-owner@vger.kernel.org
+Return-path: <owner-linux-mm@kvack.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20120113;
+        h=date:from:to:cc:subject:in-reply-to:message-id:references
+         :user-agent:mime-version:content-type;
+        bh=s9YulZLNDaynGiNvkzfS8qZAQESW8G+fqpG09rYTDok=;
+        b=ZoPXk7UsxslK4sCHuVuiNhmz66YoTdiJRFbYe+HGDtoY9QeGx7PPBwvEv1LGneouwB
+         BiU9LAsUjauC1CuZsIIn8PRg5rUG+VZXKU8RFEvmHFvm7UuSAOWU069XewIN0gVY7TU/
+         oMjKz/58xw2W5oqDB+HxwyAIH29eI4Og8Ja7RtbFTIhQTwg4ZIY/8L1m57Py1odPVFGR
+         RavlLGAf0+BKshLFu7peQ9tHyaSyXU75/6ETm0lEwisG0Fk0cE/UahDoOh7jdVOTck1d
+         /ttpDY4+nITjdEhEMiT7HZmXHjRUVfeb1W7rpQSMAac88HTx+I/7nXY4+YUY/4LteSks
+         XTKA==
+In-Reply-To: <1401413716.29324.2.camel@concordia>
+Sender: owner-linux-mm@kvack.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-To: Naoya Horiguchi <n-horiguchi@ah.jp.nec.com>
-Cc: Hugh Dickins <hughd@google.com>, Andrew Morton <akpm@linux-foundation.org>, benh@kernel.crashing.org, Tony Luck <tony.luck@intel.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, trinity@vger.kernel.org
+Content-Type: TEXT/PLAIN; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: Naoya Horiguchi <n-horiguchi@ah.jp.nec.com>, Hugh Dickins <hughd@google.com>, Andrew Morton <akpm@linux-foundation.org>, benh@kernel.crashing.org, Tony Luck <tony.luck@intel.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, trinity@vger.kernel.org
 
-On Thu, 2014-05-29 at 14:34 -0400, Naoya Horiguchi wrote:
-> On Thu, May 29, 2014 at 06:59:43PM +1000, Michael Ellerman wrote:
-> > Applying your patch and running trinity pretty immediately results in the
-> > following, which looks related (sys_move_pages() again) ?
-> >
-> > Unable to handle kernel paging request for data at address 0xf2000f80000000
-> > Faulting instruction address: 0xc0000000001e29bc
-> > cpu 0x1b: Vector: 300 (Data Access) at [c0000003c70f76f0]
-> >     pc: c0000000001e29bc: .remove_migration_pte+0x9c/0x320
-> >     lr: c0000000001e29b8: .remove_migration_pte+0x98/0x320
-> >     sp: c0000003c70f7970
-> >    msr: 8000000000009032
-> >    dar: f2000f80000000
-> >  dsisr: 40000000
-> >   current = 0xc0000003f9045800
-> >   paca    = 0xc000000001dc6c00   softe: 0        irq_happened: 0x01
-> >     pid   = 3585, comm = trinity-c27
-> > enter ? for help
-> > [c0000003c70f7a20] c0000000001bce88 .rmap_walk+0x328/0x470
-> > [c0000003c70f7ae0] c0000000001e2904 .remove_migration_ptes+0x44/0x60
-> > [c0000003c70f7b80] c0000000001e4ce8 .migrate_pages+0x6d8/0xa00
-> > [c0000003c70f7cc0] c0000000001e55ec .SyS_move_pages+0x5dc/0x7d0
-> > [c0000003c70f7e30] c00000000000a1d8 syscall_exit+0x0/0x98
-> > --- Exception: c01 (System Call) at 00003fff7b2b30a8
-> > SP (3fffe09728a0) is in userspace
-> > 1b:mon>
->
-> Sorry for inconvenience on your testing.
- 
-That's fine, it's good to find bugs :)
+On Fri, 30 May 2014, Michael Ellerman wrote:
+> 
+> diff --git a/include/linux/mempolicy.h b/include/linux/mempolicy.h
+> index 3c1b968..f230a97 100644
+> --- a/include/linux/mempolicy.h
+> +++ b/include/linux/mempolicy.h
+> @@ -175,6 +175,12 @@ static inline int vma_migratable(struct vm_area_struct *vma)
+>  {
+>         if (vma->vm_flags & (VM_IO | VM_PFNMAP))
+>                 return 0;
+> +
+> +#ifndef CONFIG_ARCH_ENABLE_HUGEPAGE_MIGRATION
+> +       if (vma->vm_flags & VM_HUGETLB)
+> +               return 0;
+> +#endif
+> +
+>         /*
+>          * Migration allocates pages in the highest zone. If we cannot
+>          * do so then migration (at least from node to node) is not
 
-> Hugepage migration is enabled for archs which have pmd-level hugepage
-> (including ppc64,) but not tested except for x86_64.
-> hugepage_migration_support() controls this so the following patch should
-> help you avoid the problem, I believe.
-> Could you try to test with it?
+That's right, thanks.
 
-Sure. So this patch, in addition to Hugh's patch to remove the BUG_ON(), does
-avoid the crash above (remove_migration_pte()).
+> 
+> 
+> Which seems to be what Hugh was referring to in his mail - correct me if I'm
+> wrong Hugh.
+> 
+> With your patch and the above hunk I can run trinity happily for a while,
+> whereas without it crashes almost immediately.
+> 
+> So with the above hunk you can add my tested-by.
+> 
+> cheers
 
-I dropped Hugh's patch, as he has decided he doesn't like it, and added the
-following hunk instead:
-
-diff --git a/include/linux/mempolicy.h b/include/linux/mempolicy.h
-index 3c1b968..f230a97 100644
---- a/include/linux/mempolicy.h
-+++ b/include/linux/mempolicy.h
-@@ -175,6 +175,12 @@ static inline int vma_migratable(struct vm_area_struct *vma)
- {
-        if (vma->vm_flags & (VM_IO | VM_PFNMAP))
-                return 0;
-+
-+#ifndef CONFIG_ARCH_ENABLE_HUGEPAGE_MIGRATION
-+       if (vma->vm_flags & VM_HUGETLB)
-+               return 0;
-+#endif
-+
-        /*
-         * Migration allocates pages in the highest zone. If we cannot
-         * do so then migration (at least from node to node) is not
-
-
-Which seems to be what Hugh was referring to in his mail - correct me if I'm
-wrong Hugh.
-
-With your patch and the above hunk I can run trinity happily for a while,
-whereas without it crashes almost immediately.
-
-So with the above hunk you can add my tested-by.
-
-cheers
-
+--
+To unsubscribe, send a message with 'unsubscribe linux-mm' in
+the body to majordomo@kvack.org.  For more info on Linux MM,
+see: http://www.linux-mm.org/ .
+Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
