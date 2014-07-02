@@ -1,52 +1,59 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: *** Error in `trinity': double free or corruption (!prev):
- 0x08208e78 ***
-Date: Fri, 13 Jun 2014 13:30:04 -0400
-Message-ID: <20140613173004.GA21623@redhat.com>
-References: <539A15DE.7020101@gmx.de>
- <20140612220605.GA5771@redhat.com>
- <539B24FA.8070800@gmx.de>
- <20140613163812.GA17879@redhat.com>
- <539B3168.6050300@gmx.de>
+From: Vinson Lee <vlee@twopensource.com>
+Subject: [PATCH] Add SEEK_HOLE and SEEK_DATA symbols for older distros.
+Date: Wed,  2 Jul 2014 10:28:56 -0700
+Message-ID: <1404322136-23539-1-git-send-email-vlee@twopensource.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <539B3168.6050300@gmx.de>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
-On Fri, Jun 13, 2014 at 07:14:16PM +0200, Toralf F=F6rster wrote:
+=46rom: Vinson Lee <vlee@twitter.com>
+
+This patch fixes these build errors on CentOS 6.
+
+  CC	syscalls/lseek.o
+syscalls/lseek.c:18: error: =E2=80=98SEEK_DATA=E2=80=99 undeclared here=
+ (not in a function)
+syscalls/lseek.c:18: error: =E2=80=98SEEK_HOLE=E2=80=99 undeclared here=
+ (not in a function)
+
+Signed-off-by: Vinson Lee <vlee@twitter.com>
+---
+ include/compat.h |    8 ++++++++
+ syscalls/lseek.c |    1 +
+ 2 files changed, 9 insertions(+), 0 deletions(-)
+
+diff --git a/include/compat.h b/include/compat.h
+index 30edc81..64af817 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -910,3 +910,11 @@ struct kvm_get_htab_fd {
+ #ifndef SWAP_FLAG_DISCARD
+ #define SWAP_FLAG_DISCARD 0x10000
+ #endif
++
++/* unistd.h */
++#ifndef SEEK_DATA
++#define SEEK_DATA 3
++#endif
++#ifndef SEEK_HOLE
++#define SEEK_HOLE 4
++#endif
+diff --git a/syscalls/lseek.c b/syscalls/lseek.c
+index d832e99..a8ca77b 100644
+--- a/syscalls/lseek.c
++++ b/syscalls/lseek.c
+@@ -4,6 +4,7 @@
+ #include <sys/types.h>
+ #include <unistd.h>
+ #include "sanitise.h"
++#include "compat.h"
 =20
- > $ trinity --list | grep Enabled$ | grep -v AVOID | cut -f3 -d' ' | w=
-hile read s; do echo; echo $s; trinity -q -q -q -c $s -N 20 -C 1; done =
-  =20
- >=20
- > with latest trinity git tee and latest kernel tree which exposed the=
- syscall "modify_ldt":
- >=20
- >=20
- > modify_ldt
- > Trinity 1.5pre  Dave Jones <davej@redhat.com>
- > [init] Marking syscall modify_ldt (123) as to be enabled.
- > Done parsing arguments.
- > *** Error in `trinity': double free or corruption (top): 0x0815d870 =
-***
- > =3D=3D=3D=3D=3D=3D=3D Backtrace: =3D=3D=3D=3D=3D=3D=3D=3D=3D
- > /lib/libc.so.6(+0x7a202)[0x400a3202]
- > /lib/libc.so.6(+0x7af80)[0x400a3f80]
- > trinity(mkcall+0x17a)[0x805b0ca]
- > trinity(child_process+0x95)[0x8054965]
- > trinity(main_loop+0x1e3)[0x80583f3]
- > trinity(main+0x252)[0x8053752]
- > /lib/libc.so.6(__libc_start_main+0xf5)[0x40045cc5]
- > trinity[0x8053cd5]
-
-=46ixed.
-
-thanks,
-
-	Dave
+ struct syscallentry syscall_lseek =3D {
+ 	.name =3D "lseek",
+--=20
+1.7.1
