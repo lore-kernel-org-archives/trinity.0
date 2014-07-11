@@ -1,36 +1,28 @@
-From: Vinson Lee <vlee@twopensource.com>
-Subject: [PATCH] scripts/gen-versionh.sh: Explicitly use bash.
-Date: Thu, 10 Jul 2014 16:24:54 -0700
-Message-ID: <1405034694-13763-1-git-send-email-vlee@twopensource.com>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
+Subject: compile error wrt VERSION
+Date: Fri, 11 Jul 2014 16:25:47 +0200
+Message-ID: <53BFF3EB.7030204@gmx.de>
+Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
 To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
 
-From: Vinson Lee <vlee@twitter.com>
+At a 32 bit stable Gentoo Linux I do get (using make -j4):
 
-Fix build error on Ubuntu.
+gical-op -Wstrict-aliasing=3D3  -o devices.o -c devices.c
+In file included from debug.c:13:0:
+include/version.h:3:9: error: macro names must be identifiers
+debug.c: In function =E2=80=98__BUG=E2=80=99:
+debug.c:44:23: error: =E2=80=98VERSION=E2=80=99 undeclared (first use i=
+n this function)
+debug.c:44:23: note: each undeclared identifier is reported only once f=
+or each function it appears in
+make: *** [debug.o] Error 1
+make: *** Waiting for unfinished jobs....
 
-scripts/gen-versionh.sh: 34: [: 1: unexpected operator
 
-Signed-off-by: Vinson Lee <vlee@twitter.com>
----
- scripts/gen-versionh.sh |    2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/scripts/gen-versionh.sh b/scripts/gen-versionh.sh
-index c531767..09d4fe5 100755
---- a/scripts/gen-versionh.sh
-+++ b/scripts/gen-versionh.sh
-@@ -1,4 +1,4 @@
--#!/bin/sh
-+#!/bin/bash
- 
- HEADER="include/version.h"
- 
--- 
-1.7.9.5
+--=20
+Toralf
