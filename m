@@ -1,25 +1,20 @@
-From: David Herrmann <dh.herrmann@gmail.com>
-Subject: Re: drm_mode_create_dumb_ioctl: divide error
-Date: Sun, 24 Aug 2014 19:18:11 +0200
-Message-ID: <CANq1E4S97B_RA+WQbsHe8JQsVnqTS3g6=uR3EQFN9n9bptFV2w@mail.gmail.com>
-References: <CA+ydwtoGKP622R5XSSSvibd_5PtsQxtsijrdD23c-7waQvjC=g@mail.gmail.com>
- <CANq1E4TZPZQSP2wWLG2LJmf1YXyRnv0rtMyKGkjsfSV50RDSnA@mail.gmail.com>
- <CA+ydwtq7-O4+5jtu_zZEFGM7Nbq7pGqGG=UgZBnDzg58QsgMoA@mail.gmail.com>
+From: Tommi Rantala <tt.rantala@gmail.com>
+Subject: drm_ioctl & WARNING at arch/x86/mm/ioremap.c:98
+Date: Wed, 27 Aug 2014 21:31:25 +0300
+Message-ID: <CA+ydwtoj-4cBeZZYomWf9ZeSxrwvDYbNpxbVQMA7tkUF5XM_9g@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Return-path: <dri-devel-bounces@lists.freedesktop.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20120113;
- h=mime-version:in-reply-to:references:date:message-id:subject:from:to
- :cc:content-type;
- bh=qF67AGZhhULTaefq0j/vwGab/fJ1Ki3uSfWMl1RqQB4=;
- b=zqECdDyxDWcGCFE4i2SkaZHt//6Z2MMB2YEP/AAaQ2BICHJ3CENBhqnoO16qabyJTl
- B3ML8CHjUzFyxEI9/JMTgvZyDpkWQqm0erb6ZcJygwO1Q3/RdrMQZi+S4y6WPurQMzaB
- DYjF8BS19m5BA6fQUs4E8Irp5TwFrfZWB2GpP5RqR7nO7dGmRxDlSyAP0HMCOw83KOTO
- 4FuvDByHSc9+6kv5QPElASUZuceP4n0QUlQpePu90kkZuoYaRGzx5Cx+IigPJ1vJ9CXu
- eOP2KQd++xl4AXC9QOwLWKIr8GHGHe7jvgPCZ6jJ1vrbt6BU/DB+APvZIZuswir9Bqpa
- xK0g==
-In-Reply-To: <CA+ydwtq7-O4+5jtu_zZEFGM7Nbq7pGqGG=UgZBnDzg58QsgMoA@mail.gmail.com>
+ h=mime-version:date:message-id:subject:from:to:cc:content-type;
+ bh=A7VLQ79FYRMhi2Yn6huYEDddOzmRw/4mFzNjNijUrpI=;
+ b=KSHeE+epA8O6PX9aySjE6iXGo1uMHWLdxEGRST3fm+SxkyGnc98lslvdexsIBBW5jy
+ R17oVXrAxyiwWL6kuQ7Fty1+/Dp/WGgQEL/sZg6E/msc06uKXeaSs1f+fLo6eO5wgjrn
+ VHmBwvyQpeqr2QvlviPZ/UpPTRWuSHv9CJ1HJzGEHhSJUo2pUKr1LNNohyevqeAlmlik
+ G4EYn0KwBrxF1Fr4EdMMeKti/DJTD2DiSBxXglPQ7GzlywVTfiphU7EhutmRrGnURvR2
+ iX4o2R+EJbLX23+iJD4HrdX7OmFjRuQW7daCiSAaaFK5pCzxoZCe7O041zDSERPXjaHK
+ 57og==
 List-Id: <trinity.vger.kernel.org>
 List-Unsubscribe: <http://lists.freedesktop.org/mailman/options/dri-devel>,
  <mailto:dri-devel-request@lists.freedesktop.org?subject=unsubscribe>
@@ -30,36 +25,44 @@ List-Subscribe: <http://lists.freedesktop.org/mailman/listinfo/dri-devel>,
  <mailto:dri-devel-request@lists.freedesktop.org?subject=subscribe>
 Errors-To: dri-devel-bounces@lists.freedesktop.org
 Sender: "dri-devel" <dri-devel-bounces@lists.freedesktop.org>
-To: Tommi Rantala <tt.rantala@gmail.com>
-Cc: Dave Jones <davej@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "dri-devel@lists.freedesktop.org" <dri-devel@lists.freedesktop.org>, trinity@vger.kernel.org
+To: dri-devel@lists.freedesktop.org
+Cc: LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org
 
-Hi
+Hello,
 
-On Sun, Aug 24, 2014 at 7:12 PM, Tommi Rantala <tt.rantala@gmail.com> wrote:
-> (gdb) info locals
-> cpp = 0
-> stride = 0
-> size = <optimized out>
->
-> (gdb) print /x *(struct drm_mode_create_dumb *)data
-> $13 = {
->   height = 0xffffffff,
->   width = 0xffffffff,
->   bpp = 0xffffffff,
->   flags = 0xffffffff,
->   handle = 0xffffffff,
->   pitch = 0xffffffff,
->   size = 0xffffffffffffffff
-> }
+Got this warning while fuzzing v3.17-rc2-40-gff0c57a with Trinity. Was
+running as root in qemu.
 
-Thanks a lot for digging into this. Looks like DIV_ROUND_UP() can
-overflow... *check*
-Yes, it's defined as:
-        #define DIV_ROUND_UP(n,d) (((n) + (d) - 1) / (d))
+Tommi
 
-Kinda unexpected that a function called "DIV" can overflow, but makes
-sense here. Obvious fix is to test "cpp" for zero. I will send it to
-dri-devel.
 
-Thanks!
-David
+ioremap: invalid physical address 4000000000004000
+------------[ cut here ]------------
+WARNING: CPU: 0 PID: 2887 at arch/x86/mm/ioremap.c:98
+__ioremap_caller+0x7a/0x2e0()
+CPU: 0 PID: 2887 Comm: trinity-c6 Not tainted 3.17.0-rc2+ #29
+Hardware name: Bochs Bochs, BIOS Bochs 01/01/2011
+ 0000000000000009 ffff880036ee7c90 ffffffff8238ba09 0000000000000000
+ ffff880036ee7cc8 ffffffff8113c603 0000000000000000 4000000000004000
+ 4000000000008000 ffffffff81747c7d 0000000000000010 ffff880036ee7cd8
+Call Trace:
+ [<ffffffff8238ba09>] dump_stack+0x4d/0x66
+ [<ffffffff8113c603>] warn_slowpath_common+0x73/0x90
+ [<ffffffff81747c7d>] ? drm_addmap_core+0x1dd/0x600
+ [<ffffffff8113c6f5>] warn_slowpath_null+0x15/0x20
+ [<ffffffff810aebaa>] __ioremap_caller+0x7a/0x2e0
+ [<ffffffff8237ec03>] ? kmemleak_alloc+0x23/0x50
+ [<ffffffff8126ced9>] ? kmem_cache_alloc_trace+0x119/0x290
+ [<ffffffff81747adb>] ? drm_addmap_core+0x3b/0x600
+ [<ffffffff810aee62>] ioremap_nocache+0x12/0x20
+ [<ffffffff81747c7d>] drm_addmap_core+0x1dd/0x600
+ [<ffffffff817486c5>] drm_addmap_ioctl+0x45/0x70
+ [<ffffffff8174d6fe>] drm_ioctl+0x3fe/0x640
+ [<ffffffff81748680>] ? drm_addmap+0x30/0x30
+ [<ffffffff815aa790>] ? avc_has_perm+0x20/0x2f0
+ [<ffffffff81170bb8>] ? sched_clock_cpu+0xa8/0xf0
+ [<ffffffff812922f0>] do_vfs_ioctl+0x4d0/0x510
+ [<ffffffff815acf15>] ? selinux_file_ioctl+0xf5/0x100
+ [<ffffffff8129237e>] SyS_ioctl+0x4e/0x80
+ [<ffffffff823a47a9>] system_call_fastpath+0x16/0x1b
+---[ end trace c988df0287baa491 ]---
