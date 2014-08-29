@@ -1,79 +1,62 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: endless loop open child logfiles
-Date: Fri, 29 Aug 2014 16:10:41 -0400
-Message-ID: <20140829201041.GA2352@redhat.com>
-References: <5400D70F.7040803@gmx.de>
+From: Cong Wang <cwang@twopensource.com>
+Subject: Re: RTNL: assertion failed at net/ipv6/addrconf.c (1699)
+Date: Fri, 29 Aug 2014 15:54:48 -0700
+Message-ID: <CAHA+R7PLR7QHZuPriCErpuYL2_T+EiMhKF=qEKXjdgubno_StA@mail.gmail.com>
+References: <CA+ydwtoDwQVg_BWrxxdpUyJ7Up60GtxTCLYe_5vFdV2td_kGhQ@mail.gmail.com>
+	<CAHA+R7MZCDGRhSf=UuVCGQvNo03wVziZQB_X30rwNf6hmHipQA@mail.gmail.com>
+	<20140829195339.GA9780@kria>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
-Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <5400D70F.7040803@gmx.de>
-Sender: trinity-owner@vger.kernel.org
+Return-path: <netdev-owner@vger.kernel.org>
+In-Reply-To: <20140829195339.GA9780@kria>
+Sender: netdev-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: Sabrina Dubroca <sd@queasysnail.net>
+Cc: Tommi Rantala <tt.rantala@gmail.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, James Morris <jmorris@namei.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Patrick McHardy <kaber@trash.net>, Hannes Frederic Sowa <hannes@stressinduktion.org>, netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
 
-On Fri, Aug 29, 2014 at 09:39:59PM +0200, Toralf F=F6rster wrote:
- > If a (small) file system is fullfilled, then there's an endless loop=
- in opening logiles, tested with 4 childs in a KVM within a 97 MB big B=
-TRFS file system created in a file in a ramdisk, commands are :
- >=20
- >=20
- > $> mkdir /mnt/ramdisk/btrfs; truncate -s 97M /mnt/ramdisk/btrfs.fs; =
-/sbin/mkfs.btrfs /mnt/ramdisk/btrfs.fs; sudo su -c "mount -o loop,compr=
-ess=3Dlzo /mnt/ramdisk/btrfs.fs /mnt/ramdisk/btrfs; chmod 777 /mnt/ramd=
-isk/btrfs"
- >=20
- > $> D=3D/mnt/ramdisk/btrfs; while [[ : ]]; do cd ~; sudo rm -rf $D/t3=
-; mkdir $D/t3 || break; cd $D/t3; mkdir -p v1/v2; for i in $(seq 0 99);=
- do touch v1/v2/f$i; mkdir v1/v2/d$i; done; trinity -C 4 -N 100000 -V $=
-D/t3/v1/v2; echo; echo " done"; echo; sleep 4; done
+On Fri, Aug 29, 2014 at 12:53 PM, Sabrina Dubroca <sd@queasysnail.net> wrote:
+> 2014-08-29, 11:14:48 -0700, Cong Wang wrote:
+>> On Fri, Aug 29, 2014 at 8:26 AM, Tommi Rantala <tt.rantala@gmail.com> wrote:
+>> > [   77.297196] RTNL: assertion failed at net/ipv6/addrconf.c (1699)
+>> > [   77.298080] CPU: 0 PID: 4842 Comm: trinity-main Not tainted 3.17.0-rc2+ #30
+>> > [   77.299039] Hardware name: Bochs Bochs, BIOS Bochs 01/01/2011
+>> > [   77.299789]  ffff88003d76a618 ffff880026133c50 ffffffff8238ba79
+>> > ffff880037c84520
+>> > [   77.300829]  ffff880026133c90 ffffffff820bd52b 0000000000000000
+>> > ffffffff82d86c40
+>> > [   77.301869]  0000000000000000 00000000f76fd1e1 ffff8800382d8000
+>> > ffff8800382d8220
+>> > [   77.302906] Call Trace:
+>> > [   77.303246]  [<ffffffff8238ba79>] dump_stack+0x4d/0x66
+>> > [   77.303928]  [<ffffffff820bd52b>] addrconf_join_solict+0x4b/0xb0
+>> > [   77.304731]  [<ffffffff820b031b>] ipv6_dev_ac_inc+0x2bb/0x330
+>> > [   77.305498]  [<ffffffff820b0060>] ? ac6_seq_start+0x260/0x260
+>> > [   77.306257]  [<ffffffff820b05fe>] ipv6_sock_ac_join+0x26e/0x360
+>> > [   77.307046]  [<ffffffff820b0429>] ? ipv6_sock_ac_join+0x99/0x360
+>> > [   77.307798]  [<ffffffff820cdd60>] do_ipv6_setsockopt.isra.5+0xa70/0xf20
+>>
+>>
+>> I think we should just use rtnl_lock() instead of rcu_read_lock() there,
+>> it is not a hot path worth optimization.
+>>
+>> Please try the attached patch.
+>
+> note: it doesn't build as it is now, it needs:
+>
+> -EXPORT_SYMBOL(dev_get_by_flags_rcu);
+> +EXPORT_SYMBOL(dev_get_by_flags);
+>
+>
+> I just tried your patch with a basic test program (open
+> socket/join/leave/close and open socket/join/close).
+>
+> I think you need to modify ipv6_sock_ac_close as well, or you can still
+> trigger the assertion when closing the socket without leaving first.
 
-short on time right now, but try this..
+You are absolutely right here.
 
-	Dave
+Can I have your Signed-off-by and Tested-by before sending the patch
+formally?
 
-diff --git a/include/exit.h b/include/exit.h
-index 948ecea02112..ebbaf98cfaac 100644
---- a/include/exit.h
-+++ b/include/exit.h
-@@ -19,8 +19,9 @@ enum exit_reasons {
- 	EXIT_FD_INIT_FAILURE =3D 13,
- 	EXIT_FORK_FAILURE =3D 14,
- 	EXIT_LOCKING_CATASTROPHE =3D 15,
-+	EXIT_LOGFILE_OPEN_ERROR =3D 16,
-=20
--	NUM_EXIT_REASONS =3D 16
-+	NUM_EXIT_REASONS =3D 17
- };
-=20
- const char * decode_exit(void);
-diff --git a/log.c b/log.c
-index 22b72db86f3c..0ccd1ba45cc9 100644
---- a/log.c
-+++ b/log.c
-@@ -60,8 +60,10 @@ void open_child_logfile(struct childdata *child)
- 	sprintf(logfilename, "trinity-child%u.log", child->num);
-=20
- 	child->logfile =3D open_logfile(logfilename);
--	if (!child->logfile)
-+	if (!child->logfile) {
-+		shm->exit_reason =3D EXIT_LOGFILE_OPEN_ERROR;
- 		exit(EXIT_FAILURE);
-+	}
-=20
- 	free(logfilename);
-=20
-diff --git a/main.c b/main.c
-index 5541de09ae7e..ed3d02c0d4e5 100644
---- a/main.c
-+++ b/main.c
-@@ -295,6 +295,7 @@ static const char *reasons[NUM_EXIT_REASONS] =3D {
- 	"Something happened during fd init.",
- 	"fork() failure",
- 	"some kind of locking catastrophe",
-+	"error while opening logfiles",
- };
-=20
- const char * decode_exit(void)
+Thanks!
