@@ -1,68 +1,114 @@
 From: Tommi Rantala <tt.rantala@gmail.com>
-Subject: drm_ioctl & WARNING at arch/x86/mm/ioremap.c:98
-Date: Wed, 27 Aug 2014 21:31:25 +0300
-Message-ID: <CA+ydwtoj-4cBeZZYomWf9ZeSxrwvDYbNpxbVQMA7tkUF5XM_9g@mail.gmail.com>
+Subject: RTNL: assertion failed at net/ipv6/addrconf.c (1699)
+Date: Fri, 29 Aug 2014 18:26:51 +0300
+Message-ID: <CA+ydwtoDwQVg_BWrxxdpUyJ7Up60GtxTCLYe_5vFdV2td_kGhQ@mail.gmail.com>
 Mime-Version: 1.0
+Return-path: <linux-kernel-owner@vger.kernel.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=mime-version:date:message-id:subject:from:to:cc:content-type;
+        bh=jM1HIsIWlPycmgAIAPueCcUPu6v3nIu60lzybJXFlrU=;
+        b=rLc4TiO/OhGzbwbVwZQJy9YPqeawlZIg00x+3cI7Ggga39ekvXXkfWZDCq1Iiuuuz6
+         CrDHsNnncEkrpU5iab6zoE4hDcjTeZMEv86anHQAbcuBoXQxSY+jAveAFd1/b7u5FEfa
+         oM9tCihyEO1MFDxWrAZ73xHpo+kjSfbM088PbjzaFNL9tzjBbX44MJl5/O+DIb8CMEnn
+         ncZppyeqHdllZ7sH5hlDfo3n63wsh1XdX2H7Pc5Od4FUJvJLTn+FgvCDCSTDLipIu14E
+         jHwwMgAVLoEe34DiqbQHzMw2GtRKrkwusVEC9yTsZoV5Ie+OCXEqe2xUO/XK6uR7PkwY
+         hI2A==
+Sender: linux-kernel-owner@vger.kernel.org
+List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Return-path: <dri-devel-bounces@lists.freedesktop.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20120113;
- h=mime-version:date:message-id:subject:from:to:cc:content-type;
- bh=A7VLQ79FYRMhi2Yn6huYEDddOzmRw/4mFzNjNijUrpI=;
- b=KSHeE+epA8O6PX9aySjE6iXGo1uMHWLdxEGRST3fm+SxkyGnc98lslvdexsIBBW5jy
- R17oVXrAxyiwWL6kuQ7Fty1+/Dp/WGgQEL/sZg6E/msc06uKXeaSs1f+fLo6eO5wgjrn
- VHmBwvyQpeqr2QvlviPZ/UpPTRWuSHv9CJ1HJzGEHhSJUo2pUKr1LNNohyevqeAlmlik
- G4EYn0KwBrxF1Fr4EdMMeKti/DJTD2DiSBxXglPQ7GzlywVTfiphU7EhutmRrGnURvR2
- iX4o2R+EJbLX23+iJD4HrdX7OmFjRuQW7daCiSAaaFK5pCzxoZCe7O041zDSERPXjaHK
- 57og==
-List-Id: <trinity.vger.kernel.org>
-List-Unsubscribe: <http://lists.freedesktop.org/mailman/options/dri-devel>,
- <mailto:dri-devel-request@lists.freedesktop.org?subject=unsubscribe>
-List-Archive: <http://lists.freedesktop.org/archives/dri-devel>
-List-Post: <mailto:dri-devel@lists.freedesktop.org>
-List-Help: <mailto:dri-devel-request@lists.freedesktop.org?subject=help>
-List-Subscribe: <http://lists.freedesktop.org/mailman/listinfo/dri-devel>,
- <mailto:dri-devel-request@lists.freedesktop.org?subject=subscribe>
-Errors-To: dri-devel-bounces@lists.freedesktop.org
-Sender: "dri-devel" <dri-devel-bounces@lists.freedesktop.org>
-To: dri-devel@lists.freedesktop.org
-Cc: LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org
+To: "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, James Morris <jmorris@namei.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Patrick McHardy <kaber@trash.net>, Hannes Frederic Sowa <hannes@stressinduktion.org>
+Cc: netdev@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
 
-Hello,
+Hi,
 
-Got this warning while fuzzing v3.17-rc2-40-gff0c57a with Trinity. Was
-running as root in qemu.
+Was fuzzing Linus v3.17-rc2-89-g59753a8 with Trinity as the root user
+in qemu, when I hit the following assertion failures.
 
 Tommi
 
 
-ioremap: invalid physical address 4000000000004000
-------------[ cut here ]------------
-WARNING: CPU: 0 PID: 2887 at arch/x86/mm/ioremap.c:98
-__ioremap_caller+0x7a/0x2e0()
-CPU: 0 PID: 2887 Comm: trinity-c6 Not tainted 3.17.0-rc2+ #29
-Hardware name: Bochs Bochs, BIOS Bochs 01/01/2011
- 0000000000000009 ffff880036ee7c90 ffffffff8238ba09 0000000000000000
- ffff880036ee7cc8 ffffffff8113c603 0000000000000000 4000000000004000
- 4000000000008000 ffffffff81747c7d 0000000000000010 ffff880036ee7cd8
-Call Trace:
- [<ffffffff8238ba09>] dump_stack+0x4d/0x66
- [<ffffffff8113c603>] warn_slowpath_common+0x73/0x90
- [<ffffffff81747c7d>] ? drm_addmap_core+0x1dd/0x600
- [<ffffffff8113c6f5>] warn_slowpath_null+0x15/0x20
- [<ffffffff810aebaa>] __ioremap_caller+0x7a/0x2e0
- [<ffffffff8237ec03>] ? kmemleak_alloc+0x23/0x50
- [<ffffffff8126ced9>] ? kmem_cache_alloc_trace+0x119/0x290
- [<ffffffff81747adb>] ? drm_addmap_core+0x3b/0x600
- [<ffffffff810aee62>] ioremap_nocache+0x12/0x20
- [<ffffffff81747c7d>] drm_addmap_core+0x1dd/0x600
- [<ffffffff817486c5>] drm_addmap_ioctl+0x45/0x70
- [<ffffffff8174d6fe>] drm_ioctl+0x3fe/0x640
- [<ffffffff81748680>] ? drm_addmap+0x30/0x30
- [<ffffffff815aa790>] ? avc_has_perm+0x20/0x2f0
- [<ffffffff81170bb8>] ? sched_clock_cpu+0xa8/0xf0
- [<ffffffff812922f0>] do_vfs_ioctl+0x4d0/0x510
- [<ffffffff815acf15>] ? selinux_file_ioctl+0xf5/0x100
- [<ffffffff8129237e>] SyS_ioctl+0x4e/0x80
- [<ffffffff823a47a9>] system_call_fastpath+0x16/0x1b
----[ end trace c988df0287baa491 ]---
+[init] Started watchdog process, PID is 4841
+[main] Main thread is alive.
+[   77.229699] sctp: [Deprecated]: trinity-main (pid 4842) Use of int
+in max_burst socket option deprecated.
+[   77.229699] Use struct sctp_assoc_value instead
+[   77.297196] RTNL: assertion failed at net/ipv6/addrconf.c (1699)
+[   77.298080] CPU: 0 PID: 4842 Comm: trinity-main Not tainted 3.17.0-rc2+ #30
+[   77.299039] Hardware name: Bochs Bochs, BIOS Bochs 01/01/2011
+[   77.299789]  ffff88003d76a618 ffff880026133c50 ffffffff8238ba79
+ffff880037c84520
+[   77.300829]  ffff880026133c90 ffffffff820bd52b 0000000000000000
+ffffffff82d86c40
+[   77.301869]  0000000000000000 00000000f76fd1e1 ffff8800382d8000
+ffff8800382d8220
+[   77.302906] Call Trace:
+[   77.303246]  [<ffffffff8238ba79>] dump_stack+0x4d/0x66
+[   77.303928]  [<ffffffff820bd52b>] addrconf_join_solict+0x4b/0xb0
+[   77.304731]  [<ffffffff820b031b>] ipv6_dev_ac_inc+0x2bb/0x330
+[   77.305498]  [<ffffffff820b0060>] ? ac6_seq_start+0x260/0x260
+[   77.306257]  [<ffffffff820b05fe>] ipv6_sock_ac_join+0x26e/0x360
+[   77.307046]  [<ffffffff820b0429>] ? ipv6_sock_ac_join+0x99/0x360
+[   77.307798]  [<ffffffff820cdd60>] do_ipv6_setsockopt.isra.5+0xa70/0xf20
+[   77.308570]  [<ffffffff8117097d>] ? sched_clock_local+0x1d/0x80
+[   77.309260]  [<ffffffff810a8a27>] ? kvm_clock_read+0x27/0x40
+[   77.309915]  [<ffffffff810736d9>] ? sched_clock+0x9/0x10
+[   77.310537]  [<ffffffff815afff8>] ? sock_has_perm+0x168/0x1e0
+[   77.311204]  [<ffffffff81170bb8>] ? sched_clock_cpu+0xa8/0xf0
+[   77.311866]  [<ffffffff81170d1b>] ? local_clock+0x1b/0x30
+[   77.312501]  [<ffffffff811872cd>] ? lock_release_holdtime+0x1d/0x170
+[   77.313241]  [<ffffffff815b0010>] ? sock_has_perm+0x180/0x1e0
+[   77.313905]  [<ffffffff815afe90>] ?
+selinux_msg_queue_alloc_security+0xa0/0xa0
+[   77.314746]  [<ffffffff820ce263>] ipv6_setsockopt+0x53/0xb0
+[   77.315397]  [<ffffffff820d3135>] udpv6_setsockopt+0x25/0x30
+[   77.316058]  [<ffffffff81f9930f>] sock_common_setsockopt+0xf/0x20
+[   77.316764]  [<ffffffff81f9305e>] SyS_setsockopt+0x8e/0xd0
+[   77.317406]  [<ffffffff823a47e9>] system_call_fastpath+0x16/0x1b
+[main] 375 sockets created based on info from socket cachefile.
+[main] Generating file descriptors
+[main] Added 129 filenames from /dev
+[main] Added 44048 filenames from /proc
+[main] Added 18192 filenames from /sys
+[main] Enabled 9 fd providers.
+[watchdog] Watchdog is alive. (pid:4841)
+[child3:4846] finit_module (313) returned ENOSYS, marking as inactive.
+[child1:4844] kcmp (312) returned ENOSYS, marking as inactive.
+[child2:4845] uselib (134) returned ENOSYS, marking as inactive.
+[child1:4844] nfsservctl (180) returned ENOSYS, marking as inactive.
+[child2:4845] delete_module (129:[32BIT]) returned ENOSYS, marking as inactive.
+[child2:4845] init_module (175) returned ENOSYS, marking as inactive.
+[   84.126609] trinity-c7: vm86 mode not supported on 64 bit kernel
+[child7:4850] vm86 (166:[32BIT]) returned ENOSYS, marking as inactive.
+[main] Bailing main loop because ctrl-c.
+[   84.345840] RTNL: assertion failed at net/ipv6/addrconf.c (1712)
+[   84.346615] CPU: 0 PID: 4842 Comm: trinity-main Not tainted 3.17.0-rc2+ #30
+[   84.347426] Hardware name: Bochs Bochs, BIOS Bochs 01/01/2011
+[   84.348102]  ffff88003d76a618 ffff880026133d10 ffffffff8238ba79
+ffff8800382d8000
+[   84.349018]  ffff880026133d50 ffffffff820bd5db ffffffff81141555
+ffff8800382d8220
+[   84.349935]  ffff8800382d8000 00000000f76fd1e1 ffff88003d76a618
+ffff8800382d8000
+[   84.350848] Call Trace:
+[   84.351149]  [<ffffffff8238ba79>] dump_stack+0x4d/0x66
+[   84.351751]  [<ffffffff820bd5db>] addrconf_leave_solict+0x4b/0xb0
+[   84.352574]  [<ffffffff81141555>] ? __local_bh_enable_ip+0xa5/0xf0
+[   84.353315]  [<ffffffff820b07b3>] __ipv6_dev_ac_dec+0xc3/0x140
+[   84.354019]  [<ffffffff820b08c8>] ipv6_dev_ac_dec+0x98/0xb0
+[   84.354687]  [<ffffffff820b0bcd>] ipv6_sock_ac_close+0x10d/0x1a0
+[   84.355410]  [<ffffffff820b0aee>] ? ipv6_sock_ac_close+0x2e/0x1a0
+[   84.356147]  [<ffffffff820ae9d3>] inet6_release+0x23/0x40
+[   84.356789]  [<ffffffff81f91834>] sock_release+0x14/0x80
+[   84.357410]  [<ffffffff81f918ad>] sock_close+0xd/0x20
+[   84.358042]  [<ffffffff8127fa91>] __fput+0x111/0x1e0
+[   84.358622]  [<ffffffff8127fba9>] ____fput+0x9/0x10
+[   84.359196]  [<ffffffff8115e3ee>] task_work_run+0x9e/0xd0
+[   84.359825]  [<ffffffff8113f4b6>] do_exit+0x456/0xb30
+[   84.360419]  [<ffffffff823a541c>] ? retint_swapgs+0x13/0x1b
+[   84.361075]  [<ffffffff8113fc54>] do_group_exit+0x84/0xd0
+[   84.361705]  [<ffffffff8113fcaf>] SyS_exit_group+0xf/0x10
+[   84.362338]  [<ffffffff823a47e9>] system_call_fastpath+0x16/0x1b
+[watchdog] [4841] Watchdog exiting because ctrl-c.
+[init] Ran 775 syscalls. Successes: 179  Failures: 596
