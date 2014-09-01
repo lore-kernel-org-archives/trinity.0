@@ -1,31 +1,25 @@
-From: Sabrina Dubroca <sd@queasysnail.net>
-Subject: Re: RTNL: assertion failed at net/ipv6/addrconf.c (1699)
-Date: Sat, 30 Aug 2014 19:11:06 +0200
-Message-ID: <20140830171106.GA4698@kria>
-References: <CA+ydwtoDwQVg_BWrxxdpUyJ7Up60GtxTCLYe_5vFdV2td_kGhQ@mail.gmail.com>
- <CAHA+R7MZCDGRhSf=UuVCGQvNo03wVziZQB_X30rwNf6hmHipQA@mail.gmail.com>
- <20140829195339.GA9780@kria>
- <1409363489.2980.17.camel@localhost>
- <20140830105821.GB18155@kria>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
+Subject: hang in creating the trinity-testfileX
+Date: Mon, 01 Sep 2014 19:53:47 +0200
+Message-ID: <5404B2AB.8080500@gmx.de>
 Mime-Version: 1.0
-Return-path: <netdev-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <20140830105821.GB18155@kria>
-Sender: netdev-owner@vger.kernel.org
+Content-Transfer-Encoding: 7bit
+Return-path: <trinity-owner@vger.kernel.org>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Hannes Frederic Sowa <hannes@stressinduktion.org>
-Cc: Cong Wang <cwang@twopensource.com>, Tommi Rantala <tt.rantala@gmail.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, James Morris <jmorris@namei.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Patrick McHardy <kaber@trash.net>, netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
+To: trinity@vger.kernel.org
 
-2014-08-30, 12:58:21 +0200, Sabrina Dubroca wrote:
->    - pndisc_constructor, called from pneigh_lookup -- pneigh_lookup
->      has ASSERT_RTNL(), but pneigh_lookup is called from ip6_forward and
->      ndisc_recv_na
+Trinity sometimes hangs infinitely in a KVM while trying to create the testfiles, eg .:
 
-Ah, these have creat = 0, so it's fine. I missed that earlier.
+...
+[main] fd[668] = timerfd
+[main] fd[669] = fopen("trinity-testfile1", O_RDWR)
+[main] fd[670] = fopen("trinity-testfile2", O_RDWR)
 
-Sorry for the noise.
+
+Ctrl-C works fortunately
 
 -- 
-Sabrina
+Toralf
+pgp key: 0076 E94E
