@@ -1,41 +1,72 @@
-From: Cong Wang <cwang@twopensource.com>
+From: Hannes Frederic Sowa <hannes@stressinduktion.org>
 Subject: Re: RTNL: assertion failed at net/ipv6/addrconf.c (1699)
-Date: Tue, 2 Sep 2014 11:40:30 -0700
-Message-ID: <CAHA+R7MMe+O9-sNHQvgOO78tBzDy+hO+GtJFsuJPKx0eG6eMaw@mail.gmail.com>
+Date: Tue, 02 Sep 2014 21:02:50 +0200
+Message-ID: <1409684570.15984.6.camel@localhost>
 References: <CA+ydwtoDwQVg_BWrxxdpUyJ7Up60GtxTCLYe_5vFdV2td_kGhQ@mail.gmail.com>
-	<CAHA+R7MZCDGRhSf=UuVCGQvNo03wVziZQB_X30rwNf6hmHipQA@mail.gmail.com>
-	<20140829195339.GA9780@kria>
-	<1409363489.2980.17.camel@localhost>
-	<CAHA+R7ODa+LrdwSrS7HcBfwwq8_fpj-Ld0OCDtcOqkpCdZCvxg@mail.gmail.com>
-	<1409680684.972417.162793869.03CF8A61@webmail.messagingengine.com>
-	<CAHA+R7Mwy1SCpEUgGf9BdLEro6N-3t89KU=xL0iuzgOppXELrQ@mail.gmail.com>
-	<1409681914.978561.162800349.5A7FA784@webmail.messagingengine.com>
+	 <CAHA+R7MZCDGRhSf=UuVCGQvNo03wVziZQB_X30rwNf6hmHipQA@mail.gmail.com>
+	 <20140829195339.GA9780@kria> <1409363489.2980.17.camel@localhost>
+	 <CAHA+R7ODa+LrdwSrS7HcBfwwq8_fpj-Ld0OCDtcOqkpCdZCvxg@mail.gmail.com>
+	 <1409680684.972417.162793869.03CF8A61@webmail.messagingengine.com>
+	 <CAHA+R7Mwy1SCpEUgGf9BdLEro6N-3t89KU=xL0iuzgOppXELrQ@mail.gmail.com>
+	 <1409681914.978561.162800349.5A7FA784@webmail.messagingengine.com>
+	 <CAHA+R7MMe+O9-sNHQvgOO78tBzDy+hO+GtJFsuJPKx0eG6eMaw@mail.gmail.com>
 Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <1409681914.978561.162800349.5A7FA784@webmail.messagingengine.com>
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed/relaxed; d=
+	stressinduktion.org; h=message-id:subject:from:to:cc:date
+	:in-reply-to:references:content-type:mime-version
+	:content-transfer-encoding; s=mesmtp; bh=GnX6H8Sx4hX4Tc0Krgu/ull
+	YBbg=; b=bPwXZ/rovHZDflzCdGTy+fMvBWwzaAaJGKl2QpJpZoVd2rQNI2YLqxy
+	90qnyHq8t6+iR1XOz1GozDCce3EVle7bDOK41zcxdmGKlEyyy2nNltMPmp0bv2/k
+	6AKeaQ9JX7Lz2DnVXR44TkhmNifkiXRzHyJBgf4hEmvI2oWlmObY=
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed/relaxed; d=
+	messagingengine.com; h=message-id:subject:from:to:cc:date
+	:in-reply-to:references:content-type:mime-version
+	:content-transfer-encoding; s=smtpout; bh=GnX6H8Sx4hX4Tc0Krgu/ul
+	lYBbg=; b=CTqcIb+UWEe58LrKedsvJUzmKfpD/dbU4QROuEHLPfrMfat6NfjqRf
+	e/e2YnS1XMOxjS4Ivafdx5p9OoyLIfnJf+KZV57pop+ivqXfgscy1PxZK/xE9pJY
+	iaAewhZig1IaCq0SRIbh05qdxpRwE7aKYDfCElT9Kx3YSBbriUS1A=
+In-Reply-To: <CAHA+R7MMe+O9-sNHQvgOO78tBzDy+hO+GtJFsuJPKx0eG6eMaw@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Hannes Frederic Sowa <hannes@stressinduktion.org>
+To: Cong Wang <cwang@twopensource.com>
 Cc: Sabrina Dubroca <sd@queasysnail.net>, Tommi Rantala <tt.rantala@gmail.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, James Morris <jmorris@namei.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Patrick McHardy <kaber@trash.net>, netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
 
-On Tue, Sep 2, 2014 at 11:18 AM, Hannes Frederic Sowa
-<hannes@stressinduktion.org> wrote:
-> Those ASSERT_RTNLs were misplaced and only caught the callers mostly
-> from addrconf.c. I don't mind getting reports from stable kernel users
-> and fixing those, too (or help fixing those). ASSERT_RTNL is not
-> dangerous.
->
-> We had a long history in not correctly using rtnl lock in ipv6/multicast
-> code and those wrongfully placed ASSERT_RTNLs were my bad when I fixed
-> the duplicate address detection handling.
->
-> If enough multicast addresses are subscribed to an interface we might
-> again get those splats because enabling promisc mode on an interface
-> will also check for rtnl lock.
->
+On Di, 2014-09-02 at 11:40 -0700, Cong Wang wrote:
+> On Tue, Sep 2, 2014 at 11:18 AM, Hannes Frederic Sowa
+> <hannes@stressinduktion.org> wrote:
+> > Those ASSERT_RTNLs were misplaced and only caught the callers mostly
+> > from addrconf.c. I don't mind getting reports from stable kernel users
+> > and fixing those, too (or help fixing those). ASSERT_RTNL is not
+> > dangerous.
+> >
+> > We had a long history in not correctly using rtnl lock in ipv6/multicast
+> > code and those wrongfully placed ASSERT_RTNLs were my bad when I fixed
+> > the duplicate address detection handling.
+> >
+> > If enough multicast addresses are subscribed to an interface we might
+> > again get those splats because enabling promisc mode on an interface
+> > will also check for rtnl lock.
+> >
+> 
+> Sure, I never doubt adding ASSERT_RTNL() is helpful, I just still think
+> this should be for net-next, or at least a separated patch. I don't want
+> my patch to be blamed in others' "Fixes:". :)
 
-Sure, I never doubt adding ASSERT_RTNL() is helpful, I just still think
-this should be for net-next, or at least a separated patch. I don't want
-my patch to be blamed in others' "Fixes:". :)
+Come on, that's why we have community review. Nobody blames anyone
+because of added regressions. It's more a fault of the community then,
+and it works out fairly good I think! Even others are keen on fixing
+your bugs sometimes. ;)
+
+If fixes tag is well researched, it won't point to the addition of
+ASSERT_RTNL() but your patch would help to discover a bug somewhere else
+in the stack.
+
+I think for this patch a fixes-tag is hard to find because it is hard to
+find because it dates back to the beginning of the git history IMHO.
+
+Bye,
+Hannes
+
