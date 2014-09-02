@@ -1,32 +1,67 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: hang in creating the trinity-testfileX
-Date: Tue, 2 Sep 2014 13:37:32 -0400
-Message-ID: <20140902173732.GA19354@redhat.com>
-References: <5404B2AB.8080500@gmx.de>
+From: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Subject: Re: RTNL: assertion failed at net/ipv6/addrconf.c (1699)
+Date: Tue, 02 Sep 2014 19:58:04 +0200
+Message-ID: <1409680684.972417.162793869.03CF8A61@webmail.messagingengine.com>
+References: <CA+ydwtoDwQVg_BWrxxdpUyJ7Up60GtxTCLYe_5vFdV2td_kGhQ@mail.gmail.com>
+ <CAHA+R7MZCDGRhSf=UuVCGQvNo03wVziZQB_X30rwNf6hmHipQA@mail.gmail.com>
+ <20140829195339.GA9780@kria> <1409363489.2980.17.camel@localhost>
+ <CAHA+R7ODa+LrdwSrS7HcBfwwq8_fpj-Ld0OCDtcOqkpCdZCvxg@mail.gmail.com>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <5404B2AB.8080500@gmx.de>
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed/relaxed; d=
+	stressinduktion.org; h=message-id:from:to:cc:mime-version
+	:content-transfer-encoding:content-type:subject:date:in-reply-to
+	:references; s=mesmtp; bh=WPB/ZA8nAtzV+w3sTnTxWdIJxDA=; b=gRN67r
+	KMskpkaoqtGDuFFsmQAw5rtJWYQCaJ10Avo68v5xgz+q+uO+8Ygb/uWiN8A9WHvh
+	RV0llDS/7iaAXqpZr/IkmFPHfHjKrvtZllvAN01dlxaSPZcJzmidh2eL+gv/Kk6R
+	RaFtF5JoTubXDF3CgwjN/kuKlHeJkFZLzLfDM=
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed/relaxed; d=
+	messagingengine.com; h=message-id:from:to:cc:mime-version
+	:content-transfer-encoding:content-type:subject:date:in-reply-to
+	:references; s=smtpout; bh=WPB/ZA8nAtzV+w3sTnTxWdIJxDA=; b=annkq
+	LvU5gLtF0+/xKwIb8ceTNHsCJP1o7VtsLyPZQ8dZrKtabafHsOPn4AXzdkIpq8Pe
+	MLSAerzl9FtOA3j1Q71p0OFF51xoPtJ0ILYn6A88rlfD7Bc8TV9iSCQJzDP/isPH
+	B8wB6lXTq7f1A1k295fmoBHWfWeggcC2kBAfmQ=
+In-Reply-To: <CAHA+R7ODa+LrdwSrS7HcBfwwq8_fpj-Ld0OCDtcOqkpCdZCvxg@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+To: Cong Wang <cwang@twopensource.com>
+Cc: Sabrina Dubroca <sd@queasysnail.net>, Tommi Rantala <tt.rantala@gmail.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, James Morris <jmorris@namei.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Patrick McHardy <kaber@trash.net>, netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
 
-On Mon, Sep 01, 2014 at 07:53:47PM +0200, Toralf F=F6rster wrote:
- > Trinity sometimes hangs infinitely in a KVM while trying to create t=
-he testfiles, eg .:
- >=20
- > ...
- > [main] fd[668] =3D timerfd
- > [main] fd[669] =3D fopen("trinity-testfile1", O_RDWR)
- > [main] fd[670] =3D fopen("trinity-testfile2", O_RDWR)
+Hi Cong,
 
-so creating the 3rd file is where it hangs ? weird.
-=20
- > Ctrl-C works fortunately
+On Tue, Sep 2, 2014, at 18:50, Cong Wang wrote:
+> On Fri, Aug 29, 2014 at 6:51 PM, Hannes Frederic Sowa
+> <hannes@stressinduktion.org> wrote:
+> >
+> > Also rtnl_lock and rcu_read_lock compose in that order, so we don't need
+> > to change dev_get_by_flags, but as this is the only user it sure is
+> > possible. RCU locked version is just easier composeable, so I wouldn't
+> > touch that if needed in future, just also take rcu lock as before.
+> 
+> There is no point to keep RCU read lock if we have rtnl lock,
+> I don't know why you don't want to change dev_get_by_flags(),
+> it is pretty easy to do since it only has one caller.
 
-Can you gdb it and find out where it's looping ?
+I definitely don't have a problem cleaning this up in net-next. I wanted
+a minimal patch for stable because I didn't check history where and when
+additional users of dev_get_by_flags_rcu were removed.
 
-	Dave
+> Even if you really need RCU in future, you are always welcome
+> to bring it back when you do, sorry we should never be blocked by
+> code NOT merged yet.
+> 
+> >
+> > Also we should move ASSERT_RTNL checks from addrconf_join_solict to
+> > ipv6_dev_mc_inc/dec.
+> >
+> 
+> Make it another patch.
+
+It is just one logical change, moving ASSERT_RTNLs to places where they
+better catch invalid callstacks.
+
+Bye,
+Hannes
