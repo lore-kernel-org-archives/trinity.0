@@ -1,51 +1,115 @@
-From: Cong Wang <cwang@twopensource.com>
-Subject: Re: RTNL: assertion failed at net/ipv6/addrconf.c (1699)
-Date: Tue, 2 Sep 2014 12:18:32 -0700
-Message-ID: <CAHA+R7OtFHZBxdq836QOmErvijYEH5uO30RW5vq9v5jBQkPasQ@mail.gmail.com>
-References: <CA+ydwtoDwQVg_BWrxxdpUyJ7Up60GtxTCLYe_5vFdV2td_kGhQ@mail.gmail.com>
-	<CAHA+R7MZCDGRhSf=UuVCGQvNo03wVziZQB_X30rwNf6hmHipQA@mail.gmail.com>
-	<20140829195339.GA9780@kria>
-	<1409363489.2980.17.camel@localhost>
-	<CAHA+R7ODa+LrdwSrS7HcBfwwq8_fpj-Ld0OCDtcOqkpCdZCvxg@mail.gmail.com>
-	<1409680684.972417.162793869.03CF8A61@webmail.messagingengine.com>
-	<CAHA+R7Mwy1SCpEUgGf9BdLEro6N-3t89KU=xL0iuzgOppXELrQ@mail.gmail.com>
-	<1409681914.978561.162800349.5A7FA784@webmail.messagingengine.com>
-	<CAHA+R7MMe+O9-sNHQvgOO78tBzDy+hO+GtJFsuJPKx0eG6eMaw@mail.gmail.com>
-	<1409684570.15984.6.camel@localhost>
+From: =?UTF-8?B?VG9yYWxmIEbDtnJzdGVy?= <toralf.foerster@gmx.de>
+Subject: Re: hang in creating the trinity-testfileX
+Date: Wed, 03 Sep 2014 19:44:43 +0200
+Message-ID: <5407538B.7030900@gmx.de>
+References: <5404B2AB.8080500@gmx.de> <20140902173732.GA19354@redhat.com>
 Mime-Version: 1.0
-Return-path: <linux-kernel-owner@vger.kernel.org>
-In-Reply-To: <1409684570.15984.6.camel@localhost>
-Sender: linux-kernel-owner@vger.kernel.org
+Content-Transfer-Encoding: QUOTED-PRINTABLE
+Return-path: <trinity-owner@vger.kernel.org>
+In-Reply-To: <20140902173732.GA19354@redhat.com>
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Hannes Frederic Sowa <hannes@stressinduktion.org>
-Cc: Sabrina Dubroca <sd@queasysnail.net>, Tommi Rantala <tt.rantala@gmail.com>, "David S. Miller" <davem@davemloft.net>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, James Morris <jmorris@namei.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Patrick McHardy <kaber@trash.net>, netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
+Content-Type: text/plain; charset="iso-8859-1"
+To: Dave Jones <davej@redhat.com>
+Cc: trinity@vger.kernel.org
 
-On Tue, Sep 2, 2014 at 12:02 PM, Hannes Frederic Sowa
-<hannes@stressinduktion.org> wrote:
->
-> If fixes tag is well researched, it won't point to the addition of
-> ASSERT_RTNL() but your patch would help to discover a bug somewhere else
-> in the stack.
->
-> I think for this patch a fixes-tag is hard to find because it is hard to
-> find because it dates back to the beginning of the git history IMHO.
->
+On 09/02/2014 07:37 PM, Dave Jones wrote:
+> On Mon, Sep 01, 2014 at 07:53:47PM +0200, Toralf F=C3=B6rster wrote:
+>  > Trinity sometimes hangs infinitely in a KVM while trying to create=
+ the testfiles, eg .:
+>  >=20
+>  > ...
+>  > [main] fd[668] =3D timerfd
+>  > [main] fd[669] =3D fopen("trinity-testfile1", O_RDWR)
+>  > [main] fd[670] =3D fopen("trinity-testfile2", O_RDWR)
+>=20
+> so creating the 3rd file is where it hangs ? weird.
+> =20
+>  > Ctrl-C works fortunately
+>=20
+> Can you gdb it and find out where it's looping ?
+>=20
+> 	Dave
+>=20
+>=20
 
-As I replied to Eric, this warning is probably caused by
-the following commit:
+this is from one ssh terminal of the KVM :
 
-commit c15b1ccadb323ea50023e8f1cca2954129a62b51
-Author: Hannes Frederic Sowa <hannes@stressinduktion.org>
-Date:   Thu Mar 27 18:28:07 2014 +0100
+=2E..
+[main] fd[654] =3D fopen /proc/376/task/376/net/snmp6 (read-only) flags=
+:0
+[main] fd[655] =3D fopen /sys/devices/virtual/net/lo/statistics/collisi=
+ons (read-only) flags:0
+[main] fd[656] =3D open /proc/376/net/fib_triestat (read-only) flags:30=
+b380
+[main] fd[657] =3D open /proc/365/fdinfo/1 (read-only) flags:281800
+[main] fd[658] =3D fopen /proc/21162/task/21162/wchan (read-only) flags=
+:0
+[main] fd[659] =3D fopen /proc/1971/attr/keycreate (read-write) flags:2
+[main] fd[660] =3D fopen /proc/786/net/snmp (read-only) flags:0
+[main] fd[661] =3D timerfd
+[main] fd[662] =3D timerfd
+[main] fd[663] =3D timerfd
+[main] fd[664] =3D timerfd
+[main] fd[665] =3D timerfd
+[main] fd[666] =3D timerfd
+[main] fd[667] =3D timerfd
+[main] fd[668] =3D timerfd
+[main] fd[669] =3D open("trinity-testfile1", flags:1000)          <----=
+---------- here it hangs
 
-    ipv6: move DAD and addrconf_verify processing to workqueue
 
 
-HOWEVER, you can definitely argue that the code without your
-ASSERT_RTNL() was already broken, it's a little hard to tell without
-digging more, that might date back to the beginning of git as you said.
+and this info I derived within another ssh session to the KVM :
 
-For safety, I think we can simply assume it's that commit to be fixed
-so that we don't fix older kernels until someone really reports a bug.
+tfoerste@n22kvm ~ $ ps fx -eo pid,start_time,command | grep -e trinity =
+-e sleep | grep -v grep
+  375 19:40  |           \_ trinity -C 3 -q
+  376 19:40  |               \_ trinity -C 3 -q
+tfoerste@n22kvm ~ $ gdb trinity 375 -n -batch -ex 'thread apply all bt'
+
+warning: Could not load shared library symbols for linux-gate.so.1.
+Do you need "set solib-search-path" or "set sysroot"?
+
+warning: no loadable sections found in added symbol-file system-supplie=
+d DSO at 0xb772a000
+0xb772acec in ?? ()
+
+Thread 1 (process 375):
+#0  0xb772acec in ?? ()
+#1  0xb7591ee5 in __libc_start_main (main=3D0x8053930 <main>, argc=3D4,=
+ argv=3D0xbff5b8d4, init=3D0x80672c0 <__libc_csu_init>, fini=3D0x806733=
+0 <__libc_csu_fini>, rtld_fini=3D0xb773b4e0 <_dl_fini>, stack_end=3D0xb=
+ff5b8cc) at libc-start.c:285
+#2  0x08054125 in _start ()
+tfoerste@n22kvm ~ $ gdb trinity 376 -n -batch -ex 'thread apply all bt'
+
+warning: Could not load shared library symbols for linux-gate.so.1.
+Do you need "set solib-search-path" or "set sysroot"?
+
+warning: no loadable sections found in added symbol-file system-supplie=
+d DSO at 0xb772a000
+0xb772acec in ?? ()
+
+Thread 1 (process 376):
+#0  0xb772acec in ?? ()
+#1  0xb7591ee5 in __libc_start_main (main=3D0x8053930 <main>, argc=3D4,=
+ argv=3D0xbff5b8d4, init=3D0x80672c0 <__libc_csu_init>, fini=3D0x806733=
+0 <__libc_csu_fini>, rtld_fini=3D0xb773b4e0 <_dl_fini>, stack_end=3D0xb=
+ff5b8cc) at libc-start.c:285
+#2  0x08054125 in _start ()
+tfoerste@n22kvm ~ $ sudo cat /proc/375/stack
+[<c5a4a574>] do_wait+0x1b4/0x200
+[<c5a4b3a2>] SyS_waitpid+0x72/0xe0
+[<c60cc761>] syscall_after_call+0x0/0x4
+[<ffffffff>] 0xffffffff
+tfoerste@n22kvm ~ $ sudo cat /proc/376/stack
+[<c5a97ac8>] hrtimer_nanosleep+0xa8/0x1b0
+[<c5a97c26>] SyS_nanosleep+0x56/0x70
+[<c60cc66b>] sysenter_after_call+0x0/0x21
+[<ffffffff>] 0xffffffff
+
+
+--=20
+Toralf
+pgp key: 0076 E94E
