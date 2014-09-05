@@ -1,56 +1,43 @@
-From: Hannes Frederic Sowa <hannes@stressinduktion.org>
-Subject: Re: [PATCH net v2] ipv6: fix rtnl locking in setsockopt for anycast
- and multicast
-Date: Fri, 05 Sep 2014 21:12:56 +0200
-Message-ID: <1409944376.5306.9.camel@localhost>
-References: <20140901210520.GB25543@kria>
-	 <1409610378.21965.52.camel@localhost> <20140902082929.GA8483@kria>
-	 <20140905.115305.809714259412705649.davem@davemloft.net>
-	 <CAHA+R7M1qd5g1ta=YFqefgXDf1EfF2_VsJGUvH6Dd+ttnHc_VQ@mail.gmail.com>
+From: David Miller <davem@davemloft.net>
+Subject: Re: [PATCH net v2] ipv6: fix rtnl locking in setsockopt for
+ anycast and multicast
+Date: Fri, 05 Sep 2014 12:21:57 -0700 (PDT)
+Message-ID: <20140905.122157.2149128504245355664.davem@davemloft.net>
+References: <20140902082929.GA8483@kria>
+	<20140905.115305.809714259412705649.davem@davemloft.net>
+	<CAHA+R7M1qd5g1ta=YFqefgXDf1EfF2_VsJGUvH6Dd+ttnHc_VQ@mail.gmail.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha1; c=relaxed/relaxed; d=
-	stressinduktion.org; h=message-id:subject:from:to:cc:date
-	:in-reply-to:references:content-type:mime-version
-	:content-transfer-encoding; s=mesmtp; bh=nj3Aw7g+DCTZV+jlaCQCot/
-	KPWw=; b=mmzSZq6TYQBTdJOy+mauWHX/eCitozqyGT8nbwoadpXX+XTJXxGsaax
-	jCb47ZBoonuNszlGaI/0BZVJl14sGlFMWEgN8mqWmUwa+aoyg15pXB7eBintZtdp
-	9lgBymChu+wH42xmj6riIfRUyb1FkRgMVw3hdNkFmHq8pCgK9B+8=
-DKIM-Signature: v=1; a=rsa-sha1; c=relaxed/relaxed; d=
-	messagingengine.com; h=message-id:subject:from:to:cc:date
-	:in-reply-to:references:content-type:mime-version
-	:content-transfer-encoding; s=smtpout; bh=nj3Aw7g+DCTZV+jlaCQCot
-	/KPWw=; b=bvBAnKXf6LyBFt/g201vk4jBnQFXaZVq5rG+njWhbvLeRDdSZR+fmx
-	7VVCkXlqTeFuuAliLglAiBCKTzfsE3+2lX3YNrq6cs51As29PfhTX3jh0xdHws2S
-	iQxFdoJDaAwkZLFUemSnuQ5ob+vGL6GAPAUBHDHcNnULghbqAgre4=
 In-Reply-To: <CAHA+R7M1qd5g1ta=YFqefgXDf1EfF2_VsJGUvH6Dd+ttnHc_VQ@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-To: Cong Wang <cwang@twopensource.com>
-Cc: David Miller <davem@davemloft.net>, Sabrina Dubroca <sd@queasysnail.net>, Tommi Rantala <tt.rantala@gmail.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, James Morris <jmorris@namei.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Patrick McHardy <kaber@trash.net>, netdev <netdev@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
+Content-Type: Text/Plain; charset="us-ascii"
+To: cwang@twopensource.com
+Cc: sd@queasysnail.net, hannes@stressinduktion.org, tt.rantala@gmail.com, kuznet@ms2.inr.ac.ru, jmorris@namei.org, yoshfuji@linux-ipv6.org, kaber@trash.net, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, trinity@vger.kernel.org, davej@redhat.com
 
-On Fr, 2014-09-05 at 11:58 -0700, Cong Wang wrote:
+From: Cong Wang <cwang@twopensource.com>
+Date: Fri, 5 Sep 2014 11:58:31 -0700
+
 > On Fri, Sep 5, 2014 at 11:53 AM, David Miller <davem@davemloft.net> wrote:
-> > From: Sabrina Dubroca <sd@queasysnail.net>
-> > Date: Tue, 2 Sep 2014 10:29:29 +0200
-> >
-> >> Calling setsockopt with IPV6_JOIN_ANYCAST or IPV6_LEAVE_ANYCAST
-> >> triggers the assertion in addrconf_join_solict()/addrconf_leave_solict()
-> >>
-> >> ipv6_sock_ac_join(), ipv6_sock_ac_drop(), ipv6_sock_ac_close() need to
-> >> take RTNL before calling ipv6_dev_ac_inc/dec. Same thing with
-> >> ipv6_sock_mc_join(), ipv6_sock_mc_drop(), ipv6_sock_mc_close() before
-> >> calling ipv6_dev_mc_inc/dec.
-> >>
-> >> This patch moves ASSERT_RTNL() up a level in the call stack.
-> >>
-> >> Signed-off-by: Cong Wang <xiyou.wangcong@gmail.com>
-> >> Signed-off-by: Sabrina Dubroca <sd@queasysnail.net>
-> >> Reported-by: Tommi Rantala <tt.rantala@gmail.com>
-> >
-> > Applied and queued up for -stable, thanks.
+>> From: Sabrina Dubroca <sd@queasysnail.net>
+>> Date: Tue, 2 Sep 2014 10:29:29 +0200
+>>
+>>> Calling setsockopt with IPV6_JOIN_ANYCAST or IPV6_LEAVE_ANYCAST
+>>> triggers the assertion in addrconf_join_solict()/addrconf_leave_solict()
+>>>
+>>> ipv6_sock_ac_join(), ipv6_sock_ac_drop(), ipv6_sock_ac_close() need to
+>>> take RTNL before calling ipv6_dev_ac_inc/dec. Same thing with
+>>> ipv6_sock_mc_join(), ipv6_sock_mc_drop(), ipv6_sock_mc_close() before
+>>> calling ipv6_dev_mc_inc/dec.
+>>>
+>>> This patch moves ASSERT_RTNL() up a level in the call stack.
+>>>
+>>> Signed-off-by: Cong Wang <xiyou.wangcong@gmail.com>
+>>> Signed-off-by: Sabrina Dubroca <sd@queasysnail.net>
+>>> Reported-by: Tommi Rantala <tt.rantala@gmail.com>
+>>
+>> Applied and queued up for -stable, thanks.
 > 
 > I believe you applied a wrong version, at least the following
 > is not correct:
@@ -63,16 +50,8 @@ On Fr, 2014-09-05 at 11:58 -0700, Cong Wang wrote:
 > 
 > (I did provide a correct version which is just ignored by you.)
 
-What games are you playing? You know how patches are processed by David
-and I even let him the choice by pointing out a problem in your patch so
-that you could an update and send v2.
+Not ignored, but rather it was hard to interpret the situation due to
+poor communication in the feedback emails.
 
-I really feel miffed about your behavior!
-
-Anyway, I saw the hunk adding the return -ENODEV and didn't see any
-problems with it. Sure it might be better if it would gone into a
-separate patch. Can you elaborate what problems you see?
-
-Thanks,
-Hannes
-
+The onus is on you guys to communicate things precisely so that I
+understand what patch is in what state.
