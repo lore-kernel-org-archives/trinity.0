@@ -1,32 +1,68 @@
-From: Cong Wang <cwang@twopensource.com>
-Subject: Re: [PATCH net v2] ipv6: fix rtnl locking in setsockopt for anycast
- and multicast
-Date: Fri, 5 Sep 2014 12:34:38 -0700
-Message-ID: <CAHA+R7MbsZhxB8uo3xvVsS6JWjRV4p2BcgCBVWtVaJ6Tr4ONYA@mail.gmail.com>
-References: <CAHA+R7M1qd5g1ta=YFqefgXDf1EfF2_VsJGUvH6Dd+ttnHc_VQ@mail.gmail.com>
-	<1409944376.5306.9.camel@localhost>
-	<CAHA+R7NSu=wjGsmLapjM4Mbk_oeZ07P+yN0b982otvjoW2jodA@mail.gmail.com>
-	<20140905.122539.670916286627732128.davem@davemloft.net>
+From: Tommi Rantala <tt.rantala@gmail.com>
+Subject: f2fs get_dnode_of_data oops
+Date: Sun, 7 Sep 2014 22:14:02 +0300
+Message-ID: <CA+ydwtrB-rJB1fURO+CC1J-=VZ16g9Un47cMSMAZsTFPNg2s+g@mail.gmail.com>
 Mime-Version: 1.0
-Return-path: <netdev-owner@vger.kernel.org>
-In-Reply-To: <20140905.122539.670916286627732128.davem@davemloft.net>
-Sender: netdev-owner@vger.kernel.org
+Return-path: <trinity-owner@vger.kernel.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=mime-version:date:message-id:subject:from:to:cc:content-type;
+        bh=11GjrfGhi9kH1/oT8PClMDv05vNNzCqLy8ud5se+BZU=;
+        b=T/sd9cmSGZXuj5rCjp+tyCUNE100e1pjNEQC5RD/VKcBLIIBfhOeTF1/rTvCU7ChtG
+         Gvv3Axmx85HX1Vs7IEW7o7kVZRD24W5WvdfO8UhsnNrxceMgSNOAs2ZsG1socIJxT1Ge
+         lAJkLsDTwwzMxpI9y6dNYVw4/uipEE/F/ii4QQaWCsHg1P5U9eMDwhelTJAbtkNdu37a
+         RlZPUkDkxvkwrJhsxDB2lET40dsqumjgjKXQPHGvRqUGaadxGi3CoiTfVtkQCcLe93ts
+         IUG3NPc+wISatKu9NHilRWZUU6aCYBgXFRAsYlMnun5yjWNXlzQn/5Mre7uJc/JXSCoN
+         gLEw==
+Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: David Miller <davem@davemloft.net>
-Cc: Hannes Frederic Sowa <hannes@stressinduktion.org>, Sabrina Dubroca <sd@queasysnail.net>, Tommi Rantala <tt.rantala@gmail.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, James Morris <jmorris@namei.org>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Patrick McHardy <kaber@trash.net>, netdev <netdev@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
+To: linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, Changman Lee <cm224.lee@samsung.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, trinity@vger.kernel.org, Dave Jones <davej@redhat.com>
 
-On Fri, Sep 5, 2014 at 12:25 PM, David Miller <davem@davemloft.net> wrote:
->
-> I thought the retention of RCU locking was reasonable, and that your
-> feedback was something I disagreed with.
->
-> This is different from ignoring your feedback.
+Hello,
 
-The point is we don't need to backport the patch that far, as I already
-mentioned, up to  commit c15b1ccadb323ea
-("ipv6: move DAD and addrconf_verify processing to workqueue"),
-simply because no one reports any bug.
+Hit this oops while fuzzing v3.17-rc3-176-g2b12164 with Trinity.
 
-So we don't have to adjust the patch just for stable in this case.
+Tommi
+
+
+BUG: unable to handle kernel paging request at ffff8804338717a8
+IP: [<ffffffff81779039>] get_dnode_of_data+0x3a9/0x440
+PGD 4594067 PUD 0
+Oops: 0000 [#1] SMP DEBUG_PAGEALLOC
+CPU: 0 PID: 4719 Comm: trinity-c3 Not tainted 3.17.0-rc3+ #33
+Hardware name: Bochs Bochs, BIOS Bochs 01/01/2011
+task: ffff880015630000 ti: ffff88000724c000 task.ti: ffff88000724c000
+RIP: 0010:[<ffffffff81779039>]  [<ffffffff81779039>]
+get_dnode_of_data+0x3a9/0x440
+RSP: 0018:ffff88000724fe08  EFLAGS: 00010246
+RAX: ffff880033874000 RBX: 00000000000000f8 RCX: 00000000fffff590
+RDX: ffff880033874168 RSI: ffff88000724fd98 RDI: ffff88000724fef0
+RBP: ffff88000724feb8 R08: 0000000000000000 R09: 0000000000000000
+R10: 0000000000000001 R11: ffffffff83b33f90 R12: fffffffffffff590
+R13: 0000000000000000 R14: ffffea0000ce1d00 R15: ffff8800209f8000
+FS:  00007f2bd22dc700(0000) GS:ffff88003fa00000(0000) knlGS:0000000000000000
+CS:  0010 DS: 0000 ES: 0000 CR0: 000000008005003b
+CR2: ffff8804338717a8 CR3: 00000000346c0000 CR4: 00000000000006f0
+DR0: 000000000185d000 DR1: 000000000185d000 DR2: 0000000000000000
+DR3: 0000000000000000 DR6: 00000000ffff0ff0 DR7: 00000000000b0602
+Stack:
+ ffff88000724fef0 ffff88000724fe30 ffff880036c18000 0000000000000004
+ ffff8800209f80f0 00000002fffff590 ffffffff81189f1d ffff8800fffff590
+ 0000000000000246 ffffffff00000000 ffffffff81189ce0 ffffffff000000f8
+Call Trace:
+ [<ffffffff81189f1d>] ? trace_hardirqs_on+0xd/0x10
+ [<ffffffff81189ce0>] ? mark_held_locks+0x90/0xa0
+ [<ffffffff81189e75>] ? trace_hardirqs_on_caller+0x185/0x220
+ [<ffffffff81763417>] f2fs_llseek+0xf7/0x420
+ [<ffffffff8127e4d5>] SyS_lseek+0x65/0xa0
+ [<ffffffff8259b229>] system_call_fastpath+0x16/0x1b
+Code: ba 00 00 00 00 00 88 ff ff 48 c1 f8 06 48 c1 e0 0c 48 01 d0 8b
+98 ec 0f 00 00 39 98 e8 0f 00 00 48 8d 90 68 01 00 00 48 0f 45 d0 <8b>
+04 8a 89 47 24 31 c0 eb 75 41 bc e4 ff ff ff 4d 85 f6 74 19
+RIP  [<ffffffff81779039>] get_dnode_of_data+0x3a9/0x440
+ RSP <ffff88000724fe08>
+CR2: ffff8804338717a8
+---[ end trace bed7b35d1c48e9c3 ]---
