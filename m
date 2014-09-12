@@ -1,35 +1,49 @@
-From: Dave Jones <davej@redhat.com>
-Subject: Re: hang in creating the trinity-testfileX
-Date: Wed, 10 Sep 2014 13:59:20 -0400
-Message-ID: <20140910175920.GA29738@redhat.com>
-References: <5404B2AB.8080500@gmx.de>
+From: Brian Haley <brian.haley@hp.com>
+Subject: [PATCH] Add missing EPOLLWAKEUP define to compat.h for older distros
+Date: Thu, 11 Sep 2014 21:35:37 -0400
+Message-ID: <1410485737-27811-1-git-send-email-brian.haley@hp.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <5404B2AB.8080500@gmx.de>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
-Cc: trinity@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+To: trinity@vger.kernel.org
 
-On Mon, Sep 01, 2014 at 07:53:47PM +0200, Toralf F=F6rster wrote:
- > Trinity sometimes hangs infinitely in a KVM while trying to create t=
-he testfiles, eg .:
- >=20
- > ...
- > [main] fd[668] =3D timerfd
- > [main] fd[669] =3D fopen("trinity-testfile1", O_RDWR)
- > [main] fd[670] =3D fopen("trinity-testfile2", O_RDWR)
- >=20
- >=20
- > Ctrl-C works fortunately
+  CC    syscalls/epoll_ctl.o
+syscalls/epoll_ctl.c:14:2: error: =E2=80=98EPOLLWAKEUP=E2=80=99 undecla=
+red here (not in a function)
 
-I just hit this myself. It happens if the test files already exist.
-=46or now just clear out tmp/* before re-running.
+Signed-off-by: Brian Haley <brian.haley@hp.com>
+---
+ include/compat.h     |    5 +++++
+ syscalls/epoll_ctl.c |    1 +
+ 2 files changed, 6 insertions(+)
 
-I'll push out some changes later to deal with this (and other problems)=
-=2E
-
-	Dave
+diff --git a/include/compat.h b/include/compat.h
+index 64af817..7c8fda0 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -918,3 +918,8 @@ struct kvm_get_htab_fd {
+ #ifndef SEEK_HOLE
+ #define SEEK_HOLE 4
+ #endif
++
++/* sys/epoll.h */
++#ifndef EPOLLWAKEUP
++#define EPOLLWAKEUP (1u << 29)
++#endif
+diff --git a/syscalls/epoll_ctl.c b/syscalls/epoll_ctl.c
+index 31df7ca..7274422 100644
+--- a/syscalls/epoll_ctl.c
++++ b/syscalls/epoll_ctl.c
+@@ -7,6 +7,7 @@
+ #include <sys/epoll.h>
+ #include "sanitise.h"
+ #include "utils.h"
++#include "compat.h"
+=20
+ static const unsigned long epoll_flags[] =3D {
+ 	EPOLLIN, EPOLLOUT, EPOLLRDHUP, EPOLLPRI,
+--=20
+1.7.9.5
