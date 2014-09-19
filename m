@@ -1,49 +1,45 @@
-From: Brian Haley <brian.haley@hp.com>
-Subject: [PATCH] Add missing EPOLLWAKEUP define to compat.h for older distros
-Date: Thu, 11 Sep 2014 21:35:37 -0400
-Message-ID: <1410485737-27811-1-git-send-email-brian.haley@hp.com>
+From: Markos Chandras <markos.chandras@imgtec.com>
+Subject: [PATCH 1/2] configure.sh: Respect CFLAGS from the environment
+Date: Fri, 19 Sep 2014 15:11:54 +0100
+Message-ID: <1411135915-26522-2-git-send-email-markos.chandras@imgtec.com>
+References: <1411135915-26522-1-git-send-email-markos.chandras@imgtec.com>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
+In-Reply-To: <1411135915-26522-1-git-send-email-markos.chandras@imgtec.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
+Cc: Markos Chandras <markos.chandras@imgtec.com>
 
-  CC    syscalls/epoll_ctl.o
-syscalls/epoll_ctl.c:14:2: error: =E2=80=98EPOLLWAKEUP=E2=80=99 undecla=
-red here (not in a function)
+Currently, configure.sh does not inherit any cflags from the
+environment. However, for MIPS, it's necessary to pass additional
+cflags to decide, for example, if we want a big endian (-BE) or
+little endian (-EL) build. As a result of which, we modify the
+configure.sh script to respect additional cflags passed by the
+user.
 
-Signed-off-by: Brian Haley <brian.haley@hp.com>
+Signed-off-by: Markos Chandras <markos.chandras@imgtec.com>
 ---
- include/compat.h     |    5 +++++
- syscalls/epoll_ctl.c |    1 +
- 2 files changed, 6 insertions(+)
+ configure.sh | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/include/compat.h b/include/compat.h
-index 64af817..7c8fda0 100644
---- a/include/compat.h
-+++ b/include/compat.h
-@@ -918,3 +918,8 @@ struct kvm_get_htab_fd {
- #ifndef SEEK_HOLE
- #define SEEK_HOLE 4
- #endif
-+
-+/* sys/epoll.h */
-+#ifndef EPOLLWAKEUP
-+#define EPOLLWAKEUP (1u << 29)
-+#endif
-diff --git a/syscalls/epoll_ctl.c b/syscalls/epoll_ctl.c
-index 31df7ca..7274422 100644
---- a/syscalls/epoll_ctl.c
-+++ b/syscalls/epoll_ctl.c
-@@ -7,6 +7,7 @@
- #include <sys/epoll.h>
- #include "sanitise.h"
- #include "utils.h"
-+#include "compat.h"
-=20
- static const unsigned long epoll_flags[] =3D {
- 	EPOLLIN, EPOLLOUT, EPOLLRDHUP, EPOLLPRI,
---=20
-1.7.9.5
+diff --git a/configure.sh b/configure.sh
+index d2a31c266519..98905fb8e7fd 100755
+--- a/configure.sh
++++ b/configure.sh
+@@ -16,9 +16,9 @@ MISSING_DEFS=0
+ # expand tilde
+ CC="$(eval echo ${CROSS_COMPILE}${CC})"
+ 
+-CFLAGS=""
++CFLAGS="${CFLAGS}"
+ if [ "${SYSROOT}xx" != "xx" ]; then
+-	CFLAGS="$(eval echo --sysroot=${SYSROOT} )"
++	CFLAGS="${CFLAGS} $(eval echo --sysroot=${SYSROOT} )"
+ fi
+ 
+ echo "#pragma once" > $CONFIGH
+-- 
+2.1.0
