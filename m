@@ -1,42 +1,45 @@
-From: Paul Moore <paul@paul-moore.com>
-Subject: Re: "selinux_nlmsg_perm: unrecognized netlink message: protocol=0 nlmsg_type=0 sclass=30" warning on Linux 3.18-rc3
-Date: Mon, 10 Nov 2014 15:41:57 -0500
-Message-ID: <2373486.3IgvVOFVQB@sifl>
-References: <CAHTgTXVyR3hoZDSp6QRTtJ9+cAuPXsPomfDBw0zisft=7H_7dA@mail.gmail.com> <18386541.xBZWpSPpcC@sifl> <20141105222537.GG5902@madcap2.tricolour.ca>
-Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7Bit
+From: Richard Guy Briggs <rgb@redhat.com>
+Subject: [PATCH] selinux: convert WARN_ONCE() to printk_once() in selinux_nlmsg_perm()
+Date: Wed, 12 Nov 2014 14:01:34 -0500
+Message-ID: <49c549f887cd1a0284f79251765606eccacd11e3.1415818605.git.rgb@redhat.com>
+References: <2373486.3IgvVOFVQB@sifl>
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20141105222537.GG5902@madcap2.tricolour.ca>
+In-Reply-To: <2373486.3IgvVOFVQB@sifl>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-To: Richard Guy Briggs <rgb@redhat.com>
-Cc: Stephen Smalley <sds@tycho.nsa.gov>, Vinson Lee <vlee@twopensource.com>, Eric Paris <eparis@parisplace.org>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, selinux@tycho.nsa.gov, linux-security-module@vger.kernel.org, trinity@vger.kernel.org
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: selinux@tycho.nsa.gov, linux-security-module@vger.kernel.org, trinity@vger.kernel.org
+Cc: Richard Guy Briggs <rgb@redhat.com>, sds@tycho.nsa.gov, vlee@twopensource.com, eparis@parisplace.org, pmoore@redhat.com, james.l.morris@oracle.com, serge@hallyn.com, paul@paul-moore.com
 
-On Wednesday, November 05, 2014 05:25:37 PM Richard Guy Briggs wrote:
-> On 14/11/05, Paul Moore wrote:
-> > In retrospect, we could probably do better.  I don't think it should be an
-> > audit record, but I can see the point that a backtrace and scary WARNING!
-> > display are probably a bit too much.
-> > 
-> > Richard, how about converting this WARN_ONCE() to a printk_once(), or
-> > similar?
->
-> I'd be agreeable to that.  While I was a bit concerned that a
-> WARN_ONCE() could be lost in the noise (evidently that's not the case!)
-> a printk_once() would more likely get lost in the noise.  Would it make
-> sense to make it a bit less infrequent than printk_once() and rate-limit
-> it at say, one per 5 seconds or more?
+Convert WARN_ONCE() to printk_once() in selinux_nlmsg_perm().
 
-Let's just go with printk_once() for right now.  We probably need to have a 
-better, more consistent approach to error messages not related to the normal 
-access control stuff, however, I'd like to fix this for the v3.18-rcX releases 
-and that is a bit out of scope for right now.
+After conversion from audit_log() in commit e173fb26, WARN_ONCE() was deemed
+too alarmist, so switch it to printk_once().  If this gets buried in the noise,
+it may be converted to a rate-limited call in the future.
 
-Ideally I'd like to fix it this week.  Richard, any chance you can submit a 
-patch by the end of the day on Tuesday?  It really should be trivial; if you 
-can't let me know and I'll take care of it.
+Signed-off-by: Richard Guy Briggs <rgb@redhat.com>
+---
+ security/selinux/hooks.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
 
+diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
+index e663141..17d0066 100644
+--- a/security/selinux/hooks.c
++++ b/security/selinux/hooks.c
+@@ -4725,9 +4725,9 @@ static int selinux_nlmsg_perm(struct sock *sk, struct sk_buff *skb)
+ 	err = selinux_nlmsg_lookup(sksec->sclass, nlh->nlmsg_type, &perm);
+ 	if (err) {
+ 		if (err == -EINVAL) {
+-			WARN_ONCE(1, "selinux_nlmsg_perm: unrecognized netlink message:"
+-				  " protocol=%hu nlmsg_type=%hu sclass=%hu\n",
+-				  sk->sk_protocol, nlh->nlmsg_type, sksec->sclass);
++			printk_once("selinux_nlmsg_perm: unrecognized netlink message:"
++				    " protocol=%hu nlmsg_type=%hu sclass=%hu\n",
++				    sk->sk_protocol, nlh->nlmsg_type, sksec->sclass);
+ 			if (!selinux_enforcing || security_get_allow_unknown())
+ 				err = 0;
+ 		}
 -- 
-paul moore
-www.paul-moore.com
+1.7.1
