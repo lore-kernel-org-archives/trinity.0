@@ -1,80 +1,73 @@
 From: tyson.w.smith@gmail.com
-Subject: [PATCH 6/7] Simplify get_interesting_32bit_value()
-Date: Wed,  4 Mar 2015 13:12:17 -0800
-Message-ID: <1425503537-38190-1-git-send-email-tyson.w.smith@gmail.com>
+Subject: [PATCH 7/7] Removed overlapping values in get_interesting_value()
+Date: Wed,  4 Mar 2015 13:12:37 -0800
+Message-ID: <1425503557-38233-1-git-send-email-tyson.w.smith@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id;
-        bh=B86PzBeWSX814qNPxOhic26OufdWYI0YTQMpcTQKo3I=;
-        b=y2dWVZahYfZGeL0ik0vnoEGRO+6oqZUJWCFJBOAd9jqG4DPNv/2djZ7aEbfvVoP9J8
-         p+lklbWA3j11nzYgQN5h//zsDhMIUFv86x/Oe4Iq0N1Znjzkobrx9/kWm+nuimIhLHok
-         5syJo4uRqsW2O8EiWY6FCb6DkIyqzjrb+HCy09M5kIuutrfL2Zf8u0Vy/41K41loT8ht
-         gmbfOFE6Zwvz1PxhdoTSuKhoPsNrAbVIgEJqYEgNU8shhefB8481sF2lfUnZDZBVFZZ9
-         SbvxjgNm9e+RApPDocG+7+3ZZvzQDb66bY4HiW1XCq+w/EDXBqtj67B90j3IODRZ/25a
-         9AEQ==
+        bh=FUjNyyGfZS6Folkyhmun7OdB1YtmCnLqJI33h3iN+Lk=;
+        b=PqRNwqxNYBYdauiACfONdxfJdQmzKtGieRPAa42uF+/F7T6zzTS0llBMzq7087EETI
+         Wvzegc46GCxQefLv6H1BNvC+jeCHaVwNgCLcyfTaoDswkCY3qiLvj8EuRNH47J98Js6P
+         qrmS/oPNZGvV0d8coVWXjobr5H1Scvn7aQuocm1dHtJj8/4hm/+DoZSHvJ7riwFli4am
+         2bDcSBCNUiPnTfqLBdFHekH1ZvQ2fC8jORzr6ikNxe6jXhd4T8OVdw8VrM5klp5t5lR1
+         tAY0X53ggPkHC0gTmFpT5t4UbBpNuKpy1CO2dxt8+Jt518Qd2FAHHzFyGGxFpo74SCls
+         B8Vw==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 To: davej@codemonkey.org.uk
-Cc: trinity@vger.kernel.org, Tyson Smith <tyson.w.smith@gmail.com>
+Cc: trinity@vger.kernel.org, Tyson Smith <tysmith@motorola.com>
 
-From: Tyson Smith <tyson.w.smith@gmail.com>
+From: Tyson Smith <tysmith@motorola.com>
 
-Removed values that overlap with values generated but the other functions.
-Added multiple of page_size case.
+Added 50/50 chance of skipping 64bit modifications code block. This should
+likely be closer to 1 in 4 odds of entering this branch, perhaps less if
+these values haven't been triggering issues in the past.
 ---
- interesting-numbers.c | 35 +++++++++++------------------------
- 1 file changed, 11 insertions(+), 24 deletions(-)
+ interesting-numbers.c | 28 ++++++++++++++--------------
+ 1 file changed, 14 insertions(+), 14 deletions(-)
 
 diff --git a/interesting-numbers.c b/interesting-numbers.c
-index 070ddfa..4b4e785 100644
+index 4b4e785..aeb0335 100644
 --- a/interesting-numbers.c
 +++ b/interesting-numbers.c
-@@ -43,31 +43,18 @@ static unsigned short get_interesting_16bit_value(void)
- 
- static unsigned int get_interesting_32bit_value(void)
- {
--	unsigned int num = 0;
--
--	switch (rand() % 9) {
--	case 0:	num = 0;
--		break;
--	case 1:	num = 1UL << (rand() % 32);	// set a single bit.
--		break;
--	case 2:	num = 0x8fffffff;
--		break;
--	case 3:	num = 0xff;
--		num = num << (rand() % 31);
--		break;
--	case 4: num = 0xffff0000;
--		break;
--	case 5: num = 0xffffe000;
--		break;
--	case 6: num = 0xffffff00 | (rand() % 256);
--		break;
--	case 7: num = 0xffffffff - page_size;
--		break;
--	case 8: num = 0xffffffff;
--		break;
-+	switch (rand() % 10) {
-+	case 0: return 0x80000000 >> (rand() & 0x1f);	// 2^n (1 -> 0x10000)
-+	case 1: return rand();							// 0 -> RAND_MAX (likely 0x7fffffff)
-+	case 2: return 0xff << (rand() % 25);
-+	case 3: return 0xffff0000;
-+	case 4: return 0xffffe000;
-+	case 5: return 0xffffff00 | (rand() & 0xff);
-+	case 6: return 0xffffffff - page_size;
-+	case 7: return page_size;
-+	case 8: return page_size * ((rand() % (0xffffffff/page_size)) + 1);
-+	default: return 0xffffffff;						// max
- 	}
--
--	return num;
- }
- 
+@@ -95,20 +95,20 @@ unsigned long get_interesting_value(void)
+ 	low = (rand() & 0xf) ? low : plus_minus_two(low);	// 1 in 16 call plus_minus_two
  #if __WORDSIZE != 32
+ 
+-	switch (rand() % 13) {
+-	case 0: return 0;
+-	case 1: return low;
+-	case 2: return 0x0000000100000000UL | low;
+-	case 3: return 0x7fffffff00000000UL | low;
+-	case 4: return 0x8000000000000000UL | low;
+-	case 5: return 0xffffffff00000000UL | low;
+-	case 6: return 0xffffffffffffff00UL | (rand() % 256);
+-	case 7: return 0xffffffffffffffffUL - page_size;
+-	case 8: return PAGE_OFFSET | (low << 4);
+-	case 9: return KERNEL_ADDR | (low & 0xffffff);
+-	case 10: return MODULE_ADDR | (low & 0xffffff);
+-	case 11: return per_arch_interesting_addr(low);
+-	case 12: return (low << 32);
++	if (rand_bool()) {	// FIXME: This should likely be less aggressive than 50/50
++		switch (rand() % 11) {
++		case 0: return 0x0000000100000000UL | low;
++		case 1: return 0x7fffffff00000000UL | low;
++		case 2: return 0x8000000000000000UL | low;
++		case 3: return 0xffffffff00000000UL | low;
++		case 4: return 0xffffffffffffff00UL | (rand() & 0xff);
++		case 5: return 0xffffffffffffffffUL - page_size;
++		case 6: return PAGE_OFFSET | (low << 4);
++		case 7: return KERNEL_ADDR | (low & 0xffffff);
++		case 8: return MODULE_ADDR | (low & 0xffffff);
++		case 9: return per_arch_interesting_addr(low);
++		case 10: return (low << 32);
++		}
+ 	}
+ 
+ #endif	/* __WORDSIZE */
 -- 
 1.9.1
