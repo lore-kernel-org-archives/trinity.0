@@ -1,18 +1,18 @@
 From: tyson.w.smith@gmail.com
-Subject: [PATCH 3/7] Unnest the get_interesting_<Nbit>_value() calls
-Date: Wed,  4 Mar 2015 13:10:54 -0800
-Message-ID: <1425503454-38059-1-git-send-email-tyson.w.smith@gmail.com>
+Subject: [PATCH 4/7] Make get_interesting_32bit_value() static
+Date: Wed,  4 Mar 2015 13:11:18 -0800
+Message-ID: <1425503478-38102-1-git-send-email-tyson.w.smith@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id;
-        bh=D6mORCCZkZOCSD6QqiLfEbDaeawVrRAdqEmGcUzVkiw=;
-        b=fahS0lcNPH+FytEC9fEB8/+E2ynkA96XS8V8Y+FGKdec/hkpxXQ1Q5NTdSAfBcJsd0
-         rw7AehWjzbztJAqRadbEdkw/MKRmFjYHGSimrrq2WtqnY+OpNPtcmJm9PN7iAlLyNZQR
-         L80i8Y7bLEwQeNo9/T4yoDAj5XjrRBvJ+5DGEC/hEJzzZouNeXIFtk6s5b3M/lVlc9mi
-         aMJzDWAKxrekqW3HylBVfvi8UbizmMOvNgh/fiu15G/IHsbcjURsc77+lMQYuvT441eH
-         WnamCEqymVfKtKLGw5HrDtGDEniZqpD92cv4VewFD/bg2dmfsOHNfQKcK8sSNBGCPMYQ
-         YUvA==
+        bh=2/7aRJEXP5UqoUedBCV9N4pc4RvQxtYDDqqDouqLZwU=;
+        b=ekqhcYBaU/znLFLpdpPDD1w5Lv9p4V5O+8I76tdHWqsyl7VP50ROfqo3mLInT6tTKa
+         QMlR97ns2l2VdgnLrMmJ3i7rcZG8A+kR1scXRKQSQEwbVh3ngeu37VCVXx4y46ZhtwZi
+         RYxyqpts8JtPpZza5mgB6H5ko+6E1qT0bK3pkYpsSegYcc93xGWFkme4OU3cqCK9K9+Z
+         igV0AnYJvhX3EiUNr7rB0mZsq0vPbYPZtezaEC5yLPVeuBoR3gnuWKwPmdW09vgVgIz7
+         EgTu/HBJgrV3d5PQOwUoq7m/2CMIwvfNejo8AkvfLFM+bEZtSPOrbJkv5/GPXd0UNXFJ
+         z9ow==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -23,127 +23,51 @@ Cc: trinity@vger.kernel.org, Tyson Smith <tyson.w.smith@gmail.com>
 
 From: Tyson Smith <tyson.w.smith@gmail.com>
 
-This will help evenly distribute the calls to each
-get_interesting_<Nbit>_value() functions. It will also make the modification
-to the distribution easier in the future if tweaks are needed. Move call to
-plus_minus_two() from get_interesting_32bit_value() to get_interesting_value().
+All calls to get_interesting_32bit_value() should now be made to
+get_interesting_value() to help simplify generating interesting values.
 ---
- interesting-numbers.c | 61 +++++++++++++++++++++++----------------------------
- 1 file changed, 28 insertions(+), 33 deletions(-)
+ include/sanitise.h    | 1 -
+ interesting-numbers.c | 2 +-
+ random.c              | 2 +-
+ 3 files changed, 2 insertions(+), 3 deletions(-)
 
+diff --git a/include/sanitise.h b/include/sanitise.h
+index bd5c823..5001250 100644
+--- a/include/sanitise.h
++++ b/include/sanitise.h
+@@ -6,7 +6,6 @@ void generic_sanitise(struct syscallrecord *rec);
+ void generic_free_arg(struct syscallrecord *rec);
+ 
+ unsigned long get_interesting_value(void);
+-unsigned int get_interesting_32bit_value(void);
+ 
+ void *get_address(void);
+ void *get_non_null_address(void);
 diff --git a/interesting-numbers.c b/interesting-numbers.c
-index 4b23b4c..e08e27d 100644
+index e08e27d..311b16d 100644
 --- a/interesting-numbers.c
 +++ b/interesting-numbers.c
-@@ -35,22 +35,20 @@ static int get_interesting_16bit_value(void)
- {
- 	int num = 0;
- 
--	switch (rand() % 8) {
-+	switch (rand() % 7) {
- 	case 0:	num = 0;
- 		break;
--	case 1:	num = get_interesting_8bit_value();
-+	case 1:	num = -32768;
- 		break;
--	case 2:	num = -32768;
-+	case 2:	num = -129;
- 		break;
--	case 3:	num = -129;
-+	case 3:	num = 255;
- 		break;
--	case 4:	num = 255;
-+	case 4:	num = 32767;
- 		break;
--	case 5:	num = 32767;
-+	case 5:	num = 1UL << (rand() % 15);
- 		break;
--	case 6:	num = 1UL << (rand() % 15);
--		break;
--	case 7:	num = rand() % 0xffff;
-+	case 6:	num = rand() % 0xffff;
- 		break;
- 	}
- 
-@@ -61,37 +59,28 @@ unsigned int get_interesting_32bit_value(void)
- {
- 	unsigned int num = 0;
- 
--	switch (rand() % 11) {
-+	switch (rand() % 9) {
- 	case 0:	num = 0;
- 		break;
--
--	case 1:	num = get_interesting_8bit_value();
-+	case 1:	num = 1UL << (rand() % 32);	// set a single bit.
- 		break;
--
--	case 2:	num = get_interesting_16bit_value();
-+	case 2:	num = 0x8fffffff;
- 		break;
--
--	case 3:	num = 1UL << (rand() % 32);	// set a single bit.
--		break;
--	case 4:	num = 0x8fffffff;
--		break;
--	case 5:	num = 0xff;
-+	case 3:	num = 0xff;
- 		num = num << (rand() % 31);
- 		break;
--	case 6: num = 0xffff0000;
-+	case 4: num = 0xffff0000;
- 		break;
--	case 7: num = 0xffffe000;
-+	case 5: num = 0xffffe000;
- 		break;
--	case 8: num = 0xffffff00 | (rand() % 256);
-+	case 6: num = 0xffffff00 | (rand() % 256);
- 		break;
--	case 9: num = 0xffffffff - page_size;
-+	case 7: num = 0xffffffff - page_size;
- 		break;
--	case 10: num = 0xffffffff;
-+	case 8: num = 0xffffffff;
- 		break;
- 	}
- 
--	num = rand() & 0xf ? num : plus_minus_two(num);	// 1 in 16 call plus_minus_two
--
+@@ -55,7 +55,7 @@ static int get_interesting_16bit_value(void)
  	return num;
  }
  
-@@ -119,13 +108,19 @@ static unsigned long per_arch_interesting_addr(unsigned long low)
- 
- unsigned long get_interesting_value(void)
+-unsigned int get_interesting_32bit_value(void)
++static unsigned int get_interesting_32bit_value(void)
  {
--#if __WORDSIZE == 32
--	return get_interesting_32bit_value();
--#else
- 	unsigned long low = 0;
+ 	unsigned int num = 0;
  
--	if (rand_bool())
--		low = get_interesting_32bit_value();
-+	switch (rand() % 3) {
-+	case 0:	low = get_interesting_8bit_value();
-+		break;
-+	case 1:	low = get_interesting_16bit_value();
-+		break;
-+	case 2: low = get_interesting_32bit_value();
-+		break;
-+	}
-+
-+	low = (rand() & 0xf) ? low : plus_minus_two(low);	// 1 in 16 call plus_minus_two
-+#if __WORDSIZE != 32
- 
- 	switch (rand() % 13) {
- 	case 0: return 0;
-@@ -143,6 +138,6 @@ unsigned long get_interesting_value(void)
- 	case 12: return (low << 32);
+diff --git a/random.c b/random.c
+index 0601f4f..c20acaf 100644
+--- a/random.c
++++ b/random.c
+@@ -138,7 +138,7 @@ static unsigned int __rand32(void)
+ 		break;
+ 	case 4:	r = rept8(4);
+ 		break;
+-	case 5:	return get_interesting_32bit_value();
++	case 5:	return get_interesting_value();
  	}
  
--	return low;	// unreachable, but gcc is dumb.
- #endif	/* __WORDSIZE */
-+	return low;
- }
+ 	return r;
 -- 
 1.9.1
