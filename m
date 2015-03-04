@@ -1,129 +1,54 @@
-From: Tommi Rantala <tt.rantala@gmail.com>
-Subject: Re: [PATCH] drm: Fix deadlock due to getconnector
-	locking changes
-Date: Mon, 2 Mar 2015 22:03:43 +0200
-Message-ID: <CA+ydwtpTzDGhjvxn3dDFHg8Ksi_iuyBfhmYo2JjJYDBeLM-xqQ@mail.gmail.com>
-References: <1424601516-19267-1-git-send-email-daniel.vetter@ffwll.ch>
- <20150223235539.GA20066@mlap.lactee>
-Mime-Version: 1.0
-Content-Transfer-Encoding: base64
-Return-path: <intel-gfx-bounces@lists.freedesktop.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20120113;
- h=mime-version:in-reply-to:references:date:message-id:subject:from:to
- :cc:content-type;
- bh=BGM7bC6hAVTZ6X02VbfUlrdI4TiQycPQ05NWarwqPrI=;
- b=xgD3zvxkX4lPnsC6auerBlIPXEMBpgoHEg9mnH+IYPqFRdbEMoYa8lATeogxFHV4GP
- SUCfd3rX7T1xlggOqN6JCmiq6V2e9ZHODLBAIxnomHWRZRMr3v3+/V7b8wo+qNOFSANG
- Z+ALAe0G59BCzb3Qs/mRw8dQxcg9f94Kg4mZPYXLXvUQrft6t1z+wrayKvcaTfVfOgck
- N5qkDU7iLYv6xxEaWMShqFMn1Ap98II0iuXm43tGgUiz7qznjCzbaUBOP+eTT4jIPeM8
- XXjN/WYd8nuaCRAYK4wrvTC+2JH1gyYoqxonZeUa0qmUpBzkvSS3RoWZWMd3HdWsM8Y9
- kWUg==
-In-Reply-To: <20150223235539.GA20066@mlap.lactee>
-List-Id: <trinity.vger.kernel.org>
-List-Unsubscribe: <http://lists.freedesktop.org/mailman/options/intel-gfx>,
- <mailto:intel-gfx-request@lists.freedesktop.org?subject=unsubscribe>
-List-Archive: <http://lists.freedesktop.org/archives/intel-gfx>
-List-Post: <mailto:intel-gfx@lists.freedesktop.org>
-List-Help: <mailto:intel-gfx-request@lists.freedesktop.org?subject=help>
-List-Subscribe: <http://lists.freedesktop.org/mailman/listinfo/intel-gfx>,
- <mailto:intel-gfx-request@lists.freedesktop.org?subject=subscribe>
-Errors-To: intel-gfx-bounces@lists.freedesktop.org
-Sender: "Intel-gfx" <intel-gfx-bounces@lists.freedesktop.org>
+From: tyson.w.smith@gmail.com
+Subject: [PATCH 1/7] Remove value modification decision from plus_minus_two()
+Date: Wed,  4 Mar 2015 13:09:55 -0800
+Message-ID: <1425503395-37972-1-git-send-email-tyson.w.smith@gmail.com>
+Return-path: <trinity-owner@vger.kernel.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=from:to:cc:subject:date:message-id;
+        bh=Hhwkj7DvBvSklCRh3yW6dAJTQ9pPfgQMOv3CQAga2PM=;
+        b=HJDxfcsJI0Qk/zKcic5ZtdTMKsXhJceoFHz18PvnRGnRF/1Brk0JYuFc8ZIEtls8pn
+         8eowYPDxJbAG9YkCDmTBz+EJuCEkYCGDqRTSy6fuY34fbNoOThATtrNIHk7MtN+otuy/
+         SMj82jx0vGU6h4W89QyHUnjZAFE+sFqG2BWoCCrzrg4OwFtbvNdtGoeq50trVsV5SnK9
+         6pFl2Z9hhQZx7QII5dv6zUORrGnBqZUljAtymsW46RNVX3PRzdJunZZAF8aAqahwtGID
+         LvZO1qpIGYlw/30EjRkRmYdD+mMwkZ6lSwJItK6qnKVmsDJJbKAJ32hp/8b0MDbvgAMK
+         aj9A==
+Sender: trinity-owner@vger.kernel.org
+List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
-To: Marc Finet <m.dreadlock@gmail.com>
-Cc: Daniel Vetter <daniel.vetter@ffwll.ch>, Intel Graphics Development <intel-gfx@lists.freedesktop.org>, trinity@vger.kernel.org, DRI Development <dri-devel@lists.freedesktop.org>, Daniel Vetter <daniel.vetter@intel.com>
+Content-Transfer-Encoding: 7bit
+To: davej@codemonkey.org.uk
+Cc: trinity@vger.kernel.org, Tyson Smith <tyson.w.smith@gmail.com>
 
-MjAxNS0wMi0yNCAxOjU1IEdNVCswMjowMCBNYXJjIEZpbmV0IDxtLmRyZWFkbG9ja0BnbWFpbC5j
-b20+Ogo+IE9uIFN1biwgRmViIDIyLCAyMDE1IGF0IDExOjM4OjM2QU0gKzAxMDAsIERhbmllbCBW
-ZXR0ZXIgd3JvdGU6Cj4+IEluCj4+Cj4+IGRhbmllbEBwaGVub206fi9saW51eC9zcmMkIGdpdCBz
-aG93IGNjZmMwODY1NQo+PiBjb21taXQgY2NmYzA4NjU1ZDVmZDUwNzY4MjhmNDVmYjA5MTk0YzA3
-MGYyZjYzYQo+PiBBdXRob3I6IFJvYiBDbGFyayA8cm9iZGNsYXJrQGdtYWlsLmNvbT4KPj4gRGF0
-ZTogICBUaHUgRGVjIDE4IDE2OjAxOjQ4IDIwMTQgLTA1MDAKPj4KPj4gICAgIGRybTogdHdlYWsg
-Z2V0Y29ubmVjdG9yIGxvY2tpbmcKPj4KPj4gV2UgbmVlZCB0byBleHRlbmQgdGhlIGxvY2tpbmcg
-dG8gY292ZXIgY29ubmVjdG9yLT5zdGF0ZSByZWFkaW5nIGZvcgo+PiBhdG9taWMgZHJpdmVycywg
-YnV0IHRoZSBhYm92ZSBjb21taXQgd2FzIGEgYml0IHRvbyBlYWdlciBhbmQgYWxzbwo+PiBpbmNs
-dWRlZCB0aGUgZmlsbF9tb2RlcyBjYWxsYmFjay4gV2hpY2ggb24gaTkxNSBvbiBvbGQgcGxhdGZv
-cm1zIHVzaW5nCj4+IGxvYWQgZGV0ZWN0aW9uIG5lZWRzIHRvIGFjcXVpcmUgbW9kZXNldCBsb2Nr
-cywgcmVzdWx0aW5nIGluIGEgZGVhZGxvY2sKPj4gb24gb3V0cHV0IHByb2JpbmcuCj4+Cj4+IFJl
-cG9ydGVkLWJ5OiBNYXJjIEZpbmV0IDxtLmRyZWFkbG9ja0BnbWFpbC5jb20+Cj4+IENjOiBNYXJj
-IEZpbmV0IDxtLmRyZWFkbG9ja0BnbWFpbC5jb20+Cj4+IENjOiByb2JkY2xhcmtAZ21haWwuY29t
-Cj4+IFNpZ25lZC1vZmYtYnk6IERhbmllbCBWZXR0ZXIgPGRhbmllbC52ZXR0ZXJAaW50ZWwuY29t
-Pgo+Cj4gVGVzdGVkLWJ5OiBNYXJjIEZpbmV0IDxtLmRyZWFkbG9ja0BnbWFpbC5jb20+Cj4KPiBU
-aGFua3MuCj4+IC0tLQo+PiAgZHJpdmVycy9ncHUvZHJtL2RybV9jcnRjLmMgfCAzICsrLQo+PiAg
-MSBmaWxlIGNoYW5nZWQsIDIgaW5zZXJ0aW9ucygrKSwgMSBkZWxldGlvbigtKQo+Pgo+PiBkaWZm
-IC0tZ2l0IGEvZHJpdmVycy9ncHUvZHJtL2RybV9jcnRjLmMgYi9kcml2ZXJzL2dwdS9kcm0vZHJt
-X2NydGMuYwo+PiBpbmRleCBiMTVkNzIwZWRhNGMuLmNlNWYxMTkzZWNkNiAxMDA2NDQKPj4gLS0t
-IGEvZHJpdmVycy9ncHUvZHJtL2RybV9jcnRjLmMKPj4gKysrIGIvZHJpdmVycy9ncHUvZHJtL2Ry
-bV9jcnRjLmMKPj4gQEAgLTIxODAsNyArMjE4MCw2IEBAIGludCBkcm1fbW9kZV9nZXRjb25uZWN0
-b3Ioc3RydWN0IGRybV9kZXZpY2UgKmRldiwgdm9pZCAqZGF0YSwKPj4gICAgICAgRFJNX0RFQlVH
-X0tNUygiW0NPTk5FQ1RPUjolZDo/XVxuIiwgb3V0X3Jlc3AtPmNvbm5lY3Rvcl9pZCk7Cj4+Cj4+
-ICAgICAgIG11dGV4X2xvY2soJmRldi0+bW9kZV9jb25maWcubXV0ZXgpOwo+PiAtICAgICBkcm1f
-bW9kZXNldF9sb2NrKCZkZXYtPm1vZGVfY29uZmlnLmNvbm5lY3Rpb25fbXV0ZXgsIE5VTEwpOwo+
-Pgo+PiAgICAgICBjb25uZWN0b3IgPSBkcm1fY29ubmVjdG9yX2ZpbmQoZGV2LCBvdXRfcmVzcC0+
-Y29ubmVjdG9yX2lkKTsKPj4gICAgICAgaWYgKCFjb25uZWN0b3IpIHsKPj4gQEAgLTIyMTAsNiAr
-MjIwOSw4IEBAIGludCBkcm1fbW9kZV9nZXRjb25uZWN0b3Ioc3RydWN0IGRybV9kZXZpY2UgKmRl
-diwgdm9pZCAqZGF0YSwKPj4gICAgICAgb3V0X3Jlc3AtPm1tX2hlaWdodCA9IGNvbm5lY3Rvci0+
-ZGlzcGxheV9pbmZvLmhlaWdodF9tbTsKPj4gICAgICAgb3V0X3Jlc3AtPnN1YnBpeGVsID0gY29u
-bmVjdG9yLT5kaXNwbGF5X2luZm8uc3VicGl4ZWxfb3JkZXI7Cj4+ICAgICAgIG91dF9yZXNwLT5j
-b25uZWN0aW9uID0gY29ubmVjdG9yLT5zdGF0dXM7Cj4+ICsKPj4gKyAgICAgZHJtX21vZGVzZXRf
-bG9jaygmZGV2LT5tb2RlX2NvbmZpZy5jb25uZWN0aW9uX211dGV4LCBOVUxMKTsKPj4gICAgICAg
-ZW5jb2RlciA9IGRybV9jb25uZWN0b3JfZ2V0X2VuY29kZXIoY29ubmVjdG9yKTsKPj4gICAgICAg
-aWYgKGVuY29kZXIpCj4+ICAgICAgICAgICAgICAgb3V0X3Jlc3AtPmVuY29kZXJfaWQgPSBlbmNv
-ZGVyLT5iYXNlLmlkOwo+PiAtLQo+PiAyLjEuNAo+PgoKSGksCgpJIHRoaW5rIHRoaXMgcGF0Y2gg
-aW50cm9kdWNlZCB0aGUgZm9sbG93aW5nLgoKSWYgdGhlIGRybV9jb25uZWN0b3JfZmluZCgpIGNh
-bGwgZmFpbHMsIHdlIGp1bXAgdG8gdGhlICdvdXQnIGxhYmVsIGFuZApjYWxsIGRybV9tb2Rlc2V0
-X3VubG9jaygpLCBiZWZvcmUgdGhlIGRybV9tb2Rlc2V0X2xvY2soKSBjYWxsLgoKWyAgIDU5LjA3
-NjAxMV0gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQpbICAgNTkuMDc2MDEx
-XSBbIEJVRzogYmFkIHVubG9jayBiYWxhbmNlIGRldGVjdGVkISBdClsgICA1OS4wNzYwMTFdIDQu
-MC4wLXJjMSsgIzYwIFRhaW50ZWQ6IEcgICAgICAgIFcKWyAgIDU5LjA3NjAxMV0gLS0tLS0tLS0t
-LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpbICAgNTkuMDc2MDExXSB0cmluaXR5LWMxNC8y
-NDE4IGlzIHRyeWluZyB0byByZWxlYXNlIGxvY2sKKGNydGNfd3dfY2xhc3NfbXV0ZXgpIGF0Ogpb
-ICAgNTkuMDc2MDExXSBbPGZmZmZmZmZmODFkYzI4NzI+XSB3d19tdXRleF91bmxvY2srMHg0Mi8w
-eGIwClsgICA1OS4wNzYwMTFdIGJ1dCB0aGVyZSBhcmUgbm8gbW9yZSBsb2NrcyB0byByZWxlYXNl
-IQpbICAgNTkuMDc2MDExXQpbICAgNTkuMDc2MDExXSBvdGhlciBpbmZvIHRoYXQgbWlnaHQgaGVs
-cCB1cyBkZWJ1ZyB0aGlzOgpbICAgNTkuMDc2MDExXSAxIGxvY2sgaGVsZCBieSB0cmluaXR5LWMx
-NC8yNDE4OgpbICAgNTkuMDc2MDExXSAgIzA6ICAoJmRldi0+bW9kZV9jb25maWcubXV0ZXgpeysu
-Ky4rLn0sIGF0OgpbPGZmZmZmZmZmODE1ZWYyNTM+XSBkcm1fbW9kZV9nZXRjb25uZWN0b3IrMHg4
-My8weDQwMApbICAgNTkuMDc2MDExXQpbICAgNTkuMDc2MDExXSBzdGFjayBiYWNrdHJhY2U6Clsg
-ICA1OS4wNzYwMTFdIENQVTogMCBQSUQ6IDI0MTggQ29tbTogdHJpbml0eS1jMTQgVGFpbnRlZDog
-RyAgICAgICAgVwogICAgIDQuMC4wLXJjMSsgIzYwClsgICA1OS4wNzYwMTFdIEhhcmR3YXJlIG5h
-bWU6IEhld2xldHQtUGFja2FyZCBIUCBDb21wYXEgZGM1NzUwIFNtYWxsCkZvcm0gRmFjdG9yLzBB
-NjRoLCBCSU9TIDc4NkUzIHYwMi4xMCAwMS8yNS8yMDA3ClsgICA1OS4wNzYwMTFdICBmZmZmZmZm
-ZjgxZGMyODcyIGZmZmY4ODAwNWI3NzdiNDggZmZmZmZmZmY4MWRiNjcwNgowMDAwMDAwMDAwMDAw
-MDAwClsgICA1OS4wNzYwMTFdICBmZmZmODgwMDViNzE5NDQwIGZmZmY4ODAwNWI3NzdiNzggZmZm
-ZmZmZmY4MTBmODA3NAowMDAwMDAwMDAwMWQ1MWMwClsgICA1OS4wNzYwMTFdICBmZmZmODgwMDY5
-ZDNhNWQwIGZmZmY4ODAwNWI3MTk0NDAgZmZmZmZmZmY4MWRjMjg3MgpmZmZmODgwMDViNzc3YmY4
-ClsgICA1OS4wNzYwMTFdIENhbGwgVHJhY2U6ClsgICA1OS4wNzYwMTFdICBbPGZmZmZmZmZmODFk
-YzI4NzI+XSA/IHd3X211dGV4X3VubG9jaysweDQyLzB4YjAKWyAgIDU5LjA3NjAxMV0gIFs8ZmZm
-ZmZmZmY4MWRiNjcwNj5dIGR1bXBfc3RhY2srMHg0Yy8weDY1ClsgICA1OS4wNzYwMTFdICBbPGZm
-ZmZmZmZmODEwZjgwNzQ+XSBwcmludF91bmxvY2tfaW1iYWxhbmNlX2J1ZysweGY0LzB4MTAwClsg
-ICA1OS4wNzYwMTFdICBbPGZmZmZmZmZmODFkYzI4NzI+XSA/IHd3X211dGV4X3VubG9jaysweDQy
-LzB4YjAKWyAgIDU5LjA3NjAxMV0gIFs8ZmZmZmZmZmY4MTBmYzc2ZT5dIGxvY2tfcmVsZWFzZV9u
-b25fbmVzdGVkKzB4MjRlLzB4MzUwClsgICA1OS4wNzYwMTFdICBbPGZmZmZmZmZmODEwZjhlYjU+
-XSA/IG1hcmtfaGVsZF9sb2NrcysweDc1LzB4YTAKWyAgIDU5LjA3NjAxMV0gIFs8ZmZmZmZmZmY4
-MWRjMjc1ZD5dID8gX19tdXRleF91bmxvY2tfc2xvd3BhdGgrMHhhZC8weDE3MApbICAgNTkuMDc2
-MDExXSAgWzxmZmZmZmZmZjgxZGMyODcyPl0gPyB3d19tdXRleF91bmxvY2srMHg0Mi8weGIwClsg
-ICA1OS4wNzYwMTFdICBbPGZmZmZmZmZmODEwZmNkN2M+XSBsb2NrX3JlbGVhc2UrMHhiYy8weDM4
-MApbICAgNTkuMDc2MDExXSAgWzxmZmZmZmZmZjgxZGMyNzIxPl0gX19tdXRleF91bmxvY2tfc2xv
-d3BhdGgrMHg3MS8weDE3MApbICAgNTkuMDc2MDExXSAgWzxmZmZmZmZmZjgxNWVmMjUzPl0gPyBk
-cm1fbW9kZV9nZXRjb25uZWN0b3IrMHg4My8weDQwMApbICAgNTkuMDc2MDExXSAgWzxmZmZmZmZm
-ZjgxZGMyODcyPl0gd3dfbXV0ZXhfdW5sb2NrKzB4NDIvMHhiMApbICAgNTkuMDc2MDExXSAgWzxm
-ZmZmZmZmZjgxNWZjMjFmPl0gZHJtX21vZGVzZXRfdW5sb2NrKzB4MmYvMHg0MApbICAgNTkuMDc2
-MDExXSAgWzxmZmZmZmZmZjgxNWVmNDUwPl0gZHJtX21vZGVfZ2V0Y29ubmVjdG9yKzB4MjgwLzB4
-NDAwClsgICA1OS4wNzYwMTFdICBbPGZmZmZmZmZmODExY2ZiMDc+XSA/IG1pZ2h0X2ZhdWx0KzB4
-NTcvMHhiMApbICAgNTkuMDc2MDExXSAgWzxmZmZmZmZmZjgxNWUxZjdjPl0gZHJtX2lvY3RsKzB4
-MTljLzB4NjQwClsgICA1OS4wNzYwMTFdICBbPGZmZmZmZmZmODEwZjkwYWQ+XSA/IHRyYWNlX2hh
-cmRpcnFzX29uKzB4ZC8weDEwClsgICA1OS4wNzYwMTFdICBbPGZmZmZmZmZmODE2MGMwNjY+XSBy
-YWRlb25fZHJtX2lvY3RsKzB4NDYvMHg4MApbICAgNTkuMDc2MDExXSAgWzxmZmZmZmZmZjgxMjEx
-ODY4Pl0gZG9fdmZzX2lvY3RsKzB4MzE4LzB4NTcwClsgICA1OS4wNzYwMTFdICBbPGZmZmZmZmZm
-ODE0NjJlZjY+XSA/IHNlbGludXhfZmlsZV9pb2N0bCsweDU2LzB4MTEwClsgICA1OS4wNzYwMTFd
-ICBbPGZmZmZmZmZmODEyMTFiNDE+XSBTeVNfaW9jdGwrMHg4MS8weGEwClsgICA1OS4wNzYwMTFd
-ICBbPGZmZmZmZmZmODFkYzY0OTI+XSBzeXN0ZW1fY2FsbF9mYXN0cGF0aCsweDEyLzB4MTcKWyAg
-IDU5LjMxNjE5MF0gW2RybTpyYWRlb25fZ2VtX3ByZWFkX2lvY3RsXSAqRVJST1IqIHVuaW1wbGVt
-ZW50ZWQKcmFkZW9uX2dlbV9wcmVhZF9pb2N0bApbICAgNTkuNTc5OTUyXSBbZHJtOnJhZGVvbl9p
-bmZvX2lvY3RsXSAqRVJST1IqIGNvcHlfdG9fdXNlcgpyYWRlb25faW5mb19pb2N0bDo1NTUKW3dh
-dGNoZG9nXSBrZXJuZWwgYmVjYW1lIHRhaW50ZWQhICg1MTIvMCkgTGFzdCBzZWVkIHdhcyAxNTQx
-MTMyODE3CgpUb21taQpfX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fXwpJbnRlbC1nZnggbWFpbGluZyBsaXN0CkludGVsLWdmeEBsaXN0cy5mcmVlZGVza3RvcC5v
-cmcKaHR0cDovL2xpc3RzLmZyZWVkZXNrdG9wLm9yZy9tYWlsbWFuL2xpc3RpbmZvL2ludGVsLWdm
-eAo=
+From: Tyson Smith <tyson.w.smith@gmail.com>
+
+---
+ interesting-numbers.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/interesting-numbers.c b/interesting-numbers.c
+index e77ec80..c0805ab 100644
+--- a/interesting-numbers.c
++++ b/interesting-numbers.c
+@@ -7,15 +7,14 @@
+ static unsigned int plus_minus_two(unsigned int num)
+ {
+ 	/* Now munge it for off-by-ones. */
+-	switch (rand() % 5) {
++	switch (rand() % 4) {
+ 	case 0:	num -= 2;
+ 		break;
+ 	case 1:	num -= 1;
+ 		break;
+-	case 2:	return num;
+-	case 3:	num += 1;
++	case 2:	num += 1;
+ 		break;
+-	case 4:	num += 2;
++	case 3:	num += 2;
+ 		break;
+ 	}
+ 	return num;
+-- 
+1.9.1
