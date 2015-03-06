@@ -1,18 +1,18 @@
 From: tyson.w.smith@gmail.com
-Subject: [PATCH 03/12] Remove rand8x8()
-Date: Fri,  6 Mar 2015 14:29:59 -0800
-Message-ID: <1425680999-28404-1-git-send-email-tyson.w.smith@gmail.com>
+Subject: [PATCH 04/12] Remove static from rand_single_bit()
+Date: Fri,  6 Mar 2015 14:30:39 -0800
+Message-ID: <1425681039-28465-1-git-send-email-tyson.w.smith@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id;
-        bh=PScaf2x5d9yzzUu4xRfIvlf2iX2L8XOUzdJ56W+TNb4=;
-        b=Hklymd3fU2xFVj5vZodRodDA1LXIPA362LIDZpdXSmPtX+RrJIR+0NqbjebgZ0rNHd
-         ozkrPngNEcbK4IYNDf2Fg+L/57mArSSzuKwZt1hrX2RumWNNdJafSQ+tnEiKUExqhCla
-         fZt37UUpAYn8w4EMRpYSmd0ckBYC99oGz4GdaM17HLu2Ybo1nFvWjCaIwcoEtPQD89Ao
-         3Lbq4W6msDZUburMD0MeNUw03iVcP2Q4SBag5igQT85oaiGCvxG3W1lERJzcp70PIV0s
-         JmQlCYCccaCCiTQH54RXbLpMmZRxRhhgPmZ3QmQr2MZxlxlqMd7BN/DyBb9IUlQYO6yX
-         XQog==
+        bh=l4AsuLZrdsDA2M4th0RbhAyNLGRw6qRr/3xmXcw5oBQ=;
+        b=BFmB5CfBCT92zBDEvfCyL4NS0rFLn8gyKCTWVoR2zNsHhhFkHDwvLVcGkg2J24nWS5
+         gnwwwMOIKsMZ3tkdUpp0thzqwOntBbh4ndeNy58GdX/zwFxRECF+wUIaa5x8vFF55qYs
+         4AEd2MpPKZGNc4CV9zE3+nh9tTIipiWr6u3P53PsoHbTQZEzWtEzBNaACBWZeTZHDVm0
+         aKDUhQZU3kA5NFG68hVAu9VoXVIITPH6r3IZqDduLmGS2SYrYfnWIpsGMPhWa0n+s1bZ
+         83v85txEYXVIAqMIbJJhVjRrki3lb3Upu3m9PGgMphqpl8xy2c1KXDQYu2v7tcnIhkdj
+         83Qw==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -23,81 +23,42 @@ Cc: trinity@vger.kernel.org, Tyson Smith <tysmith@motorola.com>
 
 From: Tyson Smith <tysmith@motorola.com>
 
-Removed rand8x8() function since it is essentially the same as a call
-to RAND_32 or RAND_64.
+Added a check to verify input value is between 0 and 32 or 64 bits
+depending on __WORDSIZE.
 ---
- random.c | 30 ++++++------------------------
- 1 file changed, 6 insertions(+), 24 deletions(-)
+ include/random.h | 1 +
+ random.c         | 8 +++++++-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
 
+diff --git a/include/random.h b/include/random.h
+index f070568..69ccfa3 100644
+--- a/include/random.h
++++ b/include/random.h
+@@ -24,4 +24,5 @@ unsigned int rand_bool(void);
+ unsigned int rand32(void);
+ u64 rand64(void);
+ unsigned int rand_range(unsigned int min, unsigned int max);
++unsigned long rand_single_bit(unsigned char size);
+ unsigned long set_rand_bitmask(unsigned int num, const unsigned long *values);
 diff --git a/random.c b/random.c
-index f425ed5..adee25e 100644
+index adee25e..063912f 100644
 --- a/random.c
 +++ b/random.c
-@@ -90,20 +90,6 @@ static unsigned long randbits(int limit)
+@@ -69,8 +69,14 @@ unsigned int rand_bool(void)
+ 	return rand() % 2;
  }
  
- /*
-- * Pick 8 random bytes, and concatenate them into a long.
-- */
--static unsigned long rand8x8(void)
--{
--	unsigned long r = 0UL;
--	unsigned int i;
--
--	for (i = rand_range(1, 7); i > 0; --i)
--		r = (r << 8) | rand() % 256;
--
--	return r;
--}
--
--/*
-  * Pick 1 random byte, and repeat it through a long.
-  */
- static unsigned long rept8(unsigned int num)
-@@ -127,18 +113,16 @@ static unsigned int __rand32(void)
+-static unsigned int rand_single_bit(unsigned char size)
++/*
++ * Pick a random power of two between 2^0 and 2^(__WORDSIZE-1)
++ */
++unsigned long rand_single_bit(unsigned char size)
  {
- 	unsigned long r = 0;
++	if (size > __WORDSIZE)
++		size = __WORDSIZE;
++
+ 	return (1UL << (rand() % size));
+ }
  
--	switch (rand() % 6) {
-+	switch (rand() % 5) {
- 	case 0: r = rand_single_bit(32);
- 		break;
- 	case 1:	r = randbits(32);
- 		break;
- 	case 2: r = RAND_32();
- 		break;
--	case 3:	r = rand8x8();
--		break;
--	case 4:	r = rept8(4);
-+	case 3:	r = rept8(4);
- 		break;
--	case 5:	return get_interesting_value();
-+	case 4:	return get_interesting_value();
- 	}
- 
- 	return r;
-@@ -211,19 +195,17 @@ u64 rand64(void)
- 
- 	} else {
- 		/* 33:64-bit ranges. */
--		switch (rand() % 6) {
-+		switch (rand() % 5) {
- 		case 0:	r = rand_single_bit(64);
- 			break;
- 		case 1:	r = randbits(64);
- 			break;
- 		case 2:	r = RAND_64();
- 			break;
--		case 3:	r = rand8x8();
--			break;
--		case 4:	r = rept8(8);
-+		case 3:	r = rept8(8);
- 			break;
- 		/* Sometimes pick a not-so-random number. */
--		case 5:	return get_interesting_value();
-+		case 4:	return get_interesting_value();
- 		}
- 
- 		/* limit the size */
 -- 
 1.9.1
