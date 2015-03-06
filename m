@@ -1,18 +1,18 @@
 From: tyson.w.smith@gmail.com
-Subject: [PATCH 08/12] Cleaned up rand32() and remove __rand32()
-Date: Fri,  6 Mar 2015 14:33:48 -0800
-Message-ID: <1425681228-28673-1-git-send-email-tyson.w.smith@gmail.com>
+Subject: [PATCH 09/12] Actually flip the sign of the value (1 -> -1)
+Date: Fri,  6 Mar 2015 14:34:09 -0800
+Message-ID: <1425681249-28725-1-git-send-email-tyson.w.smith@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id;
-        bh=RVIx8zMG5Fpnu2jzW9DRGrcw0VZAoP3tVufFv9/gVhI=;
-        b=X89ncd9STawvPBtLf2VL6q9tDhkG1QvQlTkvg8OvIMNKRdg0bISzhdyhW9awHwJj7U
-         q2ZR3VWwOEp2/lTSbowqTOf6qmC0kws2goZ3Mx6NJ92aKLbM2rw9dT+dFYVF+/hi+YdQ
-         UhRc+18wa0xGUBF4GjuarUZWl9EP2nyz63wGsY89gnJzhOqj2AsYFX12Z1kdFvvgQi/9
-         0k1eZSw89UZ2RAPvG39e+K2sMA8Jij+Q+aEHy8zqkdHjR71M+uLeDRIMxLDVA5dUCitE
-         nlX691j+OD+CUaSypVcaHKeZc4otmqsDPBB7jLXYpD6ymaIoUN80ljbECocqZ1jtOL5f
-         MttA==
+        bh=Mcpwl2ff7C+CcuEug30HGXo+XmoEFtH/xAeO0qrAYxc=;
+        b=r1J6KhBkbR/OYO63b8OaUxFm91X4qX+L6f4vbiYsxxZWITIS8gOq4O543TZxl0SBT9
+         MPaPr3B4qDAb8DyBGnDeq1RXPVie6AuUSq9E5TOXKxk6vRZbELDKEZcgqmEMzByUZNNX
+         ZLf8Fm/TXzvJKC7JTZFQFvf64uwQz9/Xvk5iHV51aGdmCLWsYkfe8OUfHXWH51haTGpS
+         wL4eYUJHcbHfp9J5l1yoCYeuUntAEnHAIOPY1ZDihQCFrQyw8XE7bhDV0vP9kJ/VuwVG
+         IjZks+Bi6dFzuxUMeS8H3AvPcWVy92ynq2q8XQgWm/L/cfVmI8/ozBT0YD296OGMN2k4
+         FExg==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -23,63 +23,36 @@ Cc: trinity@vger.kernel.org, Tyson Smith <tysmith@motorola.com>
 
 From: Tyson Smith <tysmith@motorola.com>
 
-Removed the block at the beginning of rand32() that just basically |s and ^s
-rand() with rand() or a more interesting number to basically get rand again.
-This is just an expensive way of getting a random number. Merged the small
-switch case from __rand32() in to rand32() now that there is room.
+I believe this is what was intended, previously the high bit was just being set.
+Perhaps it was meant to be toggled? If that is the case we can add that too.
 ---
- random.c | 31 ++-----------------------------
- 1 file changed, 2 insertions(+), 29 deletions(-)
+ random.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/random.c b/random.c
-index bf32648..ec20656 100644
+index ec20656..d671035 100644
 --- a/random.c
 +++ b/random.c
-@@ -106,10 +106,9 @@ static unsigned long rept_byte(void)
- }
+@@ -130,7 +130,7 @@ unsigned int rand32(void)
  
- /*
-- * "selector" function for 32bit random.
-- * only called from rand32()
-+ * Generate, and munge a 32bit number.
-  */
--static unsigned int __rand32(void)
-+unsigned int rand32(void)
- {
- 	unsigned long r = 0;
+ 	/* Sometimes flip sign */
+ 	if (rand_bool())
+-		r |= (1L << 31);
++		r = ~r + 1;
  
-@@ -125,32 +124,6 @@ static unsigned int __rand32(void)
- 	case 4:	return get_interesting_value();
+ 	/* we might get lucky if something is counting ints/longs etc. */
+ 	if (ONE_IN(4)) {
+@@ -206,9 +206,9 @@ u64 rand64(void)
+ 			r |= (1UL << ((__WORDSIZE - 1) - (rand() % 8)));
  	}
  
--	return r;
--}
--
--/*
-- * Generate, and munge a 32bit number.
-- */
--unsigned int rand32(void)
--{
--	unsigned long r = 0;
--
--	r = __rand32();
--
--	if (rand_bool()) {
--		unsigned int i;
--		unsigned int rounds;
--
--		/* mangle it. */
--		rounds = rand() % 3;
--		for (i = 0; i < rounds; i++) {
--			if (rand_bool())
--				r |= __rand32();
--			else
--				r ^= __rand32();
--		}
--	}
--
- 	/* Sometimes deduct it from INT_MAX */
+-	/* randomly flip sign bit. */
++	/* Sometimes flip sign */
  	if (rand_bool())
- 		r = INT_MAX - r;
+-		r |= (1UL << (__WORDSIZE - 1));
++		r = ~r + 1;
+ 
+ 	return r;
+ }
 -- 
 1.9.1
