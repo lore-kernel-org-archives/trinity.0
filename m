@@ -1,18 +1,18 @@
 From: tyson.w.smith@gmail.com
-Subject: [PATCH 2/7] remove randbits()
-Date: Mon, 16 Mar 2015 13:25:41 -0700
-Message-ID: <1426537541-54831-1-git-send-email-tyson.w.smith@gmail.com>
+Subject: [PATCH 3/7] simplify most significant byte modification statement
+Date: Mon, 16 Mar 2015 13:26:02 -0700
+Message-ID: <1426537562-54874-1-git-send-email-tyson.w.smith@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id;
-        bh=LNJKhNmb6g+WeG4/KLk5s/bABp4uFinKxGmPEDChJiM=;
-        b=aNWPn9uh8lp9Brts7bpEJ9VdC5yPTc1UzzYIO01oCa5CPXWkDqYd9fFoEETTDWSUtu
-         ZYNCm7nVKrwAc+tJX1l9ZIOA7mqpKJiAGX6ZzyFEmD+uP15093CV7BJ+Vmy7hrM4+/gt
-         Xm1ihWAbHXiXJRYXbUwBwmT4io9f8NaEyTTzwS4givJF1RFHRCKhpEUo0/pJsMoqUxqK
-         XWXZY9hSPWNX7r69A6sJ+cwzqRtB4de8KGOxE6gA5kC8SDreoEqakZ1rXPyz6C/ZYX2T
-         6+SLojnSsXtlDyDmg8PxjYvVd4sdC9T6v2Ka2B06le6JQmJCYKI4KPYupL5ZnTiLOxvY
-         OcEQ==
+        bh=jKUgMT1qJXgnk5vcdH6l07bKcde/9dXMDoXm5Oa733E=;
+        b=zE6d9SdcTDxzkj3xHcl4KgrzLfBZ6FCODXu6CXXmVNa/iFq1P3M0dyx/YJ9sqqcVpj
+         UsPyyzkdpJoXn84IrErL+6EUm9Ev/+zRtGpw5aOgVfPg1UlYrLtc5n4PZ7JoBN84dheU
+         yBt1WDnTgqW+YpYTcGC3oc6mQ6Vk4YEE+Z8Kk+FFck+1oOXX+F7k8bjPCU1wd1LN8UsO
+         vhbjlm9SSeC4zWo9in4oFHvI+PdLUpqN7zyq8rp4xuZ727tgWd11AiqXp11gQGtxsr0z
+         rUGab4C1qfYTNtOfw6I1CjF1/nLOSDl+ZlxCX6EAAd25ya2S0yX82dpjB77cWzcdaFnR
+         M6Fg==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -23,81 +23,32 @@ Cc: trinity@vger.kernel.org, tysmith@motorola.com, Tyson Smith <tyson.w.smith@gm
 
 From: Tyson Smith <tyson.w.smith@gmail.com>
 
-randbits() acts very much like rand() & rand() and does not
-provide much value in this context. This function would likely
-be more useful in a random bit mask scenario.
 ---
- random.c | 35 ++++++++---------------------------
- 1 file changed, 8 insertions(+), 27 deletions(-)
+ random.c | 12 +++---------
+ 1 file changed, 3 insertions(+), 9 deletions(-)
 
 diff --git a/random.c b/random.c
-index 6b824bf..7917f78 100644
+index 7917f78..8b4f715 100644
 --- a/random.c
 +++ b/random.c
-@@ -68,21 +68,6 @@ unsigned long rand_single_bit(unsigned char size)
- }
+@@ -171,15 +171,9 @@ u64 rand64(void)
+ 	if (ONE_IN(25))
+ 		r = ~r;
  
- /*
-- * set N bits, where N= rand(0 - WORDSIZE/2)
-- */
--static unsigned long randbits(int limit)
--{
--	unsigned int num = rand() % (limit / 2);
--	unsigned int i;
--	unsigned long r = 0;
+-	/* increase distribution in MSB */
+-	if (ONE_IN(10)) {
+-		unsigned int i;
+-		unsigned int rounds;
 -
--	for (i = 0; i < num; i++)
--		r |= (1UL << (rand() % (limit - 1)));
--
--	return r;
--}
--
--/*
-  * Pick 1 random byte, and repeat it through a long.
-  */
- static unsigned long rept_byte(void)
-@@ -104,16 +89,14 @@ unsigned int rand32(void)
- {
- 	unsigned long r = 0;
+-		rounds = rand() % 4;
+-		for (i = 0; i < rounds; i++)
+-			r |= (1UL << ((__WORDSIZE - 1) - (rand() % 8)));
+-	}
++	/* Set ~2 bits in MSB to increase distribution */
++	if (ONE_IN(10))
++		r |= (rand() & rand() & 0xffULL) << 56;
  
--	switch (rand() % 5) {
-+	switch (rand() % 4) {
- 	case 0: r = rand_single_bit(32);
- 		break;
--	case 1:	r = randbits(32);
-+	case 1: r = RAND_32();
- 		break;
--	case 2: r = RAND_32();
-+	case 2:	r = rept_byte();
- 		break;
--	case 3:	r = rept_byte();
--		break;
--	case 4:	return get_interesting_value();
-+	case 3:	return get_interesting_value();
- 	}
- 
- 	/* Sometimes deduct it from INT_MAX */
-@@ -160,17 +143,15 @@ u64 rand64(void)
- 
- 	} else {
- 		/* 33:64-bit ranges. */
--		switch (rand() % 5) {
-+		switch (rand() % 4) {
- 		case 0:	r = rand_single_bit(64);
- 			break;
--		case 1:	r = randbits(64);
--			break;
--		case 2:	r = RAND_64();
-+		case 1:	r = RAND_64();
- 			break;
--		case 3:	r = rept_byte();
-+		case 2:	r = rept_byte();
- 			break;
- 		/* Sometimes pick a not-so-random number. */
--		case 4:	return get_interesting_value();
-+		case 3:	return get_interesting_value();
- 		}
- 
- 		/* limit the size */
+ 	/* Sometimes flip sign */
+ 	if (ONE_IN(25))
 -- 
 1.9.1
