@@ -1,18 +1,18 @@
 From: tyson.w.smith@gmail.com
-Subject: [PATCH 1/7] add random_pathstring()
-Date: Mon, 16 Mar 2015 13:25:21 -0700
-Message-ID: <1426537521-54786-1-git-send-email-tyson.w.smith@gmail.com>
+Subject: [PATCH 2/7] remove randbits()
+Date: Mon, 16 Mar 2015 13:25:41 -0700
+Message-ID: <1426537541-54831-1-git-send-email-tyson.w.smith@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id;
-        bh=wAHCn2zJFrFd7eF8vtEcDnUGyy1JNB2Kdy+hgIseD+k=;
-        b=GkJaodkXSR/jXkzrxCp6R4wLVf9QpeeM/WQVRdIVHr2n0uLNX/TI5vV4O0LzxsA5Mj
-         vjE4egjUs+MT8jYjH22DeW6WDTmlhbxVbEr9Y+BUzsykNgHtgtCc6qctlZh9ekJ6R8a2
-         SFx/hHSCQiW/oLuqyluAWtw3oDV0rUJioRJHA84NsHd5A/EqCsKfMgTIjMf2WE8N/ksm
-         uNHtnraui6WEAjOfOrD3zDNfK6JGh5zoOxoT0jR6uZkr/aVMm44l/FYLdaGK/wAwMK5c
-         ugCi0KEVXyV3ZrOoxjDlN2EYaZocU21R1ZWPlL6dxkYRZdOBHo9apI6wN1t+HdUIR+UG
-         3lgw==
+        bh=LNJKhNmb6g+WeG4/KLk5s/bABp4uFinKxGmPEDChJiM=;
+        b=aNWPn9uh8lp9Brts7bpEJ9VdC5yPTc1UzzYIO01oCa5CPXWkDqYd9fFoEETTDWSUtu
+         ZYNCm7nVKrwAc+tJX1l9ZIOA7mqpKJiAGX6ZzyFEmD+uP15093CV7BJ+Vmy7hrM4+/gt
+         Xm1ihWAbHXiXJRYXbUwBwmT4io9f8NaEyTTzwS4givJF1RFHRCKhpEUo0/pJsMoqUxqK
+         XWXZY9hSPWNX7r69A6sJ+cwzqRtB4de8KGOxE6gA5kC8SDreoEqakZ1rXPyz6C/ZYX2T
+         6+SLojnSsXtlDyDmg8PxjYvVd4sdC9T6v2Ka2B06le6JQmJCYKI4KPYupL5ZnTiLOxvY
+         OcEQ==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -23,82 +23,81 @@ Cc: trinity@vger.kernel.org, tysmith@motorola.com, Tyson Smith <tyson.w.smith@gm
 
 From: Tyson Smith <tyson.w.smith@gmail.com>
 
-This will generate a path that will likely not exist but may
-look somewhat valid or totally crazy depending on rand.
+randbits() acts very much like rand() & rand() and does not
+provide much value in this context. This function would likely
+be more useful in a random bit mask scenario.
 ---
- random-pathname.c | 53 +++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 53 insertions(+)
+ random.c | 35 ++++++++---------------------------
+ 1 file changed, 8 insertions(+), 27 deletions(-)
 
-diff --git a/random-pathname.c b/random-pathname.c
-index 4d093d1..d8f5094 100644
---- a/random-pathname.c
-+++ b/random-pathname.c
-@@ -9,6 +9,52 @@
+diff --git a/random.c b/random.c
+index 6b824bf..7917f78 100644
+--- a/random.c
++++ b/random.c
+@@ -68,21 +68,6 @@ unsigned long rand_single_bit(unsigned char size)
+ }
  
- #define MAX_PATH_LEN 4096
- 
-+/*
-+ * Generate a path that will likely not exist but may look
-+ * somewhat valid or totally crazy depending on rand.
-+ */
-+static void random_pathstring(char *path, unsigned int len) {
-+	const char *fmts = "dns";
-+	unsigned int i;
-+
-+	if (len < 1)
-+		return;
-+
-+	switch(rand() % 5) {
-+	case 0:
-+		// single repeating random ASCII character
-+		(void) memset(path, (rand() % 95) + 32, rand() % len);
-+		path[len-1] = '\0';
-+		break;
-+	case 1:
-+		// random ASCII characters 32(space) -> 126(~)
-+		for (i=0; i < len; i++)
-+			path[i] = (char) ((rand() % 95) + 32);
-+		path[len-1] = '\0';
-+		break;
-+	case 2:
-+		// random . or /
-+		for (i=0; i < len; i++)
-+			path[i] = RAND_BOOL() ? '.' : '/';
-+		path[len-1] = '\0';
-+		break;
-+	case 3:
-+		// format strings
-+		for (i=0; i < (len - 2); i+=2) {
-+			path[i] = '%';
-+			path[i+1] = fmts[rand() % 3];
-+		}
-+		path[len-1] = '\0';
-+		break;
-+	case 4:
-+		// junk
-+		for (i=0; i < len; i++)
-+			path[i] = (char) RAND_BYTE();
-+		path[len-1] = '\0';
-+		break;
-+	}
-+}
-+
- const char * generate_pathname(void)
+ /*
+- * set N bits, where N= rand(0 - WORDSIZE/2)
+- */
+-static unsigned long randbits(int limit)
+-{
+-	unsigned int num = rand() % (limit / 2);
+-	unsigned int i;
+-	unsigned long r = 0;
+-
+-	for (i = 0; i < num; i++)
+-		r |= (1UL << (rand() % (limit - 1)));
+-
+-	return r;
+-}
+-
+-/*
+  * Pick 1 random byte, and repeat it through a long.
+  */
+ static unsigned long rept_byte(void)
+@@ -104,16 +89,14 @@ unsigned int rand32(void)
  {
- 	const char *pathname = get_filename();
-@@ -25,6 +71,13 @@ const char * generate_pathname(void)
- 	/* Create a bogus filename. */
- 	newpath = zmalloc(MAX_PATH_LEN);	// FIXME: We leak this.
+ 	unsigned long r = 0;
  
-+	/* 50/50 chance using a random path string */
-+	if (RAND_BOOL()) {
-+		len = RAND_BOOL() ? RAND_BYTE() : rand() % MAX_PATH_LEN;
-+		random_pathstring(newpath, len);
-+		return newpath;
-+	}
-+
- 	len = strlen(pathname);
+-	switch (rand() % 5) {
++	switch (rand() % 4) {
+ 	case 0: r = rand_single_bit(32);
+ 		break;
+-	case 1:	r = randbits(32);
++	case 1: r = RAND_32();
+ 		break;
+-	case 2: r = RAND_32();
++	case 2:	r = rept_byte();
+ 		break;
+-	case 3:	r = rept_byte();
+-		break;
+-	case 4:	return get_interesting_value();
++	case 3:	return get_interesting_value();
+ 	}
  
- 	if (RAND_BOOL())
+ 	/* Sometimes deduct it from INT_MAX */
+@@ -160,17 +143,15 @@ u64 rand64(void)
+ 
+ 	} else {
+ 		/* 33:64-bit ranges. */
+-		switch (rand() % 5) {
++		switch (rand() % 4) {
+ 		case 0:	r = rand_single_bit(64);
+ 			break;
+-		case 1:	r = randbits(64);
+-			break;
+-		case 2:	r = RAND_64();
++		case 1:	r = RAND_64();
+ 			break;
+-		case 3:	r = rept_byte();
++		case 2:	r = rept_byte();
+ 			break;
+ 		/* Sometimes pick a not-so-random number. */
+-		case 4:	return get_interesting_value();
++		case 3:	return get_interesting_value();
+ 		}
+ 
+ 		/* limit the size */
 -- 
 1.9.1
