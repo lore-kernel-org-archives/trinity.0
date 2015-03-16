@@ -1,18 +1,18 @@
 From: tyson.w.smith@gmail.com
-Subject: [PATCH 3/7] simplify most significant byte modification statement
-Date: Mon, 16 Mar 2015 13:26:02 -0700
-Message-ID: <1426537562-54874-1-git-send-email-tyson.w.smith@gmail.com>
+Subject: [PATCH 4/7] simplify div by 2,4,8,16 statement
+Date: Mon, 16 Mar 2015 13:26:16 -0700
+Message-ID: <1426537576-54917-1-git-send-email-tyson.w.smith@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id;
-        bh=jKUgMT1qJXgnk5vcdH6l07bKcde/9dXMDoXm5Oa733E=;
-        b=zE6d9SdcTDxzkj3xHcl4KgrzLfBZ6FCODXu6CXXmVNa/iFq1P3M0dyx/YJ9sqqcVpj
-         UsPyyzkdpJoXn84IrErL+6EUm9Ev/+zRtGpw5aOgVfPg1UlYrLtc5n4PZ7JoBN84dheU
-         yBt1WDnTgqW+YpYTcGC3oc6mQ6Vk4YEE+Z8Kk+FFck+1oOXX+F7k8bjPCU1wd1LN8UsO
-         vhbjlm9SSeC4zWo9in4oFHvI+PdLUpqN7zyq8rp4xuZ727tgWd11AiqXp11gQGtxsr0z
-         rUGab4C1qfYTNtOfw6I1CjF1/nLOSDl+ZlxCX6EAAd25ya2S0yX82dpjB77cWzcdaFnR
-         M6Fg==
+        bh=xIo+vN3Kphq9Ju1/TbEQi4ZV0mz8vLT4y6kraGghqFo=;
+        b=NwqK90L34Z/1n4Mq1Ms34PyfL/jsMEjQaChzSfVOlYfzA/Mz7H639IfBfxuZFvsMEe
+         L5QTI+J8i8YJWtfbGqw1HEKyGRij/iv/mCtEgiWrRGRalgyjgQbrbXYbcbSfEvBS16sG
+         ErilRauQdBNVJkBtQ1OV3LHjFz3qrgF+zqbV88LwcRvaZ5LXNwuOef6bNsEnIuA8pr+C
+         kY/TZnGCpyb1xiuXOuEhnR+po4Dl3d9tkC478LMeq1MJKE8tTLnoDH3Ln4wx+tCp3HU5
+         LJW+u9cWueZozn6h2iBtXte2F6rwR9s9EE2k9NinaO3VWiy05Md+ey99DaZ+HA5FcQnQ
+         FwQA==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -24,31 +24,25 @@ Cc: trinity@vger.kernel.org, tysmith@motorola.com, Tyson Smith <tyson.w.smith@gm
 From: Tyson Smith <tyson.w.smith@gmail.com>
 
 ---
- random.c | 12 +++---------
- 1 file changed, 3 insertions(+), 9 deletions(-)
+ random.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
 
 diff --git a/random.c b/random.c
-index 7917f78..8b4f715 100644
+index 8b4f715..8b8de04 100644
 --- a/random.c
 +++ b/random.c
-@@ -171,15 +171,9 @@ u64 rand64(void)
- 	if (ONE_IN(25))
- 		r = ~r;
+@@ -108,10 +108,8 @@ unsigned int rand32(void)
+ 		r = ~r + 1;
  
--	/* increase distribution in MSB */
--	if (ONE_IN(10)) {
--		unsigned int i;
--		unsigned int rounds;
--
--		rounds = rand() % 4;
--		for (i = 0; i < rounds; i++)
--			r |= (1UL << ((__WORDSIZE - 1) - (rand() % 8)));
+ 	/* we might get lucky if something is counting ints/longs etc. */
+-	if (ONE_IN(4)) {
+-		int _div = 1 << RAND_RANGE(1, 4);	/* 2,4,8 or 16 */
+-		r /= _div;
 -	}
-+	/* Set ~2 bits in MSB to increase distribution */
-+	if (ONE_IN(10))
-+		r |= (rand() & rand() & 0xffULL) << 56;
++	if (ONE_IN(4))
++		r /= 2 << (rand() & 3); /* 2,4,8 or 16 */
  
- 	/* Sometimes flip sign */
- 	if (ONE_IN(25))
+ 	/* limit the size */
+ 	switch (rand() % 5) {
 -- 
 1.9.1
