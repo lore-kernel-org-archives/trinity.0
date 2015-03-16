@@ -1,18 +1,18 @@
 From: tyson.w.smith@gmail.com
-Subject: [PATCH 4/7] simplify div by 2,4,8,16 statement
-Date: Mon, 16 Mar 2015 13:26:16 -0700
-Message-ID: <1426537576-54917-1-git-send-email-tyson.w.smith@gmail.com>
+Subject: [PATCH 5/7] make r an int to avoid unintended behavior
+Date: Mon, 16 Mar 2015 13:26:32 -0700
+Message-ID: <1426537592-54960-1-git-send-email-tyson.w.smith@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id;
-        bh=xIo+vN3Kphq9Ju1/TbEQi4ZV0mz8vLT4y6kraGghqFo=;
-        b=NwqK90L34Z/1n4Mq1Ms34PyfL/jsMEjQaChzSfVOlYfzA/Mz7H639IfBfxuZFvsMEe
-         L5QTI+J8i8YJWtfbGqw1HEKyGRij/iv/mCtEgiWrRGRalgyjgQbrbXYbcbSfEvBS16sG
-         ErilRauQdBNVJkBtQ1OV3LHjFz3qrgF+zqbV88LwcRvaZ5LXNwuOef6bNsEnIuA8pr+C
-         kY/TZnGCpyb1xiuXOuEhnR+po4Dl3d9tkC478LMeq1MJKE8tTLnoDH3Ln4wx+tCp3HU5
-         LJW+u9cWueZozn6h2iBtXte2F6rwR9s9EE2k9NinaO3VWiy05Md+ey99DaZ+HA5FcQnQ
-         FwQA==
+        bh=R+WyWxDFmI9GAuao+Kd96tw7ffa/DJo+9fbkymODKxw=;
+        b=zK51nSPz96G2xhoxgMRHiJN+MNPw8V+gudgK4UuueZ27QQxhbn6AvjZc2Qnux3HDvw
+         R5Dabc7gTBPmZ6DUC9QTb7LyAJaYx/3dSACmLiHepfM/A7vtAKRWjkj2Yn5xxTiDfChA
+         qW7OludnNTjNf29MlFe+lBg7dHviJ3hMIIWth5nTpneMVdJEwlmfMgAV/d5Qth4GWJaX
+         a+wlfsHCAe3eyBkmkgB45tGM5r2cGw3xbbRHCB4HcykyKY1/kiyxcoJCV1o0b6pDl+De
+         RvxkZXUVbkmfQU5B8EmPRKGJmdA0UHN+hcRaWcPQ8KD0e1IShHBjtwtcilkvZgSWQSmJ
+         /dyA==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -24,25 +24,21 @@ Cc: trinity@vger.kernel.org, tysmith@motorola.com, Tyson Smith <tyson.w.smith@gm
 From: Tyson Smith <tyson.w.smith@gmail.com>
 
 ---
- random.c | 6 ++----
- 1 file changed, 2 insertions(+), 4 deletions(-)
+ random.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/random.c b/random.c
-index 8b4f715..8b8de04 100644
+index 8b8de04..bbfc8da 100644
 --- a/random.c
 +++ b/random.c
-@@ -108,10 +108,8 @@ unsigned int rand32(void)
- 		r = ~r + 1;
+@@ -87,7 +87,7 @@ static unsigned long rept_byte(void)
+  */
+ unsigned int rand32(void)
+ {
+-	unsigned long r = 0;
++	unsigned int r = 0;
  
- 	/* we might get lucky if something is counting ints/longs etc. */
--	if (ONE_IN(4)) {
--		int _div = 1 << RAND_RANGE(1, 4);	/* 2,4,8 or 16 */
--		r /= _div;
--	}
-+	if (ONE_IN(4))
-+		r /= 2 << (rand() & 3); /* 2,4,8 or 16 */
- 
- 	/* limit the size */
- 	switch (rand() % 5) {
+ 	switch (rand() % 4) {
+ 	case 0: r = rand_single_bit(32);
 -- 
 1.9.1
