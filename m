@@ -1,18 +1,18 @@
 From: tyson.w.smith@gmail.com
-Subject: [PATCH 5/7] make r an int to avoid unintended behavior
-Date: Mon, 16 Mar 2015 13:26:32 -0700
-Message-ID: <1426537592-54960-1-git-send-email-tyson.w.smith@gmail.com>
+Subject: [PATCH 6/7] fix undefined behavior
+Date: Mon, 16 Mar 2015 13:26:47 -0700
+Message-ID: <1426537607-55003-1-git-send-email-tyson.w.smith@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id;
-        bh=R+WyWxDFmI9GAuao+Kd96tw7ffa/DJo+9fbkymODKxw=;
-        b=zK51nSPz96G2xhoxgMRHiJN+MNPw8V+gudgK4UuueZ27QQxhbn6AvjZc2Qnux3HDvw
-         R5Dabc7gTBPmZ6DUC9QTb7LyAJaYx/3dSACmLiHepfM/A7vtAKRWjkj2Yn5xxTiDfChA
-         qW7OludnNTjNf29MlFe+lBg7dHviJ3hMIIWth5nTpneMVdJEwlmfMgAV/d5Qth4GWJaX
-         a+wlfsHCAe3eyBkmkgB45tGM5r2cGw3xbbRHCB4HcykyKY1/kiyxcoJCV1o0b6pDl+De
-         RvxkZXUVbkmfQU5B8EmPRKGJmdA0UHN+hcRaWcPQ8KD0e1IShHBjtwtcilkvZgSWQSmJ
-         /dyA==
+        bh=I/xX4Iw+U9F53eYwBMR6tgrm4zlvzzjkv7M+t9sSD8s=;
+        b=HHdKNYTfKmkqKosT5VFcDNfbrAnwiqoIawoSoM1E7VE0E1O5o+HURRCy9tm/pMu0sg
+         HR/tTv1IbmH08IQLjEwSJQyqwqioTfQkIpwl4tpvBsDmK5eaWP+pJmrOpCmE97TfO0oR
+         uUQ4N0hQk8QqtbL5PAGOKfEegG+6mZOb84DpZe2r3PhWC5r68rJxY3WdQiHTPgGfooAc
+         fz9pCYi51caaPqQFdNVydSTiXsBwHIyXKvdOh+RhEWR/zikCOqwdE9r9eUKgCGKetu1h
+         GDr93Gdi2lG/SxDGBDTtkjNKfn20YMQgX5WCpBS9KfrGvNVQxEF//1f0rLSFyyFz3DfE
+         m8Rg==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -24,21 +24,39 @@ Cc: trinity@vger.kernel.org, tysmith@motorola.com, Tyson Smith <tyson.w.smith@gm
 From: Tyson Smith <tyson.w.smith@gmail.com>
 
 ---
- random.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ include/random.h      | 6 ++++--
+ interesting-numbers.c | 2 +-
+ 2 files changed, 5 insertions(+), 3 deletions(-)
 
-diff --git a/random.c b/random.c
-index 8b8de04..bbfc8da 100644
---- a/random.c
-+++ b/random.c
-@@ -87,7 +87,7 @@ static unsigned long rept_byte(void)
-  */
- unsigned int rand32(void)
- {
--	unsigned long r = 0;
-+	unsigned int r = 0;
+diff --git a/include/random.h b/include/random.h
+index e30dd9f..4e95996 100644
+--- a/include/random.h
++++ b/include/random.h
+@@ -7,8 +7,10 @@
+ #define ONE_IN(x)				((rand() % x) == 0)	// limit of RAND_MAX-1
  
- 	switch (rand() % 4) {
- 	case 0: r = rand_single_bit(32);
+ #if RAND_MAX == 0x7FFFFFFF
+-#define RAND_32()				((rand() << 1) | (rand() & 1))
+-#define RAND_64()				(((0ULL | rand()) << 33) | ((0ULL | rand()) << 2) | (rand() & 0x3))
++#define RAND_32()				(((unsigned int)rand() << 1) | (rand() & 1))
++#define RAND_64()				(((unsigned long long)rand() << 33) | \
++								 ((unsigned long long)rand() << 2) | \
++								 (rand() & 0x3))
+ #else
+ #error "Unexpected RAND_MAX value. Please add support."
+ #endif
+diff --git a/interesting-numbers.c b/interesting-numbers.c
+index 66728dd..2fecf3a 100644
+--- a/interesting-numbers.c
++++ b/interesting-numbers.c
+@@ -46,7 +46,7 @@ static unsigned int get_interesting_32bit_value(void)
+ 	switch (rand() % 10) {
+ 	case 0: return 0x80000000 >> (rand() & 0x1f);	// 2^n (1 -> 0x10000)
+ 	case 1: return rand();							// 0 -> RAND_MAX (likely 0x7fffffff)
+-	case 2: return 0xff << (rand() % 25);
++	case 2: return 0xffUL << (rand() % 25);
+ 	case 3: return 0xffff0000;
+ 	case 4: return 0xffffe000;
+ 	case 5: return 0xffffff00 | RAND_BYTE();
 -- 
 1.9.1
