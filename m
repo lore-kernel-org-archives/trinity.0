@@ -1,18 +1,18 @@
 From: tyson.w.smith@gmail.com
-Subject: [PATCH 6/7] fix undefined behavior
-Date: Mon, 16 Mar 2015 13:26:47 -0700
-Message-ID: <1426537607-55003-1-git-send-email-tyson.w.smith@gmail.com>
+Subject: [PATCH 7/7] strip down get_len() to a call to rand32()
+Date: Mon, 16 Mar 2015 13:27:07 -0700
+Message-ID: <1426537627-55047-1-git-send-email-tyson.w.smith@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20120113;
         h=from:to:cc:subject:date:message-id;
-        bh=I/xX4Iw+U9F53eYwBMR6tgrm4zlvzzjkv7M+t9sSD8s=;
-        b=HHdKNYTfKmkqKosT5VFcDNfbrAnwiqoIawoSoM1E7VE0E1O5o+HURRCy9tm/pMu0sg
-         HR/tTv1IbmH08IQLjEwSJQyqwqioTfQkIpwl4tpvBsDmK5eaWP+pJmrOpCmE97TfO0oR
-         uUQ4N0hQk8QqtbL5PAGOKfEegG+6mZOb84DpZe2r3PhWC5r68rJxY3WdQiHTPgGfooAc
-         fz9pCYi51caaPqQFdNVydSTiXsBwHIyXKvdOh+RhEWR/zikCOqwdE9r9eUKgCGKetu1h
-         GDr93Gdi2lG/SxDGBDTtkjNKfn20YMQgX5WCpBS9KfrGvNVQxEF//1f0rLSFyyFz3DfE
-         m8Rg==
+        bh=dJ/sBdBYSVdufsmxdRxR405cDtGIolDoIrtviAMtEKw=;
+        b=giEAoMrhAMOOfpmAot34x0Gg1i2EyeoX8lC/I7Kws1P1xcQi4T3RxgC1bI1r6xeRrp
+         PKAG01/m7+UaHJat6UVeMn+R60RvbnjsIJjuLuRBce+XVmf6yRdd4Wpbd7G1Ot0D7pdv
+         zpDKRoE/s41vEoqixFS1HuUpq2bMmaYFBDB8GoQ80frpfBHjt+bMg5FPxEsujGCyd4jH
+         OctXyBj2ztm/7PtTJAN0F/uhfJvTOAIaZY00lVEBd+66Bwv2smamj2laB5UzLRg3BTLl
+         ITuw9m9hB/HJ2U/3AARX7/TqQeV2y2d9ujuFATUhSySke70UnUF64f2KJL+3yqswxyrG
+         rvXQ==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -23,40 +23,64 @@ Cc: trinity@vger.kernel.org, tysmith@motorola.com, Tyson Smith <tyson.w.smith@gm
 
 From: Tyson Smith <tyson.w.smith@gmail.com>
 
+The body of get_len() was the same as rand32() so applying it to a value
+from rand32() didn't offer much value. A switch case could be
+added that generates other length like values as well. This could include
+2^n +/- ~2, page_size +/- 1, MAX_INT... etc.
 ---
- include/random.h      | 6 ++++--
- interesting-numbers.c | 2 +-
- 2 files changed, 5 insertions(+), 3 deletions(-)
+ random-length.c | 40 +---------------------------------------
+ 1 file changed, 1 insertion(+), 39 deletions(-)
 
-diff --git a/include/random.h b/include/random.h
-index e30dd9f..4e95996 100644
---- a/include/random.h
-+++ b/include/random.h
-@@ -7,8 +7,10 @@
- #define ONE_IN(x)				((rand() % x) == 0)	// limit of RAND_MAX-1
+diff --git a/random-length.c b/random-length.c
+index a1a72e3..1ef3dd2 100644
+--- a/random-length.c
++++ b/random-length.c
+@@ -1,45 +1,7 @@
+-#include <stdlib.h>
+-
+-#include "arch.h"	// page_size
+ #include "sanitise.h"
+ #include "random.h"
  
- #if RAND_MAX == 0x7FFFFFFF
--#define RAND_32()				((rand() << 1) | (rand() & 1))
--#define RAND_64()				(((0ULL | rand()) << 33) | ((0ULL | rand()) << 2) | (rand() & 0x3))
-+#define RAND_32()				(((unsigned int)rand() << 1) | (rand() & 1))
-+#define RAND_64()				(((unsigned long long)rand() << 33) | \
-+								 ((unsigned long long)rand() << 2) | \
-+								 (rand() & 0x3))
- #else
- #error "Unexpected RAND_MAX value. Please add support."
- #endif
-diff --git a/interesting-numbers.c b/interesting-numbers.c
-index 66728dd..2fecf3a 100644
---- a/interesting-numbers.c
-+++ b/interesting-numbers.c
-@@ -46,7 +46,7 @@ static unsigned int get_interesting_32bit_value(void)
- 	switch (rand() % 10) {
- 	case 0: return 0x80000000 >> (rand() & 0x1f);	// 2^n (1 -> 0x10000)
- 	case 1: return rand();							// 0 -> RAND_MAX (likely 0x7fffffff)
--	case 2: return 0xff << (rand() % 25);
-+	case 2: return 0xffUL << (rand() % 25);
- 	case 3: return 0xffff0000;
- 	case 4: return 0xffffe000;
- 	case 5: return 0xffffff00 | RAND_BYTE();
+ unsigned long get_len(void)
+ {
+-	int i = 0;
+-
+-	i = rand32();
+-
+-	/* short circuit if 0 */
+-	if (i == 0)
+-		return 0;
+-
+-	switch (rand() % 6) {
+-
+-	case 0:	i &= 0xff;
+-		break;
+-	case 1: i &= page_size - 1;
+-		break;
+-	case 2:	i &= 0xffff;
+-		break;
+-	case 3:	i &= 0xffffff;
+-		break;
+-	case 4:	i &= 0xffffffff;
+-		break;
+-	case 5:
+-		// Pass through
+-		break;
+-	}
+-
+-	/* again, short circuit if 0 */
+-	if (i == 0)
+-		return 0;
+-
+-	/* we might get lucky if something is counting ints/longs etc. */
+-	if (ONE_IN(4)) {
+-		int _div = 1 << RAND_RANGE(1, 4);	/* 2,4,8 or 16 */
+-		i /= _div;
+-	}
+-
+-	return i;
++	return rand32();
+ }
 -- 
 1.9.1
