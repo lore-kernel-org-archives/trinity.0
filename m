@@ -1,29 +1,96 @@
-From: Dave Jones <davej@codemonkey.org.uk>
-Subject: Re: [PATCH 7/7] strip down get_len() to a call to rand32()
-Date: Tue, 17 Mar 2015 10:38:35 -0400
-Message-ID: <20150317143835.GC17556@codemonkey.org.uk>
-References: <1426537627-55047-1-git-send-email-tyson.w.smith@gmail.com>
+From: Tommi Rantala <tt.rantala@gmail.com>
+Subject: intel_sprite_get_colorkey oops
+Date: Thu, 26 Mar 2015 21:56:25 +0200
+Message-ID: <CA+ydwtr+bCo7LJ44JFmUkVRx144UDFgOS+aJTfK6KHtvBDVuAw@mail.gmail.com>
 Mime-Version: 1.0
-Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1426537627-55047-1-git-send-email-tyson.w.smith@gmail.com>
-Sender: trinity-owner@vger.kernel.org
-List-ID: <trinity.vger.kernel.org>
+Content-Transfer-Encoding: base64
+Return-path: <dri-devel-bounces@lists.freedesktop.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20120113;
+ h=mime-version:date:message-id:subject:from:to:cc:content-type;
+ bh=Lf+Llxp9aiabXqUtpzX13h2lLmavuYv9DISzax8tFFE=;
+ b=fPA1pk6iHr4hmtFLusuUD6RhM9Z9xUlt4Pqd4QDnrAKw6Tp3zYCnt7ZRPdncQNdhJQ
+ 5e16+LawqnaB+qDRvtuCHRQe5FhaNKYmsPhqo/ZUJ3n9+PqQTZZwkaSqNFjCw2X+kH0K
+ kuSJ0bZy63mEbpPIkpthyu04TorQxJOqcCWFc3eI4YpCHq/IXW2gEEBnDS8AbL3g9+qq
+ Co8GLkl3PpZlrFLrP0jb3lZ/HxPKZJSb6V8Z8acFedD22DP0oxam61K+2utoxrT2wYl0
+ rQ2zfGnksXjoEs/qymvQCNE+pncUR89jYKTE3v79AMj10Dwbg0C88yVas67CJViGD6TC
+ ie+Q==
+List-Id: <trinity.vger.kernel.org>
+List-Unsubscribe: <http://lists.freedesktop.org/mailman/options/dri-devel>,
+ <mailto:dri-devel-request@lists.freedesktop.org?subject=unsubscribe>
+List-Archive: <http://lists.freedesktop.org/archives/dri-devel>
+List-Post: <mailto:dri-devel@lists.freedesktop.org>
+List-Help: <mailto:dri-devel-request@lists.freedesktop.org?subject=help>
+List-Subscribe: <http://lists.freedesktop.org/mailman/listinfo/dri-devel>,
+ <mailto:dri-devel-request@lists.freedesktop.org?subject=subscribe>
+Errors-To: dri-devel-bounces@lists.freedesktop.org
+Sender: "dri-devel" <dri-devel-bounces@lists.freedesktop.org>
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: tyson.w.smith@gmail.com
-Cc: trinity@vger.kernel.org, tysmith@motorola.com
+To: Intel Graphics Development <intel-gfx@lists.freedesktop.org>
+Cc: DRI Development <dri-devel@lists.freedesktop.org>, trinity@vger.kernel.org
 
-On Mon, Mar 16, 2015 at 01:27:07PM -0700, tyson.w.smith@gmail.com wrote:
- > From: Tyson Smith <tyson.w.smith@gmail.com>
- > 
- > The body of get_len() was the same as rand32() so applying it to a value
- > from rand32() didn't offer much value. A switch case could be
- > added that generates other length like values as well. This could include
- > 2^n +/- ~2, page_size +/- 1, MAX_INT... etc.
-
-Makes sense, but we could go a step further, and just remove random-length.c
-entirely, and have generate-args.c just do the rand32 call.
-(same for the 2-3 syscalls that call it)
-
-	Dave
+SGVsbG8sCgpUcmluaXR5IGRpc2NvdmVyZWQgb29wc2VzIHdpdGggdGhlIGk5MTUgY29sb3JrZXkg
+aW9jdGxzLCByZXByb2R1Y2libGUKb24gbXkgc3lzdGVtIHdpdGggdGhpczoKCiNpbmNsdWRlIDx1
+bmlzdGQuaD4KI2luY2x1ZGUgPGludHR5cGVzLmg+CiNpbmNsdWRlIDxkcm0vaTkxNV9kcm0uaD4K
+I2luY2x1ZGUgPHN5cy90eXBlcy5oPgojaW5jbHVkZSA8c3lzL3N0YXQuaD4KI2luY2x1ZGUgPGZj
+bnRsLmg+CiNpbmNsdWRlIDxzeXMvaW9jdGwuaD4KI2luY2x1ZGUgPHN0ZGlvLmg+CgojZGVmaW5l
+IEdFVCBEUk1fSU9XUihEUk1fQ09NTUFORF9CQVNFICsgRFJNX0k5MTVfR0VUX1NQUklURV9DT0xP
+UktFWSwKc3RydWN0IGRybV9pbnRlbF9zcHJpdGVfY29sb3JrZXkpCgppbnQgbWFpbihpbnQgYXJn
+YywgY2hhciAqKmFyZ3YpCnsKICAgICAgICBpbnQgZmQgPSBvcGVuKGFyZ3ZbMV0sIE9fUkRXUik7
+CiAgICAgICAgaWYgKGZkIDwgMCkgewogICAgICAgICAgICAgICAgcGVycm9yKCJvcGVuIik7CiAg
+ICAgICAgICAgICAgICByZXR1cm4gMTsKICAgICAgICB9CiAgICAgICAgZm9yIChpbnQgaT0wOyBp
+IDwgMTI4OyArK2kpIHsKICAgICAgICAgICAgICAgIHByaW50ZigiZ2V0PSVkXG4iLCBpKTsKICAg
+ICAgICAgICAgICAgIHN0cnVjdCBkcm1faW50ZWxfc3ByaXRlX2NvbG9ya2V5IGNvbG9ya2V5ID0g
+eyAucGxhbmVfaWQgPSBpIH07CiAgICAgICAgICAgICAgICBpb2N0bChmZCwgR0VULCAmY29sb3Jr
+ZXkpOwogICAgICAgIH0KICAgICAgICBmb3IgKGludCBpPTA7IGkgPCAxMjg7ICsraSkgewogICAg
+ICAgICAgICAgICAgcHJpbnRmKCJzZXQ9JWRcbiIsIGkpOwogICAgICAgICAgICAgICAgc3RydWN0
+IGRybV9pbnRlbF9zcHJpdGVfY29sb3JrZXkgY29sb3JrZXkgPSB7IC5wbGFuZV9pZCA9IGkgfTsK
+ICAgICAgICAgICAgICAgIGlvY3RsKGZkLCBEUk1fSU9DVExfSTkxNV9TRVRfU1BSSVRFX0NPTE9S
+S0VZLCAmY29sb3JrZXkpOwogICAgICAgIH0KICAgICAgICByZXR1cm4gMDsKfQoKJCAuL21haW4g
+L2Rldi9kcmkvY2FyZDAKZ2V0PTAKZ2V0PTEKZ2V0PTIKZ2V0PTMKZ2V0PTQKZ2V0PTUKZ2V0PTYK
+Z2V0PTcKZ2V0PTgKZ2V0PTkKZ2V0PTEwCmdldD0xMQpnZXQ9MTIKZ2V0PTEzCmdldD0xNApnZXQ9
+MTUKZ2V0PTE2CmdldD0xNwoKWyAgIDQwLjQ2NzEyM10gQlVHOiB1bmFibGUgdG8gaGFuZGxlIGtl
+cm5lbCBOVUxMIHBvaW50ZXIgZGVyZWZlcmVuY2UKYXQgICAgICAgICAgIChudWxsKQpbICAgNDAu
+NDc1MDEyXSBJUDogWzwgICAgICAgICAgKG51bGwpPl0gICAgICAgICAgIChudWxsKQpbICAgNDAu
+NDgwMDk0XSBQR0QgMTcyOGNkMDY3IFBVRCAxNzE2M2MwNjcgUE1EIDAKWyAgIDQwLjQ4NDU4OV0g
+T29wczogMDAxMCBbIzFdIFNNUCBLQVNBTgpbICAgNDAuNDg4Mjk3XSBDUFU6IDAgUElEOiAyMTk4
+IENvbW06IG1haW4gTm90IHRhaW50ZWQgNC4wLjAtcmM1KyAjODcKWyAgIDQwLjUwMTY2Nl0gdGFz
+azogZmZmZjg4MDBjNjZjZDM4MCB0aTogZmZmZjg4MDE3Mjc5MDAwMCB0YXNrLnRpOgpmZmZmODgw
+MTcyNzkwMDAwClsgICA0MC41MDkxNzldIFJJUDogMDAxMDpbPDAwMDAwMDAwMDAwMDAwMDA+XSAg
+WzwgICAgICAgICAgKG51bGwpPl0KICAgICAgIChudWxsKQpbICAgNDAuNTE2NzAyXSBSU1A6IDAw
+MTg6ZmZmZjg4MDE3Mjc5N2QzMCAgRUZMQUdTOiAwMDAxMDI0NgpbICAgNDAuNTIyMDM3XSBSQVg6
+IGZmZmZlZDAwMmU3YWNiZTIgUkJYOiBmZmZmODgwMTc0MDFkMDAwIFJDWDogMDAwMDAwMDAwMDAw
+MDAwNwpbICAgNDAuNTI5MjAwXSBSRFg6IDAwMDAwMDAwMDAwMDAwMDAgUlNJOiBmZmZmODgwMTcy
+Nzk3ZGQ4IFJESTogZmZmZjg4MDE3M2Q2NWMwMApbICAgNDAuNTM2MzYxXSBSQlA6IGZmZmY4ODAx
+NzI3OTdkNjggUjA4OiAwMDAwMDAwMDAwMDAwMDAwIFIwOTogMDAwMDAwMDAwMDAwMDAwMApbICAg
+NDAuNTQzNTIzXSBSMTA6IDAwMDAwMDAwMDAwMDAwMDAgUjExOiAwMDAwMDAwMDAwMDAwMDAwIFIx
+MjogMDAwMDAwMDAwMDAwMDAwMApbICAgNDAuNTUwNjg2XSBSMTM6IGZmZmY4ODAxNzNkNjVjZDgg
+UjE0OiBmZmZmODgwMTcyNzk3ZGQ4IFIxNTogZmZmZjg4MDE3M2Q2NWMwMApbICAgNDAuNTU3ODUy
+XSBGUzogIDAwMDA3ZjA5YTcyZTY3MDAoMDAwMCkgR1M6ZmZmZjg4MDE3NWMwMDAwMCgwMDAwKQpr
+bmxHUzowMDAwMDAwMDAwMDAwMDAwClsgICA0MC41NjU5NzZdIENTOiAgMDAxMCBEUzogMDAwMCBF
+UzogMDAwMCBDUjA6IDAwMDAwMDAwODAwNTAwMzMKWyAgIDQwLjU3MTc0NF0gQ1IyOiAwMDAwMDAw
+MDAwMDAwMDAwIENSMzogMDAwMDAwMDE3MjYxYzAwMCBDUjQ6IDAwMDAwMDAwMDAwNDA2ZjAKWyAg
+IDQwLjU3ODkwN10gU3RhY2s6ClsgICA0MC41ODA5MjZdICBmZmZmZmZmZjgxYjRhNDM3IGZmZmY4
+ODAxNzI3OTdkNjggZmZmZjg4MDE3NDAxZDAwMApmZmZmODgwMTcxNDcwMDAwClsgICA0MC41ODgz
+OTRdICAwMDAwMDAwMDAwMDAwMDE0IGZmZmZmZmZmZmZmZmZmZjIgZmZmZmZmZmY4MjcxYzQwMApm
+ZmZmODgwMTcyNzk3ZTg4ClsgICA0MC41OTU4NjRdICBmZmZmZmZmZjgxOGFjYmJjIGZmZmY4ODAx
+NzI3OTdlMTggZmZmZmZmZmY4MTY1ZDdjMgpmZmZmZmZmZjgxNjVkNjYwClsgICA0MC42MDMzMzVd
+IENhbGwgVHJhY2U6ClsgICA0MC42MDU3OTddICBbPGZmZmZmZmZmODFiNGE0Mzc+XSA/IGludGVs
+X3Nwcml0ZV9nZXRfY29sb3JrZXkrMHg5Ny8weGMwClsgICA0MC42MTI0MzhdICBbPGZmZmZmZmZm
+ODE4YWNiYmM+XSBkcm1faW9jdGwrMHgyN2MvMHg4OTAKWyAgIDQwLjYxNzY4N10gIFs8ZmZmZmZm
+ZmY4MTY1ZDdjMj5dID8gYXZjX2hhc19wZXJtKzB4MTgyLzB4MzIwClsgICA0MC42MjMzNzFdICBb
+PGZmZmZmZmZmODE2NWQ2NjA+XSA/IGF2Y19oYXNfcGVybSsweDIwLzB4MzIwClsgICA0MC42Mjg5
+NjZdICBbPGZmZmZmZmZmODFiNGEzYTA+XSA/IGludGVsX3Nwcml0ZV9zZXRfY29sb3JrZXkrMHgy
+NjAvMHgyNjAKWyAgIDQwLjYzNTc4NV0gIFs8ZmZmZmZmZmY4MTY1ZmZhYz5dID8gaW5vZGVfaGFz
+X3Blcm0uaXNyYS4yOCsweDdjLzB4YTAKWyAgIDQwLjY0MjE2OV0gIFs8ZmZmZmZmZmY4MjVkZmU1
+Yj5dID8gX3Jhd19zcGluX3VubG9ja19pcnErMHgyYi8weDQwClsgICA0MC42NDgzNzZdICBbPGZm
+ZmZmZmZmODEyZjhjYWY+XSBkb192ZnNfaW9jdGwrMHgzY2YvMHg3MjAKWyAgIDQwLjY1Mzg4N10g
+IFs8ZmZmZmZmZmY4MTY2MGNhYT5dID8gc2VsaW51eF9maWxlX2lvY3RsKzB4NmEvMHgxMzAKWyAg
+IDQwLjY2MDAwOF0gIFs8ZmZmZmZmZmY4MTJmOTA4MT5dIFN5U19pb2N0bCsweDgxLzB4YTAKWyAg
+IDQwLjY2NTA4M10gIFs8ZmZmZmZmZmY4MjVlMGFiMj5dIHN5c3RlbV9jYWxsX2Zhc3RwYXRoKzB4
+MTIvMHgxNwpbICAgNDAuNjcxMTEyXSBDb2RlOiAgQmFkIFJJUCB2YWx1ZS4KWyAgIDQwLjY3NDQ2
+NV0gUklQICBbPCAgICAgICAgICAobnVsbCk+XSAgICAgICAgICAgKG51bGwpClsgICA0MC42Nzk2
+MzRdICBSU1AgPGZmZmY4ODAxNzI3OTdkMzA+ClsgICA0MC42ODMxMzRdIENSMjogMDAwMDAwMDAw
+MDAwMDAwMApbICAgNDAuNjg2NDk4XSAtLS1bIGVuZCB0cmFjZSA5MjkyZDliNGFiYThkZmU5IF0t
+LS0KX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KZHJpLWRl
+dmVsIG1haWxpbmcgbGlzdApkcmktZGV2ZWxAbGlzdHMuZnJlZWRlc2t0b3Aub3JnCmh0dHA6Ly9s
+aXN0cy5mcmVlZGVza3RvcC5vcmcvbWFpbG1hbi9saXN0aW5mby9kcmktZGV2ZWwK
