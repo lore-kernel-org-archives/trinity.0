@@ -1,96 +1,243 @@
 From: Tommi Rantala <tt.rantala@gmail.com>
-Subject: intel_sprite_get_colorkey oops
-Date: Thu, 26 Mar 2015 21:56:25 +0200
-Message-ID: <CA+ydwtr+bCo7LJ44JFmUkVRx144UDFgOS+aJTfK6KHtvBDVuAw@mail.gmail.com>
-Mime-Version: 1.0
-Content-Transfer-Encoding: base64
-Return-path: <dri-devel-bounces@lists.freedesktop.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20120113;
- h=mime-version:date:message-id:subject:from:to:cc:content-type;
- bh=Lf+Llxp9aiabXqUtpzX13h2lLmavuYv9DISzax8tFFE=;
- b=fPA1pk6iHr4hmtFLusuUD6RhM9Z9xUlt4Pqd4QDnrAKw6Tp3zYCnt7ZRPdncQNdhJQ
- 5e16+LawqnaB+qDRvtuCHRQe5FhaNKYmsPhqo/ZUJ3n9+PqQTZZwkaSqNFjCw2X+kH0K
- kuSJ0bZy63mEbpPIkpthyu04TorQxJOqcCWFc3eI4YpCHq/IXW2gEEBnDS8AbL3g9+qq
- Co8GLkl3PpZlrFLrP0jb3lZ/HxPKZJSb6V8Z8acFedD22DP0oxam61K+2utoxrT2wYl0
- rQ2zfGnksXjoEs/qymvQCNE+pncUR89jYKTE3v79AMj10Dwbg0C88yVas67CJViGD6TC
- ie+Q==
-List-Id: <trinity.vger.kernel.org>
-List-Unsubscribe: <http://lists.freedesktop.org/mailman/options/dri-devel>,
- <mailto:dri-devel-request@lists.freedesktop.org?subject=unsubscribe>
-List-Archive: <http://lists.freedesktop.org/archives/dri-devel>
-List-Post: <mailto:dri-devel@lists.freedesktop.org>
-List-Help: <mailto:dri-devel-request@lists.freedesktop.org?subject=help>
-List-Subscribe: <http://lists.freedesktop.org/mailman/listinfo/dri-devel>,
- <mailto:dri-devel-request@lists.freedesktop.org?subject=subscribe>
-Errors-To: dri-devel-bounces@lists.freedesktop.org
-Sender: "dri-devel" <dri-devel-bounces@lists.freedesktop.org>
+Subject: [PATCH] DRM dumb buffer file descriptors
+Date: Wed, 15 Apr 2015 22:39:20 +0300
+Message-ID: <1429126760-32714-1-git-send-email-tt.rantala@gmail.com>
+Return-path: <trinity-owner@vger.kernel.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=from:to:cc:subject:date:message-id;
+        bh=b9961gyKQCk1SlNVO1FQmP4tnFNnT7FqLStFLV6/H0I=;
+        b=nFpS0908lPJZiPJQjVI3P0LphDhBIwQZmv07ezhvUFwG1qcpJrqM4D2oZSCKtBPEXY
+         eiytEtf6NRwd94oZifdVHtoSvgwviG2WfhOxOkOu9LEP1bFBjdDRBgUkGGx6mPoM92wl
+         ZhUVsxhuD6MQhLb5gQKV2Ns1FfLE6WOptH/ABwe5NumKOUmPvL+Qv4lmFmsMbcre/8cm
+         Qheqjqz6aRZ9p0G0s51esMy2e41hMgPbhf66KxRy6bzdee4k7OP6zQ9/c9xabD/ZRfNo
+         qfqA42KDUbiqMcsDkm1/+Fk1ZhL/A6SE64a2SlYKqmCgyuRcm6InX6rFQAW63OE+3gWq
+         6pLA==
+Sender: trinity-owner@vger.kernel.org
+List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
-To: Intel Graphics Development <intel-gfx@lists.freedesktop.org>
-Cc: DRI Development <dri-devel@lists.freedesktop.org>, trinity@vger.kernel.org
+Content-Transfer-Encoding: 7bit
+To: davej@codemonkey.org.uk
+Cc: trinity@vger.kernel.org, Tommi Rantala <tt.rantala@gmail.com>
 
-SGVsbG8sCgpUcmluaXR5IGRpc2NvdmVyZWQgb29wc2VzIHdpdGggdGhlIGk5MTUgY29sb3JrZXkg
-aW9jdGxzLCByZXByb2R1Y2libGUKb24gbXkgc3lzdGVtIHdpdGggdGhpczoKCiNpbmNsdWRlIDx1
-bmlzdGQuaD4KI2luY2x1ZGUgPGludHR5cGVzLmg+CiNpbmNsdWRlIDxkcm0vaTkxNV9kcm0uaD4K
-I2luY2x1ZGUgPHN5cy90eXBlcy5oPgojaW5jbHVkZSA8c3lzL3N0YXQuaD4KI2luY2x1ZGUgPGZj
-bnRsLmg+CiNpbmNsdWRlIDxzeXMvaW9jdGwuaD4KI2luY2x1ZGUgPHN0ZGlvLmg+CgojZGVmaW5l
-IEdFVCBEUk1fSU9XUihEUk1fQ09NTUFORF9CQVNFICsgRFJNX0k5MTVfR0VUX1NQUklURV9DT0xP
-UktFWSwKc3RydWN0IGRybV9pbnRlbF9zcHJpdGVfY29sb3JrZXkpCgppbnQgbWFpbihpbnQgYXJn
-YywgY2hhciAqKmFyZ3YpCnsKICAgICAgICBpbnQgZmQgPSBvcGVuKGFyZ3ZbMV0sIE9fUkRXUik7
-CiAgICAgICAgaWYgKGZkIDwgMCkgewogICAgICAgICAgICAgICAgcGVycm9yKCJvcGVuIik7CiAg
-ICAgICAgICAgICAgICByZXR1cm4gMTsKICAgICAgICB9CiAgICAgICAgZm9yIChpbnQgaT0wOyBp
-IDwgMTI4OyArK2kpIHsKICAgICAgICAgICAgICAgIHByaW50ZigiZ2V0PSVkXG4iLCBpKTsKICAg
-ICAgICAgICAgICAgIHN0cnVjdCBkcm1faW50ZWxfc3ByaXRlX2NvbG9ya2V5IGNvbG9ya2V5ID0g
-eyAucGxhbmVfaWQgPSBpIH07CiAgICAgICAgICAgICAgICBpb2N0bChmZCwgR0VULCAmY29sb3Jr
-ZXkpOwogICAgICAgIH0KICAgICAgICBmb3IgKGludCBpPTA7IGkgPCAxMjg7ICsraSkgewogICAg
-ICAgICAgICAgICAgcHJpbnRmKCJzZXQ9JWRcbiIsIGkpOwogICAgICAgICAgICAgICAgc3RydWN0
-IGRybV9pbnRlbF9zcHJpdGVfY29sb3JrZXkgY29sb3JrZXkgPSB7IC5wbGFuZV9pZCA9IGkgfTsK
-ICAgICAgICAgICAgICAgIGlvY3RsKGZkLCBEUk1fSU9DVExfSTkxNV9TRVRfU1BSSVRFX0NPTE9S
-S0VZLCAmY29sb3JrZXkpOwogICAgICAgIH0KICAgICAgICByZXR1cm4gMDsKfQoKJCAuL21haW4g
-L2Rldi9kcmkvY2FyZDAKZ2V0PTAKZ2V0PTEKZ2V0PTIKZ2V0PTMKZ2V0PTQKZ2V0PTUKZ2V0PTYK
-Z2V0PTcKZ2V0PTgKZ2V0PTkKZ2V0PTEwCmdldD0xMQpnZXQ9MTIKZ2V0PTEzCmdldD0xNApnZXQ9
-MTUKZ2V0PTE2CmdldD0xNwoKWyAgIDQwLjQ2NzEyM10gQlVHOiB1bmFibGUgdG8gaGFuZGxlIGtl
-cm5lbCBOVUxMIHBvaW50ZXIgZGVyZWZlcmVuY2UKYXQgICAgICAgICAgIChudWxsKQpbICAgNDAu
-NDc1MDEyXSBJUDogWzwgICAgICAgICAgKG51bGwpPl0gICAgICAgICAgIChudWxsKQpbICAgNDAu
-NDgwMDk0XSBQR0QgMTcyOGNkMDY3IFBVRCAxNzE2M2MwNjcgUE1EIDAKWyAgIDQwLjQ4NDU4OV0g
-T29wczogMDAxMCBbIzFdIFNNUCBLQVNBTgpbICAgNDAuNDg4Mjk3XSBDUFU6IDAgUElEOiAyMTk4
-IENvbW06IG1haW4gTm90IHRhaW50ZWQgNC4wLjAtcmM1KyAjODcKWyAgIDQwLjUwMTY2Nl0gdGFz
-azogZmZmZjg4MDBjNjZjZDM4MCB0aTogZmZmZjg4MDE3Mjc5MDAwMCB0YXNrLnRpOgpmZmZmODgw
-MTcyNzkwMDAwClsgICA0MC41MDkxNzldIFJJUDogMDAxMDpbPDAwMDAwMDAwMDAwMDAwMDA+XSAg
-WzwgICAgICAgICAgKG51bGwpPl0KICAgICAgIChudWxsKQpbICAgNDAuNTE2NzAyXSBSU1A6IDAw
-MTg6ZmZmZjg4MDE3Mjc5N2QzMCAgRUZMQUdTOiAwMDAxMDI0NgpbICAgNDAuNTIyMDM3XSBSQVg6
-IGZmZmZlZDAwMmU3YWNiZTIgUkJYOiBmZmZmODgwMTc0MDFkMDAwIFJDWDogMDAwMDAwMDAwMDAw
-MDAwNwpbICAgNDAuNTI5MjAwXSBSRFg6IDAwMDAwMDAwMDAwMDAwMDAgUlNJOiBmZmZmODgwMTcy
-Nzk3ZGQ4IFJESTogZmZmZjg4MDE3M2Q2NWMwMApbICAgNDAuNTM2MzYxXSBSQlA6IGZmZmY4ODAx
-NzI3OTdkNjggUjA4OiAwMDAwMDAwMDAwMDAwMDAwIFIwOTogMDAwMDAwMDAwMDAwMDAwMApbICAg
-NDAuNTQzNTIzXSBSMTA6IDAwMDAwMDAwMDAwMDAwMDAgUjExOiAwMDAwMDAwMDAwMDAwMDAwIFIx
-MjogMDAwMDAwMDAwMDAwMDAwMApbICAgNDAuNTUwNjg2XSBSMTM6IGZmZmY4ODAxNzNkNjVjZDgg
-UjE0OiBmZmZmODgwMTcyNzk3ZGQ4IFIxNTogZmZmZjg4MDE3M2Q2NWMwMApbICAgNDAuNTU3ODUy
-XSBGUzogIDAwMDA3ZjA5YTcyZTY3MDAoMDAwMCkgR1M6ZmZmZjg4MDE3NWMwMDAwMCgwMDAwKQpr
-bmxHUzowMDAwMDAwMDAwMDAwMDAwClsgICA0MC41NjU5NzZdIENTOiAgMDAxMCBEUzogMDAwMCBF
-UzogMDAwMCBDUjA6IDAwMDAwMDAwODAwNTAwMzMKWyAgIDQwLjU3MTc0NF0gQ1IyOiAwMDAwMDAw
-MDAwMDAwMDAwIENSMzogMDAwMDAwMDE3MjYxYzAwMCBDUjQ6IDAwMDAwMDAwMDAwNDA2ZjAKWyAg
-IDQwLjU3ODkwN10gU3RhY2s6ClsgICA0MC41ODA5MjZdICBmZmZmZmZmZjgxYjRhNDM3IGZmZmY4
-ODAxNzI3OTdkNjggZmZmZjg4MDE3NDAxZDAwMApmZmZmODgwMTcxNDcwMDAwClsgICA0MC41ODgz
-OTRdICAwMDAwMDAwMDAwMDAwMDE0IGZmZmZmZmZmZmZmZmZmZjIgZmZmZmZmZmY4MjcxYzQwMApm
-ZmZmODgwMTcyNzk3ZTg4ClsgICA0MC41OTU4NjRdICBmZmZmZmZmZjgxOGFjYmJjIGZmZmY4ODAx
-NzI3OTdlMTggZmZmZmZmZmY4MTY1ZDdjMgpmZmZmZmZmZjgxNjVkNjYwClsgICA0MC42MDMzMzVd
-IENhbGwgVHJhY2U6ClsgICA0MC42MDU3OTddICBbPGZmZmZmZmZmODFiNGE0Mzc+XSA/IGludGVs
-X3Nwcml0ZV9nZXRfY29sb3JrZXkrMHg5Ny8weGMwClsgICA0MC42MTI0MzhdICBbPGZmZmZmZmZm
-ODE4YWNiYmM+XSBkcm1faW9jdGwrMHgyN2MvMHg4OTAKWyAgIDQwLjYxNzY4N10gIFs8ZmZmZmZm
-ZmY4MTY1ZDdjMj5dID8gYXZjX2hhc19wZXJtKzB4MTgyLzB4MzIwClsgICA0MC42MjMzNzFdICBb
-PGZmZmZmZmZmODE2NWQ2NjA+XSA/IGF2Y19oYXNfcGVybSsweDIwLzB4MzIwClsgICA0MC42Mjg5
-NjZdICBbPGZmZmZmZmZmODFiNGEzYTA+XSA/IGludGVsX3Nwcml0ZV9zZXRfY29sb3JrZXkrMHgy
-NjAvMHgyNjAKWyAgIDQwLjYzNTc4NV0gIFs8ZmZmZmZmZmY4MTY1ZmZhYz5dID8gaW5vZGVfaGFz
-X3Blcm0uaXNyYS4yOCsweDdjLzB4YTAKWyAgIDQwLjY0MjE2OV0gIFs8ZmZmZmZmZmY4MjVkZmU1
-Yj5dID8gX3Jhd19zcGluX3VubG9ja19pcnErMHgyYi8weDQwClsgICA0MC42NDgzNzZdICBbPGZm
-ZmZmZmZmODEyZjhjYWY+XSBkb192ZnNfaW9jdGwrMHgzY2YvMHg3MjAKWyAgIDQwLjY1Mzg4N10g
-IFs8ZmZmZmZmZmY4MTY2MGNhYT5dID8gc2VsaW51eF9maWxlX2lvY3RsKzB4NmEvMHgxMzAKWyAg
-IDQwLjY2MDAwOF0gIFs8ZmZmZmZmZmY4MTJmOTA4MT5dIFN5U19pb2N0bCsweDgxLzB4YTAKWyAg
-IDQwLjY2NTA4M10gIFs8ZmZmZmZmZmY4MjVlMGFiMj5dIHN5c3RlbV9jYWxsX2Zhc3RwYXRoKzB4
-MTIvMHgxNwpbICAgNDAuNjcxMTEyXSBDb2RlOiAgQmFkIFJJUCB2YWx1ZS4KWyAgIDQwLjY3NDQ2
-NV0gUklQICBbPCAgICAgICAgICAobnVsbCk+XSAgICAgICAgICAgKG51bGwpClsgICA0MC42Nzk2
-MzRdICBSU1AgPGZmZmY4ODAxNzI3OTdkMzA+ClsgICA0MC42ODMxMzRdIENSMjogMDAwMDAwMDAw
-MDAwMDAwMApbICAgNDAuNjg2NDk4XSAtLS1bIGVuZCB0cmFjZSA5MjkyZDliNGFiYThkZmU5IF0t
-LS0KX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18KZHJpLWRl
-dmVsIG1haWxpbmcgbGlzdApkcmktZGV2ZWxAbGlzdHMuZnJlZWRlc2t0b3Aub3JnCmh0dHA6Ly9s
-aXN0cy5mcmVlZGVza3RvcC5vcmcvbWFpbG1hbi9saXN0aW5mby9kcmktZGV2ZWwK
+Use the DRM_IOCTL_MODE_CREATE_DUMB ioctl to make "dumb" buffers; then use
+the DRM_IOCTL_PRIME_HANDLE_TO_FD ioctl to get file descriptors.
+---
+ fd-drm.c          | 143 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ fds.c             |   1 +
+ include/drm_fds.h |   6 +++
+ include/shm.h     |   2 +
+ params.c          |   2 +-
+ 5 files changed, 153 insertions(+), 1 deletion(-)
+ create mode 100644 fd-drm.c
+ create mode 100644 include/drm_fds.h
+
+diff --git a/fd-drm.c b/fd-drm.c
+new file mode 100644
+index 0000000..7772c6a
+--- /dev/null
++++ b/fd-drm.c
+@@ -0,0 +1,143 @@
++/* DRM FDs */
++
++#include "config.h"
++#include "fd.h"
++#include "log.h"
++#include "memfd.h"
++#include "net.h"
++#include "params.h"
++#include "pids.h"
++#include "random.h"
++#include "sanitise.h"
++#include "shm.h"
++#include "compat.h"
++#include "trinity.h"
++
++static unsigned fd_count;
++
++#ifdef USE_DRM
++
++#include <dirent.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include <sys/types.h>
++#include <sys/ioctl.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <drm/drm.h>
++
++static int create_dumb(__unused__ int fd)
++{
++#if defined(DRM_IOCTL_MODE_CREATE_DUMB) && defined(DRM_IOCTL_PRIME_HANDLE_TO_FD)
++	struct drm_mode_create_dumb create;
++	struct drm_prime_handle handle_to_fd;
++
++	memset(&create, 0, sizeof(create));
++	create.height = 1 << RAND_RANGE(0, 10);
++	create.width = 1 << RAND_RANGE(0, 10);
++	create.bpp = 32;
++
++	if (ioctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &create) < 0) {
++		return -1;
++	}
++
++	memset(&handle_to_fd, 0, sizeof(handle_to_fd));
++	handle_to_fd.handle = create.handle;
++	if (RAND_BOOL())
++		handle_to_fd.flags = DRM_CLOEXEC;
++
++	if (ioctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &handle_to_fd) < 0) {
++		return -1;
++	}
++
++	return handle_to_fd.fd;
++#else
++	return -1;
++#endif
++}
++
++static int open_drm_fds(void)
++{
++	unsigned int i;
++	int fd, dfd;
++	DIR *dir;
++	struct dirent *entry;
++	char buf[128];
++
++	dir = opendir("/dev/dri/");
++	if (!dir)
++		goto done;
++
++	// Open all /dev/dri/*, and try to make FDs from each of them.
++	while (1) {
++		entry = readdir(dir);
++		if (!entry)
++			break;
++
++		if (strcmp(entry->d_name, ".") == 0 ||
++		    strcmp(entry->d_name, "..") == 0)
++			continue;
++
++		snprintf(buf, sizeof(buf), "/dev/dri/%s", entry->d_name);
++		buf[sizeof(buf)-1] = '\0';
++
++		fd = open(buf, O_RDWR);
++		if (fd < 0) {
++			continue;
++		}
++		shm->drm_fds[fd_count++] = fd;
++
++		if (fd_count >= MAX_DRM_FDS)
++			break;
++
++		dfd = create_dumb(fd);
++		if (dfd < 0) {
++			continue;
++		}
++		shm->drm_fds[fd_count++] = dfd;
++
++		if (fd_count >= MAX_DRM_FDS)
++			break;
++	}
++
++	if (dir)
++		closedir(dir);
++
++	for (i = 0; i < MAX_DRM_FDS; i++) {
++		if (shm->drm_fds[i] > 0) {
++			output(2, "fd[%d] = drm\n", shm->drm_fds[i]);
++		}
++	}
++
++done:
++	if (fd_count == 0)
++		drm_fd_provider.enabled = FALSE;
++
++	return TRUE;
++}
++
++#else
++
++static int open_drm_fds(void) { return TRUE; }
++
++#endif /* USE_DRM */
++
++static int get_rand_drm_fd(void)
++{
++	// We should not be called when fd_count is zero, but avoid div-by-zero
++	// just in case.
++	if (fd_count > 0)
++		return shm->drm_fds[rand() % fd_count];
++	else
++		return -1;
++}
++
++struct fd_provider drm_fd_provider = {
++	.name = "drm",
++	.enabled = TRUE,
++	.open = &open_drm_fds,
++	.get = &get_rand_drm_fd,
++};
+diff --git a/fds.c b/fds.c
+index fbb2bba..a3a70f9 100644
+--- a/fds.c
++++ b/fds.c
+@@ -56,6 +56,7 @@ void setup_fd_providers(void)
+ 	add_to_prov_list(&timerfd_fd_provider);
+ 	add_to_prov_list(&testfile_fd_provider);
+ 	add_to_prov_list(&memfd_fd_provider);
++	add_to_prov_list(&drm_fd_provider);
+ 
+ 	output(0, "Registered %d fd providers.\n", num_fd_providers);
+ }
+diff --git a/include/drm_fds.h b/include/drm_fds.h
+new file mode 100644
+index 0000000..3c70b33
+--- /dev/null
++++ b/include/drm_fds.h
+@@ -0,0 +1,6 @@
++#pragma once
++
++#include "fd.h"
++struct fd_provider drm_fd_provider;
++
++#define MAX_DRM_FDS 8
+diff --git a/include/shm.h b/include/shm.h
+index 16a5994..673ed1b 100644
+--- a/include/shm.h
++++ b/include/shm.h
+@@ -2,6 +2,7 @@
+ 
+ #include "arch.h"
+ #include "child.h"
++#include "drm_fds.h"
+ #include "epoll.h"
+ #include "eventfd.h"
+ #include "exit.h"
+@@ -61,6 +62,7 @@ struct shm_s {
+ 	int timerfd_fds[MAX_TIMERFD_FDS];
+ 	int testfile_fds[MAX_TESTFILE_FDS];
+ 	int memfd_fds[MAX_MEMFD_FDS];
++	int drm_fds[MAX_DRM_FDS];
+ 	struct socketinfo sockets[NR_SOCKET_FDS];
+ 	int current_fd;
+ 	unsigned int fd_lifetime;
+diff --git a/params.c b/params.c
+index 53861a5..96c737c 100644
+--- a/params.c
++++ b/params.c
+@@ -60,7 +60,7 @@ char server_addr[INET6_ADDRSTRLEN] = "\0";
+ 
+ void enable_disable_fd_usage(void)
+ {
+-	outputerr(" --enable-fds/--disable-fds= {sockets,pipes,perf,epoll,eventfd,pseudo,timerfd,testfile,memfd}\n");
++	outputerr(" --enable-fds/--disable-fds= {sockets,pipes,perf,epoll,eventfd,pseudo,timerfd,testfile,memfd,drm}\n");
+ }
+ 
+ static void usage(void)
+-- 
+2.1.0
