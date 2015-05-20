@@ -1,7 +1,7 @@
 From: Vinson Lee <vlee@twopensource.com>
-Subject: [PATCH] net/domains.c: Include compat.h.
-Date: Wed,  6 May 2015 12:27:11 -0700
-Message-ID: <1430940431-17203-1-git-send-email-vlee@twopensource.com>
+Subject: [PATCH] compat.h: Add CLOCK_BOOTTIME.
+Date: Wed, 20 May 2015 14:15:04 -0700
+Message-ID: <1432156504-9095-1-git-send-email-vlee@twopensource.com>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
@@ -13,46 +13,37 @@ Cc: Vinson Lee <vlee@twitter.com>
 
 =46rom: Vinson Lee <vlee@twitter.com>
 
-=46ix build errors on CentOS 6.
+CLOCK_BOOTTIME is not available with glibc < 2.14.
 
-  CC	net/domains.o
-net/domains.c:59: error: =E2=80=98PF_CAIF=E2=80=99 undeclared here (not=
- in a function)
-net/domains.c:59: warning: missing initializer
-net/domains.c:59: warning: (near initialization for =E2=80=98domains[40=
-].domain=E2=80=99)
-net/domains.c:60: error: =E2=80=98PF_ALG=E2=80=99 undeclared here (not =
-in a function)
-net/domains.c:60: warning: missing initializer
-net/domains.c:60: warning: (near initialization for =E2=80=98domains[41=
-].domain=E2=80=99)
-net/domains.c:61: error: =E2=80=98PF_NFC=E2=80=99 undeclared here (not =
-in a function)
-net/domains.c:61: warning: missing initializer
-net/domains.c:61: warning: (near initialization for =E2=80=98domains[42=
-].domain=E2=80=99)
-net/domains.c:62: error: =E2=80=98PF_VSOCK=E2=80=99 undeclared here (no=
-t in a function)
-net/domains.c:62: warning: missing initializer
-net/domains.c:62: warning: (near initialization for =E2=80=98domains[43=
-].domain=E2=80=99)
+=46ix build on CentOS 6.
+
+  CC	syscalls/perf_event_open.o
+syscalls/perf_event_open.c: In function =E2=80=98create_mostly_valid_sa=
+mpling_event=E2=80=99:
+syscalls/perf_event_open.c:1118: error: =E2=80=98CLOCK_BOOTTIME=E2=80=99=
+ undeclared (first use in this function)
+syscalls/perf_event_open.c:1118: error: (Each undeclared identifier is =
+reported only once
+syscalls/perf_event_open.c:1118: error: for each function it appears in=
+=2E)
 
 Signed-off-by: Vinson Lee <vlee@twitter.com>
 ---
- net/domains.c |    1 +
- 1 files changed, 1 insertions(+), 0 deletions(-)
+ include/compat.h |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
 
-diff --git a/net/domains.c b/net/domains.c
-index 6ecd455..0930995 100644
---- a/net/domains.c
-+++ b/net/domains.c
-@@ -9,6 +9,7 @@
- #include "domains.h"
- #include "params.h"
- #include "utils.h"
-+#include "compat.h"
-=20
- struct domain {
- 	const char *name;
+diff --git a/include/compat.h b/include/compat.h
+index c0c7f0a..0e3d011 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -997,3 +997,8 @@ struct kvm_get_htab_fd {
+ #ifndef EPOLLWAKEUP
+ #define EPOLLWAKEUP (1u << 29)
+ #endif
++
++/* time.h */
++#ifndef CLOCK_BOOTTIME
++#define CLOCK_BOOTTIME 7
++#endif
 --=20
 1.7.1
