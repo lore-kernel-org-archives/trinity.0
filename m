@@ -1,49 +1,36 @@
-From: Vinson Lee <vlee@twopensource.com>
-Subject: [PATCH] compat.h: Add CLOCK_BOOTTIME.
-Date: Wed, 20 May 2015 14:15:04 -0700
-Message-ID: <1432156504-9095-1-git-send-email-vlee@twopensource.com>
-Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+From: Jiri Slaby <jslaby@suse.com>
+Subject: [PATCH] compat.h: define CLOCK_MONOTONIC_RAW
+Date: Tue, 30 Jun 2015 12:01:01 +0200
+Message-ID: <1435658461-3198-1-git-send-email-jslaby@suse.com>
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
-To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: davej@codemonkey.org.uk
+Cc: trinity@vger.kernel.org, Jiri Slaby <jslaby@suse.com>
 
-=46rom: Vinson Lee <vlee@twitter.com>
+It is not defined on older distros yet.
 
-CLOCK_BOOTTIME is not available with glibc < 2.14.
-
-=46ix build on CentOS 6.
-
-  CC	syscalls/perf_event_open.o
-syscalls/perf_event_open.c: In function =E2=80=98create_mostly_valid_sa=
-mpling_event=E2=80=99:
-syscalls/perf_event_open.c:1118: error: =E2=80=98CLOCK_BOOTTIME=E2=80=99=
- undeclared (first use in this function)
-syscalls/perf_event_open.c:1118: error: (Each undeclared identifier is =
-reported only once
-syscalls/perf_event_open.c:1118: error: for each function it appears in=
-=2E)
-
-Signed-off-by: Vinson Lee <vlee@twitter.com>
+Signed-off-by: Jiri Slaby <jslaby@suse.com>
 ---
- include/compat.h |    5 +++++
- 1 files changed, 5 insertions(+), 0 deletions(-)
+ include/compat.h | 3 +++
+ 1 file changed, 3 insertions(+)
 
 diff --git a/include/compat.h b/include/compat.h
-index c0c7f0a..0e3d011 100644
+index ce465632c250..589beac75510 100644
 --- a/include/compat.h
 +++ b/include/compat.h
-@@ -997,3 +997,8 @@ struct kvm_get_htab_fd {
- #ifndef EPOLLWAKEUP
- #define EPOLLWAKEUP (1u << 29)
+@@ -1018,6 +1018,9 @@ struct kvm_get_htab_fd {
  #endif
-+
-+/* time.h */
-+#ifndef CLOCK_BOOTTIME
-+#define CLOCK_BOOTTIME 7
+ 
+ /* time.h */
++#ifndef CLOCK_MONOTONIC_RAW
++#define CLOCK_MONOTONIC_RAW 4
 +#endif
---=20
-1.7.1
+ #ifndef CLOCK_BOOTTIME
+ #define CLOCK_BOOTTIME 7
+ #endif
+-- 
+2.4.3
