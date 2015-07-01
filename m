@@ -1,49 +1,24 @@
-From: Dave Jones <davej@codemonkey.org.uk>
+From: =?UTF-8?Q?Toralf_F=c3=b6rster?= <toralf.foerster@gmx.de>
 Subject: Re: git issue
-Date: Wed, 1 Jul 2015 10:21:41 -0400
-Message-ID: <20150701142141.GA11460@codemonkey.org.uk>
-References: <5593ED2C.50705@gmx.de>
+Date: Wed, 1 Jul 2015 17:11:22 +0200
+Message-ID: <5594031A.5070106@gmx.de>
+References: <5593ED2C.50705@gmx.de> <20150701142141.GA11460@codemonkey.org.uk>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <5593ED2C.50705@gmx.de>
+In-Reply-To: <20150701142141.GA11460@codemonkey.org.uk>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="iso-8859-1"
-To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
+Content-Type: text/plain; charset="us-ascii"
+To: Dave Jones <davej@codemonkey.org.uk>
 Cc: trinity@vger.kernel.org
 
-On Wed, Jul 01, 2015 at 03:37:48PM +0200, Toralf F=F6rster wrote:
- > got today :
- >=20
- > $ cd ~/devel/trinity; git pull                      =20
- > U       blockdevs.c
- > U       debug.c
- > U       rand/random-pathname.c
- > U       rand/random.c
- > U       shm.c
- > U       tools/analyze-sockets.c
- > U       uid.c
- > Pull is not possible because you have unmerged files.
- > Please, fix them up in the work tree, and then use 'git add/rm <file=
->'
- > as appropriate to mark resolution and make a commit.
- >=20
- >=20
- > tfoerste@t44 ~/devel/trinity $ git diff
- >=20
- > tfoerste@t44 ~/devel/trinity $ git status
- > On branch master
- > Your branch and 'origin/master' have diverged,
- > and have 3702 and 3711 different commits each, respectively.
- >   (use "git pull" to merge the remote branch into yours)
- > You have unmerged paths.
- >   (fix conflicts and run "git commit")
+On 07/01/2015 04:21 PM, Dave Jones wrote:
+> I wondered if anyone would notice this.
 
-I wondered if anyone would notice this.
-I edited history to fix up two broken commit dates.
+I use git snapshots of trinity to test here something with user mode linux and KVM.
+Not as often as in the past but sometimes I just pull from your repo.
 
-Just reclone. Shouldn't happen again.
-
-	Dave
+-- 
+Toralf
+pgp key: 7B1A 07F4 EC82 0F90 D4C2  8936 872A E508 0076 E94E
