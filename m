@@ -1,61 +1,49 @@
-From: =?UTF-8?Q?Toralf_F=c3=b6rster?= <toralf.foerster@gmx.de>
-Subject: git issue
-Date: Wed, 1 Jul 2015 15:37:48 +0200
-Message-ID: <5593ED2C.50705@gmx.de>
+From: Dave Jones <davej@codemonkey.org.uk>
+Subject: Re: git issue
+Date: Wed, 1 Jul 2015 10:21:41 -0400
+Message-ID: <20150701142141.GA11460@codemonkey.org.uk>
+References: <5593ED2C.50705@gmx.de>
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
+Content-Disposition: inline
+In-Reply-To: <5593ED2C.50705@gmx.de>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"
-To: trinity@vger.kernel.org
+Content-Type: text/plain; charset="iso-8859-1"
+To: Toralf =?iso-8859-1?Q?F=F6rster?= <toralf.foerster@gmx.de>
+Cc: trinity@vger.kernel.org
 
-got today :
+On Wed, Jul 01, 2015 at 03:37:48PM +0200, Toralf F=F6rster wrote:
+ > got today :
+ >=20
+ > $ cd ~/devel/trinity; git pull                      =20
+ > U       blockdevs.c
+ > U       debug.c
+ > U       rand/random-pathname.c
+ > U       rand/random.c
+ > U       shm.c
+ > U       tools/analyze-sockets.c
+ > U       uid.c
+ > Pull is not possible because you have unmerged files.
+ > Please, fix them up in the work tree, and then use 'git add/rm <file=
+>'
+ > as appropriate to mark resolution and make a commit.
+ >=20
+ >=20
+ > tfoerste@t44 ~/devel/trinity $ git diff
+ >=20
+ > tfoerste@t44 ~/devel/trinity $ git status
+ > On branch master
+ > Your branch and 'origin/master' have diverged,
+ > and have 3702 and 3711 different commits each, respectively.
+ >   (use "git pull" to merge the remote branch into yours)
+ > You have unmerged paths.
+ >   (fix conflicts and run "git commit")
 
-$ cd ~/devel/trinity; git pull                       
-U       blockdevs.c
-U       debug.c
-U       rand/random-pathname.c
-U       rand/random.c
-U       shm.c
-U       tools/analyze-sockets.c
-U       uid.c
-Pull is not possible because you have unmerged files.
-Please, fix them up in the work tree, and then use 'git add/rm <file>'
-as appropriate to mark resolution and make a commit.
+I wondered if anyone would notice this.
+I edited history to fix up two broken commit dates.
 
+Just reclone. Shouldn't happen again.
 
-tfoerste@t44 ~/devel/trinity $ git diff
-
-tfoerste@t44 ~/devel/trinity $ git status
-On branch master
-Your branch and 'origin/master' have diverged,
-and have 3702 and 3711 different commits each, respectively.
-  (use "git pull" to merge the remote branch into yours)
-You have unmerged paths.
-  (fix conflicts and run "git commit")
-
-Unmerged paths:
-  (use "git add <file>..." to mark resolution)
-
-        both added:      blockdevs.c
-        both added:      debug.c
-        both added:      rand/random-pathname.c
-        both added:      rand/random.c
-        both added:      shm.c
-        both added:      tools/analyze-sockets.c
-        both added:      uid.c
-
-no changes added to commit (use "git add" and/or "git commit -a")
-
-tfoerste@t44 ~/devel/trinity $ git diff | patch -R
-patch: **** Only garbage was found in the patch input.
-
-tfoerste@t44 ~/devel/trinity $ git diff
-tfoerste@t44 ~/devel/trinity $
-
-/me ownders how to solve this - I did not edit loally files AFAICT
-
--- 
-Toralf
-pgp key: 7B1A 07F4 EC82 0F90 D4C2  8936 872A E508 0076 E94E
+	Dave
