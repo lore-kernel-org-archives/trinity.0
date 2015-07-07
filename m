@@ -1,24 +1,48 @@
-From: =?UTF-8?Q?Toralf_F=c3=b6rster?= <toralf.foerster@gmx.de>
-Subject: Re: git issue
-Date: Wed, 1 Jul 2015 17:11:22 +0200
-Message-ID: <5594031A.5070106@gmx.de>
-References: <5593ED2C.50705@gmx.de> <20150701142141.GA11460@codemonkey.org.uk>
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
+From: Vinson Lee <vlee@twopensource.com>
+Subject: [PATCH] Add POLLFREE symbol for older distros.
+Date: Tue,  7 Jul 2015 14:46:06 -0700
+Message-ID: <1436305566-7427-1-git-send-email-vlee@twopensource.com>
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <20150701142141.GA11460@codemonkey.org.uk>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
-To: Dave Jones <davej@codemonkey.org.uk>
-Cc: trinity@vger.kernel.org
+Content-Transfer-Encoding: 7bit
+To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
-On 07/01/2015 04:21 PM, Dave Jones wrote:
-> I wondered if anyone would notice this.
+From: Vinson Lee <vlee@twitter.com>
 
-I use git snapshots of trinity to test here something with user mode linux and KVM.
-Not as often as in the past but sometimes I just pull from your repo.
+Signed-off-by: Vinson Lee <vlee@twitter.com>
+---
+ include/compat.h |    5 +++++
+ syscalls/poll.c  |    1 +
+ 2 files changed, 6 insertions(+), 0 deletions(-)
 
+diff --git a/include/compat.h b/include/compat.h
+index 589beac..2eb8691 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -1024,3 +1024,8 @@ struct kvm_get_htab_fd {
+ #ifndef CLOCK_BOOTTIME
+ #define CLOCK_BOOTTIME 7
+ #endif
++
++/* asm-generic/poll.h */
++#ifndef POLLFREE
++#define POLLFREE 0x4000
++#endif
+diff --git a/syscalls/poll.c b/syscalls/poll.c
+index ad97482..5b863c5 100644
+--- a/syscalls/poll.c
++++ b/syscalls/poll.c
+@@ -7,6 +7,7 @@
+ #include "random.h"
+ #include "sanitise.h"
+ #include "utils.h"
++#include "compat.h"
+ 
+ static const unsigned long poll_events[] = {
+ 	POLLIN, POLLPRI, POLLOUT, POLLERR,
 -- 
-Toralf
-pgp key: 7B1A 07F4 EC82 0F90 D4C2  8936 872A E508 0076 E94E
+1.7.1
