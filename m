@@ -1,47 +1,34 @@
-From: Vinson Lee <vlee@twopensource.com>
-Subject: [PATCH] Fix build with kernel 3.4 headers.
-Date: Fri, 17 Jul 2015 11:15:41 -0700
-Message-ID: <1437156941-5862-1-git-send-email-vlee@twopensource.com>
-Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
+From: Praveen Pandey <praveen@linux.vnet.ibm.com>
+Subject: [PATCH] fix trinity compilation (make) error in ppcle system
+Date: Mon, 20 Jul 2015 14:29:16 +0530
+Message-ID: <1437382756-4631-1-git-send-email-praveen@linux.vnet.ibm.com>
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
-Cc: Vinson Lee <vlee@twitter.com>
+Cc: sachinp@in.ibm.com, Praveen Pandey <praveen@linux.vnet.ibm.com>
 
-=46rom: Vinson Lee <vlee@twitter.com>
+Solution include termios.h in ioctls/vt.c 
 
-PR_SET_CHILD_SUBREAPER was added in kernel 3.4 but PR_SET_NO_NEW_PRIVS,
-PR_GET_NO_NEW_PRIVS, and PR_GET_TID_ADDRESS were added in kernel 3.5.
-
-  CC	syscalls/prctl.o
-syscalls/prctl.c:33: error: =E2=80=98PR_SET_NO_NEW_PRIVS=E2=80=99 undec=
-lared here (not in a function)
-syscalls/prctl.c:34: error: =E2=80=98PR_GET_NO_NEW_PRIVS=E2=80=99 undec=
-lared here (not in a function)
-syscalls/prctl.c:34: error: =E2=80=98PR_GET_TID_ADDRESS=E2=80=99 undecl=
-ared here (not in a function)
-
-Signed-off-by: Vinson Lee <vlee@twitter.com>
+Signed-off-by: Praveen Pandey <praveen@linux.vnet.ibm.com>
 ---
- include/compat.h | 3 +++
- 1 file changed, 3 insertions(+)
+ ioctls/vt.c | 1 +
+ 1 file changed, 1 insertion(+)
 
-diff --git a/include/compat.h b/include/compat.h
-index 5451870..0e0f30e 100644
---- a/include/compat.h
-+++ b/include/compat.h
-@@ -275,6 +275,9 @@ enum {
- #ifndef PR_SET_CHILD_SUBREAPER
- #define PR_SET_CHILD_SUBREAPER  36
- #define PR_GET_CHILD_SUBREAPER  37
-+#endif
-+
-+#ifndef PR_SET_NO_NEW_PRIVS
- #define PR_SET_NO_NEW_PRIVS     38
- #define PR_GET_NO_NEW_PRIVS     39
- #define PR_GET_TID_ADDRESS      40
---=20
-1.9.1
+diff --git a/ioctls/vt.c b/ioctls/vt.c
+index a4a7e0c..350416f 100644
+--- a/ioctls/vt.c
++++ b/ioctls/vt.c
+@@ -2,6 +2,7 @@
+ #include <sys/ioctl.h>
+ #include <linux/kd.h>
+ #include <linux/serial.h>
++#include <sys/termios.h>
+ 
+ #include "utils.h"
+ #include "ioctls.h"
+-- 
+1.9.3
