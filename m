@@ -1,47 +1,47 @@
-From: Hangbin Liu <liuhangbin@gmail.com>
-Subject: [PATCH] fix build prctl.h header on RHEL6.7
-Date: Mon, 31 Aug 2015 17:18:37 +0800
-Message-ID: <1441012717-20482-1-git-send-email-liuhangbin@gmail.com>
+From: Vinson Lee <vlee@twopensource.com>
+Subject: [PATCH] socket: Fix missing-field-initializers build error.
+Date: Mon, 31 Aug 2015 16:40:51 -0700
+Message-ID: <1441064451-16193-1-git-send-email-vlee@twopensource.com>
+Mime-Version: 1.0
+Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=from:to:cc:subject:date:message-id;
-        bh=RjZg2gMxpOPc9ORSrmh6lEJ7hFB1pPLWZhC05W2PTaA=;
-        b=he3C3RrRt7MQ4gNMzSsukXwVbjQo/T1jG6N9gy9tyzqARD5cWvaVz3Y+x+/bLQC/3z
-         MhYZkJZcgQ65EVMsRPIGB5eOouw38ugbRw6uiER9HOzXhLKrDOzyAUNcfvuW3YtEjnkY
-         2nd2r+J9/cABBiufw+xOOuLek6c6xI7mIsPuinDqv9KK98LQqRMC/sRkkzxaZejJQpDX
-         CIg3qrPJ/8HzY8Jx2F8fBV10kqy6U3TN8+IzxHZUYin1zeApC2HwLzxIh6wOsdUMCQcX
-         RHiAuNljfPDu7FXQMzdhNbE41mTWQK1riEqpl+WLAwL2p2A1YUyJalO3XrGYmrDySUEG
-         2vMA==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-To: Trinity <trinity@vger.kernel.org>
-Cc: Hangbin Liu <liuhangbin@gmail.com>
+Content-Type: text/plain; charset="utf-8"
+To: trinity@vger.kernel.org
+Cc: Vinson Lee <vlee@twitter.com>
 
-latest RHEL6.7 kernel headers only defined PR_SET/GET_NO_NEW_PRIVS, which
-lead to 'PR_GET_TID_ADDRESS' undeclared build error.
+=46rom: Vinson Lee <vlee@twitter.com>
 
-Signed-off-by: Hangbin Liu <liuhangbin@gmail.com>
+This patch fixes this build error.
+
+  CC	syscalls/socket.o
+syscalls/socket.c:48:2: error: missing initializer for field =E2=80=98f=
+unc=E2=80=99 of =E2=80=98const struct socket_ptr=E2=80=99 [-Werror=3Dmi=
+ssing-field-initializers]
+  [AF_ECONET] =3D {  }, // DEAD
+  ^
+syscalls/socket.c:22:9: note: =E2=80=98func=E2=80=99 declared here
+  void (*func)(struct socket_triplet *st);
+         ^
+
+Signed-off-by: Vinson Lee <vlee@twitter.com>
 ---
- include/compat.h | 3 +++
- 1 file changed, 3 insertions(+)
+ syscalls/socket.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/include/compat.h b/include/compat.h
-index 0e0f30e..1f1ad9c 100644
---- a/include/compat.h
-+++ b/include/compat.h
-@@ -280,6 +280,9 @@ enum {
- #ifndef PR_SET_NO_NEW_PRIVS
- #define PR_SET_NO_NEW_PRIVS     38
- #define PR_GET_NO_NEW_PRIVS     39
-+#endif
-+
-+#ifndef PR_GET_TID_ADDRESS
- #define PR_GET_TID_ADDRESS      40
- #endif
- 
--- 
-1.9.3
+diff --git a/syscalls/socket.c b/syscalls/socket.c
+index 8beaf8d..94feb66 100644
+--- a/syscalls/socket.c
++++ b/syscalls/socket.c
+@@ -45,7 +45,7 @@ static const struct socket_ptr socketptrs[] =3D {
+ 	[AF_NETLINK] =3D { .func =3D &netlink_rand_socket },
+ 	[AF_PACKET] =3D { .func =3D &packet_rand_socket },
+ 	[AF_ASH] =3D { .func =3D NULL },
+-	[AF_ECONET] =3D {  },	// DEAD
++	[AF_ECONET] =3D { .func =3D NULL },	// DEAD
+ 	[AF_ATMSVC] =3D { .func =3D NULL },
+ 	[AF_RDS] =3D { .func =3D &rds_rand_socket },
+ 	[AF_SNA] =3D { .func =3D NULL },
+--=20
+2.1.4
