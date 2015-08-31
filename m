@@ -1,36 +1,47 @@
-From: Dave Jones <davej@codemonkey.org.uk>
-Subject: Re: [PATCH] Patch : enable  tool as make -p take an arg for seconds
-Date: Tue, 4 Aug 2015 19:44:33 -0400
-Message-ID: <20150804234433.GA20116@codemonkey.org.uk>
-References: <1438159549-4119-1-git-send-email-praveen@linux.vnet.ibm.com>
-Mime-Version: 1.0
+From: Hangbin Liu <liuhangbin@gmail.com>
+Subject: [PATCH] fix build prctl.h header on RHEL6.7
+Date: Mon, 31 Aug 2015 17:18:37 +0800
+Message-ID: <1441012717-20482-1-git-send-email-liuhangbin@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1438159549-4119-1-git-send-email-praveen@linux.vnet.ibm.com>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=from:to:cc:subject:date:message-id;
+        bh=RjZg2gMxpOPc9ORSrmh6lEJ7hFB1pPLWZhC05W2PTaA=;
+        b=he3C3RrRt7MQ4gNMzSsukXwVbjQo/T1jG6N9gy9tyzqARD5cWvaVz3Y+x+/bLQC/3z
+         MhYZkJZcgQ65EVMsRPIGB5eOouw38ugbRw6uiER9HOzXhLKrDOzyAUNcfvuW3YtEjnkY
+         2nd2r+J9/cABBiufw+xOOuLek6c6xI7mIsPuinDqv9KK98LQqRMC/sRkkzxaZejJQpDX
+         CIg3qrPJ/8HzY8Jx2F8fBV10kqy6U3TN8+IzxHZUYin1zeApC2HwLzxIh6wOsdUMCQcX
+         RHiAuNljfPDu7FXQMzdhNbE41mTWQK1riEqpl+WLAwL2p2A1YUyJalO3XrGYmrDySUEG
+         2vMA==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Praveen Pandey <praveen@linux.vnet.ibm.com>
-Cc: trinity@vger.kernel.org, sachinp@in.ibm.com
+To: Trinity <trinity@vger.kernel.org>
+Cc: Hangbin Liu <liuhangbin@gmail.com>
 
-On Wed, Jul 29, 2015 at 02:15:49PM +0530, Praveen Pandey wrote:
+latest RHEL6.7 kernel headers only defined PR_SET/GET_NO_NEW_PRIVS, which
+lead to 'PR_GET_TID_ADDRESS' undeclared build error.
 
- > diff --git a/Documentation/TODO b/Documentation/TODO
- > index 73ea04a..108ee9c 100644
- > --- a/Documentation/TODO
- > +++ b/Documentation/TODO
- > @@ -228,7 +228,7 @@
- >    - if we find a blocking fd, check if it's a socket, and shutdown() it.
- >      (tricky: we need to do the shutdown in the main process, and then tell other children)
- >  
- > -* make -p take an arg for seconds
- > +* make -p take an arg for seconds --- DONE
+Signed-off-by: Hangbin Liu <liuhangbin@gmail.com>
+---
+ include/compat.h | 3 +++
+ 1 file changed, 3 insertions(+)
 
-I'm not sure this feature actually adds any value any more.
-I don't recall what I was thinking back when I added that TODO item,
-but it probably came from a time long before Trinity had multiple child processes.
-
-Unless anyone has a compelling reason for this, I'd say just drop it.
-
-	Dave
+diff --git a/include/compat.h b/include/compat.h
+index 0e0f30e..1f1ad9c 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -280,6 +280,9 @@ enum {
+ #ifndef PR_SET_NO_NEW_PRIVS
+ #define PR_SET_NO_NEW_PRIVS     38
+ #define PR_GET_NO_NEW_PRIVS     39
++#endif
++
++#ifndef PR_GET_TID_ADDRESS
+ #define PR_GET_TID_ADDRESS      40
+ #endif
+ 
+-- 
+1.9.3
