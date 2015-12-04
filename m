@@ -1,7 +1,7 @@
 From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] Remove unused variable in fds/drm.c.
-Date: Fri,  4 Dec 2015 02:16:26 -0800
-Message-ID: <1449224186-28318-1-git-send-email-vlee@freedesktop.org>
+Subject: [PATCH v2] Remove unused variable in fds/drm.c.
+Date: Fri,  4 Dec 2015 02:18:52 -0800
+Message-ID: <1449224332-29060-1-git-send-email-vlee@freedesktop.org>
 Mime-Version: 1.0
 Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
@@ -10,7 +10,7 @@ List-ID: <trinity.vger.kernel.org>
 Content-Type: text/plain; charset="utf-8"
 To: trinity@vger.kernel.org
 
-=46ix with build error with GCC 5.2.1.
+=46ix build error with GCC 5.2.1.
 
   CC	fds/drm.o
 fds/drm.c: In function =E2=80=98open_drm_fds=E2=80=99:
@@ -21,6 +21,8 @@ unused-variable]
 
 Signed-off-by: Vinson Lee <vlee@freedesktop.org>
 ---
+v2 - Fixed typo in commit message.
+
  fds/drm.c | 1 -
  1 file changed, 1 deletion(-)
 
