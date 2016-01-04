@@ -1,10 +1,8 @@
 From: Jiri Slaby <jslaby@suse.cz>
-Subject: [PATCH v2 2/2] Makefile: fix build with older glibc
-Date: Mon,  4 Jan 2016 12:21:31 +0100
-Message-ID: <1451906491-20710-2-git-send-email-jslaby@suse.cz>
-References: <1451906491-20710-1-git-send-email-jslaby@suse.cz>
+Subject: [PATCH v2 1/2] compat.h: add more macros
+Date: Mon,  4 Jan 2016 12:21:30 +0100
+Message-ID: <1451906491-20710-1-git-send-email-jslaby@suse.cz>
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <1451906491-20710-1-git-send-email-jslaby@suse.cz>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -13,45 +11,62 @@ Content-Transfer-Encoding: 7bit
 To: davej@codemonkey.org.uk
 Cc: trinity@vger.kernel.org, Jiri Slaby <jslaby@suse.cz>
 
-man 2 clock_gettime says:
-Link with -lrt (only for glibc versions before 2.17).
+Some more RTNLGRP macros are not defined on SLE11 yet.
 
-If we do not do that, we get:
-post-mortem.c:61: undefined reference to `clock_gettime'
-syscall.o: In function `__do_syscall':
-syscall.c:121: undefined reference to `clock_gettime'
-watchdog.o: In function `is_child_making_progress':
-watchdog.c:317: undefined reference to `clock_gettime'
+[v2]: NVME_IOCTL_RESET is not defined on openSUSE 42.1. Include
+compat.h in ioctls/nvme.c.
 
-So introduce (standard) LDLIBS into Makefile and add -lrt there.
+So define them in compat.h.
 
 Signed-off-by: Jiri Slaby <jslaby@suse.cz>
 ---
- Makefile | 5 ++++-
- 1 file changed, 4 insertions(+), 1 deletion(-)
+ include/compat.h | 17 +++++++++++++++++
+ ioctls/nvme.c    |  1 +
+ 2 files changed, 18 insertions(+)
 
-diff --git a/Makefile b/Makefile
-index 0cdcf4be0ae0..a70c5bd958a5 100644
---- a/Makefile
-+++ b/Makefile
-@@ -37,6 +37,9 @@ CFLAGS += -Wstrict-prototypes -Wmissing-prototypes
- # needed for show_backtrace() to work correctly.
- LDFLAGS += -rdynamic
- 
-+# glibc versions before 2.17 for clock_gettime
-+LDLIBS += -lrt
+diff --git a/include/compat.h b/include/compat.h
+index fda51b529b4d..65e5e3c3cc08 100644
+--- a/include/compat.h
++++ b/include/compat.h
+@@ -268,6 +268,18 @@ enum {
+ #ifndef NETLINK_SOCK_DIAG
+ #define NETLINK_SOCK_DIAG 4
+ #endif
++#ifndef RTNLGRP_DCB
++#define RTNLGRP_DCB 23
++#endif
++#ifndef RTNLGRP_IPV4_NETCONF
++#define RTNLGRP_IPV4_NETCONF 24
++#endif
++#ifndef RTNLGRP_IPV6_NETCONF
++#define RTNLGRP_IPV6_NETCONF 25
++#endif
++#ifndef RTNLGRP_MDB
++#define RTNLGRP_MDB 26
++#endif
+ #ifndef RTNLGRP_MPLS_ROUTE
+ #define RTNLGRP_MPLS_ROUTE 27
+ #endif
+@@ -1055,3 +1067,8 @@ struct kvm_get_htab_fd {
+ #ifndef POLL_BUSY_LOOP
+ #define POLL_BUSY_LOOP 0x8000
+ #endif
 +
- # gcc only.
- ifneq ($(shell $(CC) -v 2>&1 | grep -c "clang"), 1)
- CFLAGS += -Wlogical-op
-@@ -96,7 +99,7 @@ DEPDIR= .deps
- -include $(SRCS:%.c=$(DEPDIR)/%.d)
++/* linux/nvme_ioctl.h */
++#ifndef NVME_IOCTL_RESET
++#define NVME_IOCTL_RESET _IO('N', 0x44)
++#endif
+diff --git a/ioctls/nvme.c b/ioctls/nvme.c
+index 406ec6bc2254..2cc9f1f9d366 100644
+--- a/ioctls/nvme.c
++++ b/ioctls/nvme.c
+@@ -3,6 +3,7 @@
+ #include <linux/ioctl.h>
+ #include <linux/nvme.h>
  
- trinity: version test $(OBJS) $(HEADERS)
--	$(QUIET_CC)$(CC) $(CFLAGS) $(LDFLAGS) -o trinity $(OBJS)
-+	$(QUIET_CC)$(CC) $(CFLAGS) $(LDFLAGS) -o trinity $(OBJS) $(LDLIBS)
- 	@mkdir -p tmp
++#include "compat.h"
+ #include "utils.h"
+ #include "ioctls.h"
  
- df = $(DEPDIR)/$(*D)/$(*F)
 -- 
 2.6.4
