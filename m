@@ -1,72 +1,67 @@
-From: Jiri Slaby <jslaby@suse.cz>
-Subject: [PATCH v2 1/2] compat.h: add more macros
-Date: Mon,  4 Jan 2016 12:21:30 +0100
-Message-ID: <1451906491-20710-1-git-send-email-jslaby@suse.cz>
+From: Eric B Munson <emunson@akamai.com>
+Subject: [PATCH] Add MCL_ONFAULT to mlockall calls
+Date: Wed, 20 Jan 2016 14:51:12 -0500
+Message-ID: <1453319472-8660-1-git-send-email-emunson@akamai.com>
 Return-path: <trinity-owner@vger.kernel.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=akamai.com; s=a1;
+	t=1453319482; bh=QEXab0sARrt0LMpRcuVZjz60277gHXUS2NGOWPdMdg8=;
+	l=1390; h=From:To:Cc:Date:From;
+	b=QdVbRzbExiCysCTTF9pf25kuKNq0OeSb7rDULOA2Ybh0onUYyWx4OH1GEfKEG1Oj8
+	 p2U5sG4/sWdqPPoe57AWit9hTm9+8sjSrkFL3pqclWNnTbPbsqw345aQp+646Rj/RV
+	 03cmJphXF+An/HcF8IZINbuMHvjZEWQ2+AT9Diog=
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: davej@codemonkey.org.uk
-Cc: trinity@vger.kernel.org, Jiri Slaby <jslaby@suse.cz>
+To: trinity@vger.kernel.org
+Cc: Eric B Munson <emunson@akamai.com>, Dave Jones <davej@codemonkey.org.uk>
 
-Some more RTNLGRP macros are not defined on SLE11 yet.
+The new mlock2 system call was added, but it looks like the MCL_ONFAULT
+flag was missed.  This is now a valid flag to pass to mlockall(), but it
+must be used in conjunction with either MCL_CURRENT or MCL_FUTURE (or
+both).  Also rework the way that the flags value for mlockall() is
+caclulated.  It is valid to pass any combination of the MCL_* flags
+except for MCL_ONFAULT alone.
 
-[v2]: NVME_IOCTL_RESET is not defined on openSUSE 42.1. Include
-compat.h in ioctls/nvme.c.
-
-So define them in compat.h.
-
-Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+Signed-off-by: Eric B Munson <emunson@akamai.com>
+Cc: Dave Jones <davej@codemonkey.org.uk>
 ---
- include/compat.h | 17 +++++++++++++++++
- ioctls/nvme.c    |  1 +
- 2 files changed, 18 insertions(+)
+ syscalls/mlockall.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
 
-diff --git a/include/compat.h b/include/compat.h
-index fda51b529b4d..65e5e3c3cc08 100644
---- a/include/compat.h
-+++ b/include/compat.h
-@@ -268,6 +268,18 @@ enum {
- #ifndef NETLINK_SOCK_DIAG
- #define NETLINK_SOCK_DIAG 4
- #endif
-+#ifndef RTNLGRP_DCB
-+#define RTNLGRP_DCB 23
-+#endif
-+#ifndef RTNLGRP_IPV4_NETCONF
-+#define RTNLGRP_IPV4_NETCONF 24
-+#endif
-+#ifndef RTNLGRP_IPV6_NETCONF
-+#define RTNLGRP_IPV6_NETCONF 25
-+#endif
-+#ifndef RTNLGRP_MDB
-+#define RTNLGRP_MDB 26
-+#endif
- #ifndef RTNLGRP_MPLS_ROUTE
- #define RTNLGRP_MPLS_ROUTE 27
- #endif
-@@ -1055,3 +1067,8 @@ struct kvm_get_htab_fd {
- #ifndef POLL_BUSY_LOOP
- #define POLL_BUSY_LOOP 0x8000
- #endif
-+
-+/* linux/nvme_ioctl.h */
-+#ifndef NVME_IOCTL_RESET
-+#define NVME_IOCTL_RESET _IO('N', 0x44)
-+#endif
-diff --git a/ioctls/nvme.c b/ioctls/nvme.c
-index 406ec6bc2254..2cc9f1f9d366 100644
---- a/ioctls/nvme.c
-+++ b/ioctls/nvme.c
-@@ -3,6 +3,7 @@
- #include <linux/ioctl.h>
- #include <linux/nvme.h>
+diff --git a/syscalls/mlockall.c b/syscalls/mlockall.c
+index 4485aa6..9c99424 100644
+--- a/syscalls/mlockall.c
++++ b/syscalls/mlockall.c
+@@ -10,20 +10,23 @@
  
-+#include "compat.h"
- #include "utils.h"
- #include "ioctls.h"
+ #define MCL_CURRENT     1
+ #define MCL_FUTURE      2
++#define MCL_ONFAULT	4
  
+ static void sanitise_mlockall(struct syscallrecord *rec)
+ {
+ 	if (rec->a1 != 0)
+ 		return;
+ 
+-	if (RAND_BOOL())
+-		rec->a1 = MCL_CURRENT;
+-	else
+-		rec->a1 = MCL_FUTURE;
++	/*
++	 * There are two invalid bit patterns for MCL flags, 0, and MCL_ONFAULT
++	 * alone.  All other combinations should be valid.
++	 */
++	while (rec->a1 == 0 || rec->a1 == MCL_ONFAULT)
++		rec->a1 = (RAND_BYTE() & 0x07);
+ }
+ 
+ static unsigned long mlockall_flags[] = {
+-	MCL_CURRENT, MCL_FUTURE,
++	MCL_CURRENT, MCL_FUTURE, MCL_ONFAULT,
+ };
+ 
+ struct syscallentry syscall_mlockall = {
 -- 
-2.6.4
+1.9.1
