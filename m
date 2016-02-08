@@ -1,28 +1,36 @@
-From: Dave Jones <davej@codemonkey.org.uk>
-Subject: Re: [PATCH] net/protocols.c: fix build on old machines
-Date: Tue, 2 Feb 2016 11:30:11 -0500
-Message-ID: <20160202163011.GA15535@codemonkey.org.uk>
-References: <1454415921-13454-1-git-send-email-jslaby@suse.cz>
-Mime-Version: 1.0
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] Makefile: Use -std=gnu99 if -std=gnu11 is not supported.
+Date: Mon,  8 Feb 2016 21:24:41 +0100
+Message-ID: <1454963081-6500-1-git-send-email-vlee@freedesktop.org>
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <1454415921-13454-1-git-send-email-jslaby@suse.cz>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Jiri Slaby <jslaby@suse.cz>
-Cc: trinity@vger.kernel.org
+To: trinity@vger.kernel.org
 
-On Tue, Feb 02, 2016 at 01:25:21PM +0100, Jiri Slaby wrote:
- > * include compat.h for PF_* constants
- > * use PF_NFC only if it can fit into the list
- > * use PF_ALG only if USE_IF_ALG is defined
+-std=gnu11 is not available with gcc < 4.7.
 
-I committed a slightly different fix for the PF_NFC problem
-that avoids the #if
+Signed-off-by: Vinson Lee <vlee@freedesktop.org>
+---
+ Makefile |    4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
 
-Let me know if this doesn't work.
-
-thanks,
-	Dave
+diff --git a/Makefile b/Makefile
+index a47e248..9fbdb94 100644
+--- a/Makefile
++++ b/Makefile
+@@ -10,7 +10,9 @@ endif
+ CC := $(CROSS_COMPILE)$(CC)
+ LD := $(CROSS_COMPILE)$(LD)
+ 
+-CFLAGS += -Wall -Wextra -g -O2 -I. -Iinclude/ -Wimplicit -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE -D__linux__ -std=gnu11
++CFLAGS += -Wall -Wextra -g -O2 -I. -Iinclude/ -Wimplicit -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE -D__linux__
++
++CFLAGS += $(shell if $(CC) -std=gnu11 -S -o /dev/null -xc /dev/null >/dev/null 2>&1; then echo "-std=gnu11"; else echo "-std=gnu99"; fi)
+ 
+ # Only enabled during development, and on gcc 4.9+
+ CPP_MAJOR := $(shell $(CPP) -dumpversion 2>&1 | cut -d'.' -f1)
+-- 
+1.7.9.5
