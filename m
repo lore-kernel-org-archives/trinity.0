@@ -1,36 +1,36 @@
-From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] Makefile: Use -std=gnu99 if -std=gnu11 is not supported.
-Date: Mon,  8 Feb 2016 21:24:41 +0100
-Message-ID: <1454963081-6500-1-git-send-email-vlee@freedesktop.org>
+From: Artem Savkov <asavkov@redhat.com>
+Subject: [PATCH] Fix logging logic in output().
+Date: Wed, 17 Feb 2016 17:20:39 +0100
+Message-ID: <1455726039-5525-1-git-send-email-asavkov@redhat.com>
 Return-path: <trinity-owner@vger.kernel.org>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
+To: davej@codemonkey.org.uk
+Cc: trinity@vger.kernel.org, Artem Savkov <asavkov@redhat.com>
 
--std=gnu11 is not available with gcc < 4.7.
+Commit "preparation for different forms of logging." contained a typo that
+broke logging to mainlogfile.
 
-Signed-off-by: Vinson Lee <vlee@freedesktop.org>
+Signed-off-by: Artem Savkov <asavkov@redhat.com>
 ---
- Makefile |    4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
+ log.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/Makefile b/Makefile
-index a47e248..9fbdb94 100644
---- a/Makefile
-+++ b/Makefile
-@@ -10,7 +10,9 @@ endif
- CC := $(CROSS_COMPILE)$(CC)
- LD := $(CROSS_COMPILE)$(LD)
+diff --git a/log.c b/log.c
+index dbac844..aee5a67 100644
+--- a/log.c
++++ b/log.c
+@@ -103,7 +103,7 @@ void output(unsigned char level, const char *fmt, ...)
+ 	}
  
--CFLAGS += -Wall -Wextra -g -O2 -I. -Iinclude/ -Wimplicit -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE -D__linux__ -std=gnu11
-+CFLAGS += -Wall -Wextra -g -O2 -I. -Iinclude/ -Wimplicit -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE -D__linux__
-+
-+CFLAGS += $(shell if $(CC) -std=gnu11 -S -o /dev/null -xc /dev/null >/dev/null 2>&1; then echo "-std=gnu11"; else echo "-std=gnu99"; fi)
+ 	/* go on with file logs only if enabled */
+-	if (logging == LOGGING_FILES)
++	if (logging == LOGGING_DISABLED)
+ 		return;
  
- # Only enabled during development, and on gcc 4.9+
- CPP_MAJOR := $(shell $(CPP) -dumpversion 2>&1 | cut -d'.' -f1)
+ 	handle = find_logfile_handle();
 -- 
-1.7.9.5
+2.5.0
