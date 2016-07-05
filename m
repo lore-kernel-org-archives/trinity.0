@@ -1,41 +1,40 @@
-From: Vinson Lee <vlee@freedesktop.org>
-Subject: [PATCH] fds/drm.c: Add forward declaration of struct.
-Date: Thu, 26 May 2016 00:05:24 +0000
-Message-ID: <1464221124-14378-1-git-send-email-vlee@freedesktop.org>
+From: Fabien Siron <fabien.siron@epita.fr>
+Subject: [PATCH] net/proto-unix.c: set protocol to 0 in unix_rand_socket()
+Date: Tue, 5 Jul 2016 10:02:46 +0000
+Message-ID: <20160705100246.3951-1-fabien.siron@epita.fr>
 Mime-Version: 1.0
-Content-Transfer-Encoding: QUOTED-PRINTABLE
 Return-path: <trinity-owner@vger.kernel.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+ d=epitafr.onmicrosoft.com; s=selector1-epita-fr;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version;
+ bh=qSsP75Sj7d3rodge92b25foyaRJBTJ1FxHzhHXKvYf8=;
+ b=nSJf2uxhaVuRV8JF+f8au9LVtW9IU1uMH6ZQcx0NEMZOXYaJGRWH9MjSJBT5siYk7ClesqH3R6YPrslxPWLZzNojnzRT1GpSJtndF02xbXFLo0C/Jrim1zq36dLTtgGB7fpS7WfYKmtGZJVwTizwU+v+vhdFrG42v4yOlEE9B3U=
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="utf-8"
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org
+Cc: Fabien Siron <fabien.siron@epita.fr>
 
-=46ix build error.
+The protocol of an AF_UNIX socket should be 0.
 
-  CC	fds/drm.o
-fds/drm.c: In function =E2=80=98open_drm_fds=E2=80=99:
-fds/drm.c:120:3: error: =E2=80=98drm_fd_provider=E2=80=99 undeclared (f=
-irst use in this function)
-   drm_fd_provider.enabled =3D FALSE;
-   ^
-
-Signed-off-by: Vinson Lee <vlee@freedesktop.org>
+Signed-off-by: Fabien Siron <fabien.siron@epita.fr>
 ---
- fds/drm.c | 2 ++
- 1 file changed, 2 insertions(+)
+ net/proto-unix.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/fds/drm.c b/fds/drm.c
-index d33b00e4be51..54cc0faa8d1a 100644
---- a/fds/drm.c
-+++ b/fds/drm.c
-@@ -71,6 +71,8 @@ static void add_drm_obj(int fd)
- 	output(2, "fd[%d] =3D drm\n", fd);
- }
-=20
-+static struct fd_provider drm_fd_provider;
-+
- static int open_drm_fds(void)
+diff --git a/net/proto-unix.c b/net/proto-unix.c
+index 2ef0457..8d1ee9a 100644
+--- a/net/proto-unix.c
++++ b/net/proto-unix.c
+@@ -24,7 +24,7 @@ static void unix_gen_sockaddr(struct sockaddr **addr, socklen_t *addrlen)
+ 
+ static void unix_rand_socket(struct socket_triplet *st)
  {
- 	struct objhead *head;
---=20
-2.7.4
+-	st->protocol = PF_UNIX;
++	st->protocol = 0;
+ 
+ 	switch (rnd() % 3) {
+ 	case 0: st->type = SOCK_STREAM;
+-- 
+2.9.0
