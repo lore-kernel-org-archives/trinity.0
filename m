@@ -1,73 +1,104 @@
-From: "Zhangjian (Bamvor)" <bamvor.zhangjian@huawei.com>
-Subject: Re: [RFD] Efficient unit test and fuzz tools for kernel/libc porting
-Date: Wed, 6 Jul 2016 18:38:11 +0800
-Message-ID: <577CDF93.4080001@huawei.com>
-References: <577CB5B7.7040204@huawei.com>
- <CACT4Y+ZvqA-6CQHjjx05bCPqcOXp7O2Gf8+2PeC7U5eXTL+Yrw@mail.gmail.com>
- <577CC058.9030103@huawei.com>
- <CACT4Y+a_5G-G1v4Xn-_dLacuVSNnxGorZMjGKKew6pihg_Hk-Q@mail.gmail.com>
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
+From: Vinson Lee <vlee@freedesktop.org>
+Subject: [PATCH] Fix build on older kernels without BPF.
+Date: Tue, 12 Jul 2016 18:43:06 +0000
+Message-ID: <1468348986-13200-1-git-send-email-vlee@freedesktop.org>
 Return-path: <trinity-owner@vger.kernel.org>
-In-Reply-To: <CACT4Y+a_5G-G1v4Xn-_dLacuVSNnxGorZMjGKKew6pihg_Hk-Q@mail.gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Type: text/plain; charset="us-ascii"; format="flowed"
-To: Dmitry Vyukov <dvyukov@google.com>
-Cc: syzkaller <syzkaller@googlegroups.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch@vger.kernel.org, libc-alpha@sourceware.org, trinity@vger.kernel.org, aponomarenko@rosalab.ru, Jess Hertz <jesse.hertz@nccgroup.trust>, Tim Newsham <tim.newsham@nccgroup.trust>, Arnd Bergmann <arnd@arndb.de>, Catalin Marinas <catalin.marinas@arm.com>, Mark Brown <broonie@kernel.org>, joseph@codesourcery.com, maxim.kuvyrkov@linaro.org, Yury Norov <ynorov@caviumnetworks.com>, pinskia@gmail.com, schwab@suse.de, agraf@suse.de, marcus.shawcroft@arm.com, Ding Tianhong <dingtianhong@huawei.com>, guohanjun@huawei.com, cuibixuan@huawei.com, lijinyue@huawei.com, Zefan Li <lizefan@huawei.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+To: trinity@vger.kernel.org
 
-Hi, Dmitry
+Signed-off-by: Vinson Lee <vlee@freedesktop.org>
+---
+ configure      |    1 +
+ syscalls/bpf.c |   14 ++++++++++++++
+ 2 files changed, 15 insertions(+), 0 deletions(-)
 
-On 2016/7/6 17:09, Dmitry Vyukov wrote:
-> On Wed, Jul 6, 2016 at 10:24 AM, Zhangjian (Bamvor)
-> <bamvor.zhangjian@huawei.com> wrote:
->> Hi, Dmitry
->>
->>
->>> Hi Bamvor,
->>>
->>> Nice work!
->>>
->>> Coverage should be easy to do with CONFIG_KCOV, but do you need
->>> fuzzing/coverage? It seems that testing a predefined set of special
->>> values for each arg should be enough for your use case. Namely special
->>> values that can detect endianess/truncation/sign extension/etc issues.
->>
->> Yes. We are trying to cover endianess/truncation/sign extension at this
->> moment.
->> For coverage, there are some code path in syscall wrapper in both glibc
->> and kernel. E.g. overflow check in glibc. I am thinking if coverage
->> could help on this.
->
-> Ah, you mean user-space coverage. You may try AFL in binary
-> instrumentation mode for this.
-Good idea. AFL seems a wonderful tools. I saw some discussion about use AFL
-to do kernel fuzz(triforce). If AFL support arm64, I could try it my
-aarch64 ILP32 works.
-
-Regards
-
-Bamvor
->
->
->>> I think there is also a number of glibc functions that don't directly
->>> map to syscalls. Most notably wrappers around various ioctl's (e.g.
->>> ptsname). Do you test them?
->>
->> No. Currently, our tools only focus on the syscall function in glibc. In
->> these syscall level, we could compare the parameter and return value
->> directly. As you said, there are only several type of issues. It is easy
->> to handle by tools.
->>
->> I do not know how to test these complex cases. E.g. the ptsname may call
->> ioctl, *stat* syscall. Compare the original parameter is meaningless. But
->> it seems a good type of testcase to show how the user use the syscalls.
->> Do you have some ideas?
->
-> I don't have any ideas for automated testing. One could write a model,
-> of course....
-> --
-> To unsubscribe from this list: send the line "unsubscribe linux-arch" in
-> the body of a message to majordomo@vger.kernel.org
-> More majordomo info at  http://vger.kernel.org/majordomo-info.html
->
+diff --git a/configure b/configure
+index 8d95929..ca37e4e 100755
+--- a/configure
++++ b/configure
+@@ -239,6 +239,7 @@ check_header execinfo.h USE_BACKTRACE
+ check_header netatalk/at.h USE_APPLETALK
+ check_header netrom/netrom.h USE_NETROM
+ check_header netrose/rose.h USE_ROSE
++check_header linux/bpf.h USE_BPF
+ 
+ rm -f "$TMP" "$TMP.log" "$TMP.c"
+ 
+diff --git a/syscalls/bpf.c b/syscalls/bpf.c
+index b2f57d3..4788082 100644
+--- a/syscalls/bpf.c
++++ b/syscalls/bpf.c
+@@ -1,13 +1,16 @@
+ /*
+  * SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, size)
+  */
++#ifdef USE_BPF
+ #include <linux/bpf.h>
++#endif
+ #include <linux/filter.h>
+ #include "arch.h"
+ #include "net.h"
+ #include "random.h"
+ #include "sanitise.h"
+ 
++#ifdef USE_BPF
+ static unsigned long bpf_prog_types[] = {
+ 	BPF_PROG_TYPE_UNSPEC,
+ 	BPF_PROG_TYPE_SOCKET_FILTER,
+@@ -15,9 +18,11 @@ static unsigned long bpf_prog_types[] = {
+ 	BPF_PROG_TYPE_SCHED_CLS,
+ 	BPF_PROG_TYPE_SCHED_ACT,
+ };
++#endif
+ 
+ static const char license[] = "GPLv2";
+ 
++#ifdef USE_BPF
+ static void bpf_prog_load(struct syscallrecord *rec)
+ {
+ 	unsigned long *insns = NULL, len = 0;
+@@ -49,18 +54,22 @@ static void bpf_prog_load(struct syscallrecord *rec)
+ 	rec->a2 = (unsigned long) attr;
+ 	rec->a3 = sizeof(attr);
+ }
++#endif
+ 
+ static void sanitise_bpf(struct syscallrecord *rec)
+ {
+ 	switch (rec->a1) {
++#ifdef USE_BPF
+ 	case BPF_PROG_LOAD:
+ 		bpf_prog_load(rec);
+ 		break;
++#endif
+ 	default:
+ 		break;
+ 	}
+ }
+ 
++#ifdef USE_BPF
+ static void post_bpf(struct syscallrecord *rec)
+ {
+ 	union bpf_attr *attr;
+@@ -84,10 +93,15 @@ static void post_bpf(struct syscallrecord *rec)
+ 		break;
+ 	}
+ }
++#else
++static void post_bpf(__unused__ struct syscallrecord *rec) { }
++#endif
+ 
+ static unsigned long bpf_flags[] = {
++#ifdef USE_BPF
+ 	BPF_MAP_CREATE, BPF_MAP_LOOKUP_ELEM, BPF_MAP_UPDATE_ELEM, BPF_MAP_DELETE_ELEM,
+ 	BPF_MAP_GET_NEXT_KEY, BPF_PROG_LOAD,
++#endif
+ };
+ 
+ struct syscallentry syscall_bpf = {
+-- 
+1.7.1
