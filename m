@@ -1,111 +1,44 @@
-From: Yury Norov <ynorov@caviumnetworks.com>
-Subject: Re: [PATCH] Fix -Wunused error
-Date: Sun, 27 Nov 2016 12:50:29 +0530
-Message-ID: <20161127072029.GA18679@yury-N73SV>
-References: <1480037868-28007-1-git-send-email-ynorov@caviumnetworks.com>
- <20161127025615.fgewhrif2xr576md@codemonkey.org.uk>
+From: Vegard Nossum <vegard.nossum@oracle.com>
+Subject: trinity: execve() returns 0?
+Date: Mon, 12 Dec 2016 13:05:05 +0100
+Message-ID: <4ce14b7f-a2bd-e99a-53c9-d80ae3ee27c5@oracle.com>
 Mime-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
 Return-path: <trinity-owner@vger.kernel.org>
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
- d=CAVIUMNETWORKS.onmicrosoft.com; s=selector1-caviumnetworks-com;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version;
- bh=bnOAPnac7AtA35bCj0x/hAkl//0x+OdJGKMSvxaWHDE=;
- b=3J7FdTbuYDlLurGyuigfG/RYBGoG34dOhd5c0OOhsMXmyu5NMA71aZ+VlYlWoIqCBXsw2mygq2X9svTzDHL2sRuZYuTv2fQWfrRUnWtOZLSiOZSTMe28431Lqgjut50sTQ/NlQqjjwjCXhs+8h9spGQo9RCtYcuVyIbJawNIQQw=
-Content-Disposition: inline
-In-Reply-To: <20161127025615.fgewhrif2xr576md@codemonkey.org.uk>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="us-ascii"; format="flowed"
 To: Dave Jones <davej@codemonkey.org.uk>
-Cc: trinity@vger.kernel.org, Andrew Pinski <Andrew.Pinski@cavium.com>, Steve Ellcey <Steve.Ellcey@cavium.com>
+Cc: trinity@vger.kernel.org
 
-On Sat, Nov 26, 2016 at 09:56:15PM -0500, Dave Jones wrote:
-> On Fri, Nov 25, 2016 at 07:07:48AM +0530, Yury Norov wrote:
->  > I try to build trinity for aarch64. In my configuration USE_PPPOL2TPIN6
->  > is not defined, and it makes some functions have unused variables. GCC
->  > treats it as error. This patch fixes it.
->  > 
->  > Signed-off-by: Yury Norov <ynorov@caviumnetworks.com>
->  > ---
->  >  net/proto-pppox.c | 9 +++++++++
->  >  rand/seed.c       | 2 ++
->  >  2 files changed, 11 insertions(+)
->  > 
->  > diff --git a/net/proto-pppox.c b/net/proto-pppox.c
->  > index 9deb045..bdec306 100644
->  > --- a/net/proto-pppox.c
->  > +++ b/net/proto-pppox.c
->  > @@ -83,6 +83,9 @@ static void pppox_PX_PROTO_OL2TP_PPPoL2TPin6(struct sockaddr **addr, socklen_t *
->  >  	pppol2tpin6->pppol2tp.addr.sin6_scope_id = rnd();
->  >  	*addr = (struct sockaddr *) pppol2tpin6;
->  >  	*addrlen = sizeof(struct sockaddr_pppol2tpin6);
->  > +#else
->  > +	(void) addr;
->  > +	(void) addrlen;
-> 
-> Instead of doing it this way, just add __unused__ tags to the variable
-> declarations. (In the case where they're actually used, it doesn't
-> matter)
-> 
-> thanks,
-> 
-> 	Dave
+Hi Dave,
 
-OK
+I'm debugging what seems to be a race between execve() and ioctl() (!),
+and I noticed that the execve records in the trinity child logs indicate
+that it's returning 0:
 
-Signed-off-by: Yury Norov <ynorov@caviumnetworks.com>
----
- net/proto-pppox.c | 9 ++++++---
- rand/seed.c       | 2 +-
- 2 files changed, 7 insertions(+), 4 deletions(-)
+[child9:20816] [0] 
+execve(name="/sys/devices/virtual/bdi/7:5/power/runtime_status", 
+argv=0x2cd9b30, envp=0x2ca51e0) = 0
+[child9:22112] [0] execve(name="/proc/134/net/pnresource", 
+argv=0x2c57130, envp=0x2d01bd0) = 0
+[child9:22678] [0] execve(name=".//proc/45/maps", argv=0x2ce5800, 
+envp=0x2cfbb70) = 0
+[child9:23754] [0] execve(name="/proc/1177/task/1177/net/ipx/socket", 
+argv=0x2cf5b10, envp=0x2b431b0) = 0
+[child9:23754] [1] 
+execve(name="/sys/module/tcp_cubic/parameters/hystart", argv=0x2d1fe60, 
+envp=0x2d24f50) = 0
+[child9:27614] [0] execve(name="/proc/30/net/stat/rt_cache", 
+argv=0x2cf5b10, envp=0x2d07cd0) = 0
 
-diff --git a/net/proto-pppox.c b/net/proto-pppox.c
-index 9deb045..52288fa 100644
---- a/net/proto-pppox.c
-+++ b/net/proto-pppox.c
-@@ -58,7 +58,8 @@ static void pppox_PX_PROTO_OL2TP_PPPoL2TP(struct sockaddr **addr, socklen_t *add
- 	*addrlen = sizeof(struct sockaddr_pppol2tp);
- }
- 
--static void pppox_PX_PROTO_OL2TP_PPPoL2TPin6(struct sockaddr **addr, socklen_t *addrlen)
-+static void pppox_PX_PROTO_OL2TP_PPPoL2TPin6(__unused__ struct sockaddr **addr,
-+						__unused__ socklen_t *addrlen)
- {
- #ifdef USE_PPPOL2TPIN6
- 	struct sockaddr_pppol2tpin6 *pppol2tpin6;
-@@ -86,7 +87,8 @@ static void pppox_PX_PROTO_OL2TP_PPPoL2TPin6(struct sockaddr **addr, socklen_t *
- #endif
- }
- 
--static void pppox_PX_PROTO_OL2TP_PPPoL2TPv3(struct sockaddr **addr, socklen_t *addrlen)
-+static void pppox_PX_PROTO_OL2TP_PPPoL2TPv3(__unused__ struct sockaddr **addr,
-+						__unused__ socklen_t *addrlen)
- {
- #ifdef USE_PPPOL2TPV3
- 	struct sockaddr_pppol2tpv3 *pppol2tpv3;
-@@ -107,7 +109,8 @@ static void pppox_PX_PROTO_OL2TP_PPPoL2TPv3(struct sockaddr **addr, socklen_t *a
- #endif
- }
- 
--static void pppox_PX_PROTO_OL2TP_PPPoL2TPv3in6(struct sockaddr **addr, socklen_t *addrlen)
-+static void pppox_PX_PROTO_OL2TP_PPPoL2TPv3in6(__unused__ struct sockaddr **addr,
-+						__unused__ socklen_t *addrlen)
- {
- #ifdef USE_PPPOL2TPIN6
- 	struct sockaddr_pppol2tpv3in6 *pppol2tpv3in6;
-diff --git a/rand/seed.c b/rand/seed.c
-index 2e4f84f..87880a6 100644
---- a/rand/seed.c
-+++ b/rand/seed.c
-@@ -40,7 +40,7 @@ static int urandomfd;
-  * to store what gets passed in from the command line -s argument */
- unsigned int seed = 0;
- 
--static int do_getrandom(unsigned int *buf)
-+static int do_getrandom(__unused__ unsigned int *buf)
- {
- #ifdef SYS_getrandom
- 	int ret;
--- 
-2.7.4
+I'm guessing this has something to do with the subchild code that
+trinity uses (since execve() does not return on success), although I see
+other execve calls that do return -1 as expected and I wouldn't expect
+execve() on the above files to actually succeed, so I guess the question
+is what does the = 0 mean?
+
+Thanks,
+
+
+Vegard
