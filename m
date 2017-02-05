@@ -1,20 +1,18 @@
 From: Tommi Rantala <tt.rantala@gmail.com>
-Subject: [PATCH 2/5] Makefile: use findstring to check if we are building in development mode
-Date: Sun,  5 Feb 2017 17:53:49 +0200
-Message-ID: <20170205155352.13191-2-tt.rantala@gmail.com>
-References: <20170205155352.13191-1-tt.rantala@gmail.com>
+Subject: [PATCH 1/5] Makefile: use grep -c to avoid wc -l
+Date: Sun,  5 Feb 2017 17:53:48 +0200
+Message-ID: <20170205155352.13191-1-tt.rantala@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references;
-        bh=OmW2XxET2ptfzR+aRfdUHfIkEGzCCNAjKNwXf5N3if8=;
-        b=JUmexHX6c/OwP3phbDEqj+yyrIy+Ux45D+dA8eLC6U0a+UzI0rc53RRr96U9HEjuzM
-         lh3wpIyBJJhmITTOW22tR+gJIkoWyYCz+EEuzJZNE5kvPYR8PWomsLWIn+1uzWTGHYzk
-         W7CYR9LhiHhvMODgXNP6CkvO76cjDKmRHWiD2JSpEeAIMowx7MaVXq4J+QSOGuvoOerm
-         weC5BoEBkte6ZBvz+YXvMqA6dJN0iTlI2069WTmeYFuwv/HZYKcCuhk4hyQL6eNeAYcM
-         74NMVrg7GbBbJsjsmrVApPbMD0qhS0JJxZTHs2ra+BCzLE0odK09VC5Cot2bvfyDQQCD
-         e+aA==
-In-Reply-To: <20170205155352.13191-1-tt.rantala@gmail.com>
+        h=from:to:cc:subject:date:message-id;
+        bh=GuF2tfDuZagCI4qJbrNR5Z2QYlDUdvJizLEiTRaaQ3U=;
+        b=VOnvo/srjzd/0S9gDWcH+21qcgx3jFfFsFc0iEMGo1OkS56y719A3Vl/xnKfA9xGpz
+         o9cOMgWrxsw/a6Nxg3zvEMXv0LSHqNA1zY0W9KleGpX+iRscpXTuv0Ett8Ymz9SILHKa
+         P5oxD1b7neLohA7pL78u1hSxNl/J8ZLqgQR0KAATTrD4HRW7Q+GdlSdrvnworwwPK+wi
+         PZkzLMZoistWQV1X7x2vRDhxuIKW7Uaiq/N29QK0yqz8xmX3HDx3swjv2BA9rlsyjR84
+         vXa0kyEfouNoJ6xXNAJOGD1n40B9RgiLSUTAFT1zPiumoEPz1LTW4t9VU7q+eIxMk5CH
+         40uQ==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
@@ -24,49 +22,21 @@ To: davej@codemonkey.org.uk
 Cc: trinity@vger.kernel.org, Tommi Rantala <tt.rantala@gmail.com>
 
 ---
- Makefile | 15 ++++++++++++---
- 1 file changed, 12 insertions(+), 3 deletions(-)
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/Makefile b/Makefile
-index 16fafe8..8088608 100644
+index b93fc3a..16fafe8 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -1,5 +1,11 @@
- VERSION="1.8pre"
+@@ -2,7 +2,7 @@ VERSION="1.8pre"
  
-+ifeq (,$(findstring pre,$(VERSION)))
-+DEVEL = 0
-+else
-+DEVEL = 1
-+endif
-+
  INSTALL_PREFIX ?= $(DESTDIR)
  INSTALL_PREFIX ?= $(HOME)
- NR_CPUS := $(shell grep -c ^processor /proc/cpuinfo)
-@@ -15,10 +21,11 @@ CFLAGS += -Wall -Wextra -g -O2 -I. -Iinclude/ -Wimplicit -D_FORTIFY_SOURCE=2 -D_
- CFLAGS += $(shell if $(CC) -std=gnu11 -S -o /dev/null -xc /dev/null >/dev/null 2>&1; then echo "-std=gnu11"; else echo "-std=gnu99"; fi)
+-NR_CPUS := $(shell grep ^processor /proc/cpuinfo | /usr/bin/wc -l)
++NR_CPUS := $(shell grep -c ^processor /proc/cpuinfo)
  
- # Only enabled during development, and on gcc 4.9+
-+ifeq ($(DEVEL), 1)
- CPP_MAJOR := $(shell $(CPP) -dumpversion 2>&1 | cut -d'.' -f1)
- CPP_MINOR := $(shell $(CPP) -dumpversion 2>&1 | cut -d'.' -f2)
--DEVEL	:= $(shell grep VERSION Makefile | head -n1 | grep pre | wc -l)
--CFLAGS	+= $(shell if [ $(CPP_MAJOR) -eq 5 -a $(CPP_MINOR) -ge 1 -a $(DEVEL) -eq 1 ] ; then echo "-Werror"; else echo ""; fi)
-+CFLAGS	+= $(shell if [ $(CPP_MAJOR) -eq 5 -a $(CPP_MINOR) -ge 1 ] ; then echo "-Werror"; else echo ""; fi)
-+endif
- 
- ifneq ($(SYSROOT),)
- CFLAGS += --sysroot=$(SYSROOT)
-@@ -46,7 +53,9 @@ LDLIBS += -lrt
- ifneq ($(shell $(CC) -v 2>&1 | grep -c "clang"), 1)
- CFLAGS += -Wlogical-op
- CFLAGS += -Wstrict-aliasing=3
--CFLAGS += $(shell if [ $(DEVEL) -eq 0 ]; then echo "-Wno-maybe-uninitialized"; else echo ""; fi)
-+ifeq ($(DEVEL), 0)
-+CFLAGS += -Wno-maybe-uninitialized
-+endif
- endif
- 
- # Sometimes useful for debugging. more useful with clang than gcc.
+ ifeq ($(CC),"")
+ CC := gcc
 -- 
 2.9.3
