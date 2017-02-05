@@ -1,48 +1,72 @@
-From: Dave Jones <davej@codemonkey.org.uk>
-Subject: Re: trinity: execve() returns 0?
-Date: Mon, 12 Dec 2016 09:07:32 -0500
-Message-ID: <20161212140732.k5ivd4z4ldcq3a4j@codemonkey.org.uk>
-References: <4ce14b7f-a2bd-e99a-53c9-d80ae3ee27c5@oracle.com>
-Mime-Version: 1.0
+From: Tommi Rantala <tt.rantala@gmail.com>
+Subject: [PATCH 2/5] Makefile: use findstring to check if we are building in development mode
+Date: Sun,  5 Feb 2017 17:53:49 +0200
+Message-ID: <20170205155352.13191-2-tt.rantala@gmail.com>
+References: <20170205155352.13191-1-tt.rantala@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
-In-Reply-To: <4ce14b7f-a2bd-e99a-53c9-d80ae3ee27c5@oracle.com>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=from:to:cc:subject:date:message-id:in-reply-to:references;
+        bh=OmW2XxET2ptfzR+aRfdUHfIkEGzCCNAjKNwXf5N3if8=;
+        b=JUmexHX6c/OwP3phbDEqj+yyrIy+Ux45D+dA8eLC6U0a+UzI0rc53RRr96U9HEjuzM
+         lh3wpIyBJJhmITTOW22tR+gJIkoWyYCz+EEuzJZNE5kvPYR8PWomsLWIn+1uzWTGHYzk
+         W7CYR9LhiHhvMODgXNP6CkvO76cjDKmRHWiD2JSpEeAIMowx7MaVXq4J+QSOGuvoOerm
+         weC5BoEBkte6ZBvz+YXvMqA6dJN0iTlI2069WTmeYFuwv/HZYKcCuhk4hyQL6eNeAYcM
+         74NMVrg7GbBbJsjsmrVApPbMD0qhS0JJxZTHs2ra+BCzLE0odK09VC5Cot2bvfyDQQCD
+         e+aA==
+In-Reply-To: <20170205155352.13191-1-tt.rantala@gmail.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Vegard Nossum <vegard.nossum@oracle.com>
-Cc: trinity@vger.kernel.org
+To: davej@codemonkey.org.uk
+Cc: trinity@vger.kernel.org, Tommi Rantala <tt.rantala@gmail.com>
 
-On Mon, Dec 12, 2016 at 01:05:05PM +0100, Vegard Nossum wrote:
- > Hi Dave,
- > 
- > I'm debugging what seems to be a race between execve() and ioctl() (!),
- > and I noticed that the execve records in the trinity child logs indicate
- > that it's returning 0:
- > 
- > [child9:20816] [0] 
- > execve(name="/sys/devices/virtual/bdi/7:5/power/runtime_status", 
- > argv=0x2cd9b30, envp=0x2ca51e0) = 0
- > [child9:22112] [0] execve(name="/proc/134/net/pnresource", 
- > argv=0x2c57130, envp=0x2d01bd0) = 0
- > [child9:22678] [0] execve(name=".//proc/45/maps", argv=0x2ce5800, 
- > envp=0x2cfbb70) = 0
- > [child9:23754] [0] execve(name="/proc/1177/task/1177/net/ipx/socket", 
- > argv=0x2cf5b10, envp=0x2b431b0) = 0
- > [child9:23754] [1] 
- > execve(name="/sys/module/tcp_cubic/parameters/hystart", argv=0x2d1fe60, 
- > envp=0x2d24f50) = 0
- > [child9:27614] [0] execve(name="/proc/30/net/stat/rt_cache", 
- > argv=0x2cf5b10, envp=0x2d07cd0) = 0
- > 
- > I'm guessing this has something to do with the subchild code that
- > trinity uses (since execve() does not return on success), although I see
- > other execve calls that do return -1 as expected and I wouldn't expect
- > execve() on the above files to actually succeed, so I guess the question
- > is what does the = 0 mean?
+---
+ Makefile | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
 
-Hm, I suspect do_extrafork needs to set rec->retval appropriately, looks
-like we're currently neglecting to do that, so it's remaining 0.
-
-	Dave
+diff --git a/Makefile b/Makefile
+index 16fafe8..8088608 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,5 +1,11 @@
+ VERSION="1.8pre"
+ 
++ifeq (,$(findstring pre,$(VERSION)))
++DEVEL = 0
++else
++DEVEL = 1
++endif
++
+ INSTALL_PREFIX ?= $(DESTDIR)
+ INSTALL_PREFIX ?= $(HOME)
+ NR_CPUS := $(shell grep -c ^processor /proc/cpuinfo)
+@@ -15,10 +21,11 @@ CFLAGS += -Wall -Wextra -g -O2 -I. -Iinclude/ -Wimplicit -D_FORTIFY_SOURCE=2 -D_
+ CFLAGS += $(shell if $(CC) -std=gnu11 -S -o /dev/null -xc /dev/null >/dev/null 2>&1; then echo "-std=gnu11"; else echo "-std=gnu99"; fi)
+ 
+ # Only enabled during development, and on gcc 4.9+
++ifeq ($(DEVEL), 1)
+ CPP_MAJOR := $(shell $(CPP) -dumpversion 2>&1 | cut -d'.' -f1)
+ CPP_MINOR := $(shell $(CPP) -dumpversion 2>&1 | cut -d'.' -f2)
+-DEVEL	:= $(shell grep VERSION Makefile | head -n1 | grep pre | wc -l)
+-CFLAGS	+= $(shell if [ $(CPP_MAJOR) -eq 5 -a $(CPP_MINOR) -ge 1 -a $(DEVEL) -eq 1 ] ; then echo "-Werror"; else echo ""; fi)
++CFLAGS	+= $(shell if [ $(CPP_MAJOR) -eq 5 -a $(CPP_MINOR) -ge 1 ] ; then echo "-Werror"; else echo ""; fi)
++endif
+ 
+ ifneq ($(SYSROOT),)
+ CFLAGS += --sysroot=$(SYSROOT)
+@@ -46,7 +53,9 @@ LDLIBS += -lrt
+ ifneq ($(shell $(CC) -v 2>&1 | grep -c "clang"), 1)
+ CFLAGS += -Wlogical-op
+ CFLAGS += -Wstrict-aliasing=3
+-CFLAGS += $(shell if [ $(DEVEL) -eq 0 ]; then echo "-Wno-maybe-uninitialized"; else echo ""; fi)
++ifeq ($(DEVEL), 0)
++CFLAGS += -Wno-maybe-uninitialized
++endif
+ endif
+ 
+ # Sometimes useful for debugging. more useful with clang than gcc.
+-- 
+2.9.3
