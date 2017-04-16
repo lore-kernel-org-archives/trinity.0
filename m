@@ -1,54 +1,53 @@
-From: Baruch Siach <baruch@tkos.co.il>
-Subject: [PATCH] configure: fix cross compile detection of broken ipv6 headers
-Date: Fri, 14 Apr 2017 08:18:10 +0300
-Message-ID: <ac38a49a18e337fb3bc7ac8e06097e28e1e3b3f7.1492147090.git.baruch@tkos.co.il>
+From: Tommi Rantala <tt.rantala@gmail.com>
+Subject: [PATCH] fix off-by-one in dump_childnos()
+Date: Sun, 16 Apr 2017 21:29:14 +0300
+Message-ID: <20170416182914.24457-1-tt.rantala@gmail.com>
 Return-path: <trinity-owner@vger.kernel.org>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=from:to:cc:subject:date:message-id;
+        bh=y1hfVr2ioDCTdKahl495BAm4U1LxGfACVxv1/hKsMv8=;
+        b=IlINhhar+WZUI5RMFYI8sox2i8edfGU6MtY8qosc88gDgRtMSQi9/VH9+NcyjT2oRZ
+         vdbdiJpM8eSYkdSD3zfcBkbEI9ZFypfXZZJu6/HfdM/Dyt5shFleKAhCHoIZHhpiwO1T
+         XdB/b+jMx/oxOhbGlegW2k6HRu6Gf2gQQFRDJDEwE/HSItDMYvZwV/gMWDNVUPP4/6E2
+         bIm6BIxfuTfg2MfkFYg1QWFBfw0Wv9CqPLyyI96WONIDDsygvDi1OSQCsvk36qB9lCnr
+         pJz6zxq8ksx+fLxN1OmHjU6o+gMYe4ec778eH0TnUC9ON2dF7lJpQn0bj0kvVtaoiRC9
+         aQQA==
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: Dave Jones <davej@codemonkey.org.uk>
-Cc: trinity@vger.kernel.org, Baruch Siach <baruch@tkos.co.il>
+To: davej@codemonkey.org.uk
+Cc: trinity@vger.kernel.org, Tommi Rantala <tt.rantala@gmail.com>
 
-Checking the content of the host ipv6.h headers is incompatible with cross
-compilation. Target headers may not be the same as the host. Do direct build
-test instead using the ${CC} (cross) compiler to detect headers issues.
+Fixes a segfault:
 
-Define _GNU_SOURCE to make sure glibc ipv6 definitions are exposed.
-
-Signed-off-by: Baruch Siach <baruch@tkos.co.il>
+  ## pids: (60 active)
+  0-7: 0 0 0 0 0 0 0 0
+  8-15: 0 0 0 0 0 0 0 0
+  16-23: 0 0 0 0 0 0 0 0
+  24-31: 0 0 0 0 0 0 0 0
+  32-39: 0 11081 11082 11083 11084 11085 11086 11087
+  40-47: 11088 11089 11090 11091 11093 11094 11095 11096
+  48-55: 11097 11098 11099 11100 11101 11102 0 0
+  Segmentation fault
 ---
- configure | 17 +++++++++++++++--
- 1 file changed, 15 insertions(+), 2 deletions(-)
+ pids.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/configure b/configure
-index aa3f7f334971..8639a38eba96 100755
---- a/configure
-+++ b/configure
-@@ -51,8 +51,21 @@ echo "[*] Checking system headers."
- [ -z "$IPV6" ] && IPV6=yes
- if [[ "$IPV6" == "yes" ]]; then
- 	echo -n "[*] Checking ipv6 headers ... "
--	RET=$(grep __UAPI_DEF_IN6_PKTINFO /usr/include/linux/ipv6.h)
--	if [ -z "$RET" ]; then
-+	rm -f "$TMP" || exit 1
-+
-+	cat >"$TMP.c" << EOF
-+#include <netinet/in.h>
-+#include <netinet/ip6.h>
-+#include <linux/in6.h>
-+#include <linux/ipv6.h>
-+
-+int main()
-+{
-+	struct in6_addr test;
-+}
-+EOF
-+	${CC} ${CFLAGS} -D_GNU_SOURCE "$TMP.c" -o "$TMP" &>"$TMP.log"
-+	if [ ! -x "$TMP" ]; then
- 		echo $RED "[BROKEN]" $COL_RESET "See https://patchwork.ozlabs.org/patch/425881/"
- 	else
- 		echo $GREEN "[OK]" $COL_RESET
+diff --git a/pids.c b/pids.c
+index 8b77e2f..1a23284 100644
+--- a/pids.c
++++ b/pids.c
+@@ -82,7 +82,7 @@ void dump_childnos(void)
+ 		for (j = 0; j < 8; j++) {
+ 			struct childdata *child;
+ 
+-			if (i + j > max_children)
++			if (i + j >= max_children)
+ 				break;
+ 
+ 			child = shm->children[i + j];
 -- 
-2.11.0
+2.9.3
