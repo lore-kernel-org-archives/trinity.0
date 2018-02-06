@@ -1,30 +1,56 @@
-From: Dave Jones <davej@codemonkey.org.uk>
-Subject: Trinity 1.8
-Date: Fri, 3 Nov 2017 11:24:39 -0400
-Message-ID: <20171103152439.aohhnsucuba7lu76@codemonkey.org.uk>
-Mime-Version: 1.0
+From: Thomas Richter <tmricht@linux.vnet.ibm.com>
+Subject: [PATCH 3/7] trinity: Add support for preadv2/pwritev2 svcs
+Date: Tue,  6 Feb 2018 09:02:25 +0100
+Message-ID: <20180206080229.27721-3-tmricht@linux.vnet.ibm.com>
+References: <20180206080229.27721-1-tmricht@linux.vnet.ibm.com>
 Return-path: <trinity-owner@vger.kernel.org>
-Content-Disposition: inline
+In-Reply-To: <20180206080229.27721-1-tmricht@linux.vnet.ibm.com>
 Sender: trinity-owner@vger.kernel.org
 List-ID: <trinity.vger.kernel.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-To: trinity@vger.kernel.org
+To: trinity@vger.kernel.org, davej@codemonkey.org.uk
+Cc: brueckner@linux.vnet.ibm.com, schwidefsky@de.ibm.com, heiko.carstens@de.ibm.com, Thomas Richter <tmricht@linux.vnet.ibm.com>
 
-For those still using tarball releases, I just cut a 1.8 release and put
-the result at http://codemonkey.org.uk/projects/trinity/trinity-1.8.tar.xz
+Add support for s390x (64 bit) and s390 (31 bit)
+support for system calls preadv2 and pwritev2.
 
-As well as all the usual improvements like updates to syscalls, flags
-etc, the biggest feature this release is the still-work-in-progress "log to udp"
-I hacked this up earlier this year, and it's still in proof of concept
-phase, but if you want to play with that there's a rough server
-implementation in the server/ directory. The protocol is pretty well
-defined, but it has a bunch of known flaws that need improving on,
-such as the general reliability (udp is lossy, who knew?)
+Signed-off-by: Thomas Richter <tmricht@linux.vnet.ibm.com>
+---
+ include/syscalls-s390.h  | 4 ++--
+ include/syscalls-s390x.h | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
 
-Until that gets better the log-to-disk code still exists, and now also supports
-just giving it a directory name rather than have them land in trinity's cwd.
-
-go forth and break kernels.
-
-	Dave
+diff --git a/include/syscalls-s390.h b/include/syscalls-s390.h
+index 83613edf..1ca1a0fe 100644
+--- a/include/syscalls-s390.h
++++ b/include/syscalls-s390.h
+@@ -387,8 +387,8 @@ struct syscalltable syscalls_s390[] = {
+ 	{ .entry = &syscall_shutdown },
+ 	{ .entry = &syscall_ni_syscall },	/* TODO: mlock2 svc */
+ 	{ .entry = &syscall_ni_syscall },	/* TODO: copy_file_range svc */
+-	{ .entry = &syscall_ni_syscall },	/* TODO: preadv2 svc */
+-	{ .entry = &syscall_ni_syscall },	/* TODO: pwritev2 svc */
++	{ .entry = &syscall_preadv2 },
++	{ .entry = &syscall_pwritev2 },
+ 	{ .entry = &syscall_ni_syscall },	/* TODO: s390_guarded_storage svc */
+ 	{ .entry = &syscall_ni_syscall },	/* TODO: statx svc */
+ 	{ .entry = &syscall_ni_syscall },	/* TODO: s390_sthyi svc */
+diff --git a/include/syscalls-s390x.h b/include/syscalls-s390x.h
+index 333d649c..6c546e1b 100644
+--- a/include/syscalls-s390x.h
++++ b/include/syscalls-s390x.h
+@@ -387,8 +387,8 @@ struct syscalltable syscalls_s390x[] = {
+ 	{ .entry = &syscall_shutdown },
+ 	{ .entry = &syscall_ni_syscall },	/* TODO: mlock2 svc */
+ 	{ .entry = &syscall_ni_syscall },	/* TODO: copy_file_range svc */
+-	{ .entry = &syscall_ni_syscall },	/* TODO: preadv2 svc */
+-	{ .entry = &syscall_ni_syscall },	/* TODO: pwritev2 svc */
++	{ .entry = &syscall_preadv2 },
++	{ .entry = &syscall_pwritev2 },
+ 	{ .entry = &syscall_ni_syscall },	/* TODO: s390_guarded_storage svc */
+ 	{ .entry = &syscall_ni_syscall },	/* TODO: statx svc */
+ 	{ .entry = &syscall_ni_syscall },	/* TODO: s390_sthyi svc */
+-- 
+2.14.3
