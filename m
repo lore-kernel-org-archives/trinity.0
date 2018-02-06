@@ -1,7 +1,7 @@
 From: Thomas Richter <tmricht@linux.vnet.ibm.com>
-Subject: [PATCH 4/7] trinity: Add support for statx svc
-Date: Tue,  6 Feb 2018 09:02:26 +0100
-Message-ID: <20180206080229.27721-4-tmricht@linux.vnet.ibm.com>
+Subject: [PATCH 7/7] trinity: Add support for readdir svc
+Date: Tue,  6 Feb 2018 09:02:29 +0100
+Message-ID: <20180206080229.27721-7-tmricht@linux.vnet.ibm.com>
 References: <20180206080229.27721-1-tmricht@linux.vnet.ibm.com>
 Return-path: <trinity-owner@vger.kernel.org>
 In-Reply-To: <20180206080229.27721-1-tmricht@linux.vnet.ibm.com>
@@ -13,38 +13,25 @@ Content-Transfer-Encoding: 7bit
 To: trinity@vger.kernel.org, davej@codemonkey.org.uk
 Cc: brueckner@linux.vnet.ibm.com, schwidefsky@de.ibm.com, heiko.carstens@de.ibm.com, Thomas Richter <tmricht@linux.vnet.ibm.com>
 
-Add support for s390x (64 bit) and s390 (31 bit)
-support for system call statx.
+Add support for system call readdir on s390 (31 bit).
 
 Signed-off-by: Thomas Richter <tmricht@linux.vnet.ibm.com>
 ---
- include/syscalls-s390.h  | 2 +-
- include/syscalls-s390x.h | 2 +-
- 2 files changed, 2 insertions(+), 2 deletions(-)
+ include/syscalls-s390.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/include/syscalls-s390.h b/include/syscalls-s390.h
-index 1ca1a0fe..27fbcce1 100644
+index 027a9fcd..682d2030 100644
 --- a/include/syscalls-s390.h
 +++ b/include/syscalls-s390.h
-@@ -390,6 +390,6 @@ struct syscalltable syscalls_s390[] = {
- 	{ .entry = &syscall_preadv2 },
- 	{ .entry = &syscall_pwritev2 },
- 	{ .entry = &syscall_ni_syscall },	/* TODO: s390_guarded_storage svc */
--	{ .entry = &syscall_ni_syscall },	/* TODO: statx svc */
-+	{ .entry = &syscall_statx },
- 	{ .entry = &syscall_ni_syscall },	/* TODO: s390_sthyi svc */
- };
-diff --git a/include/syscalls-s390x.h b/include/syscalls-s390x.h
-index 6c546e1b..a3efa7db 100644
---- a/include/syscalls-s390x.h
-+++ b/include/syscalls-s390x.h
-@@ -390,6 +390,6 @@ struct syscalltable syscalls_s390x[] = {
- 	{ .entry = &syscall_preadv2 },
- 	{ .entry = &syscall_pwritev2 },
- 	{ .entry = &syscall_ni_syscall },	/* TODO: s390_guarded_storage svc */
--	{ .entry = &syscall_ni_syscall },	/* TODO: statx svc */
-+	{ .entry = &syscall_statx },
- 	{ .entry = &syscall_ni_syscall },	/* TODO: s390_sthyi svc */
- };
+@@ -96,7 +96,7 @@ struct syscalltable syscalls_s390[] = {
+ 	{ .entry = &syscall_uselib },
+ 	{ .entry = &syscall_swapon },
+ 	{ .entry = &syscall_reboot },
+-	{ .entry = &syscall_ni_syscall },	/* TODO: readdir systemcall */
++	{ .entry = &syscall_oldreaddir },
+ 	{ .entry = &syscall_mmap },		/* old_mmap */
+ 	{ .entry = &syscall_munmap },
+ 	{ .entry = &syscall_truncate },
 -- 
 2.14.3
